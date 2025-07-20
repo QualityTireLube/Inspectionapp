@@ -585,22 +585,31 @@ async function tryBasicVinParser(cleanVin) {
   }
 }
 
-// === Database setup ===
-let db;
+// === Database Setup ===
+const DatabaseConfig = require('./database-config');
+const DatabaseWrapper = require('./database-wrapper');
+
+let rawDb, dbConfig, db;
 
 if (isProduction) {
   // In production, use database config (PostgreSQL)
-  const DatabaseConfig = require('./database-config');
-  const dbConfig = new DatabaseConfig();
-  db = dbConfig.getConnection();
+  dbConfig = new DatabaseConfig();
+  rawDb = dbConfig.getConnection();
+  db = new DatabaseWrapper(rawDb, dbConfig);
   logger.info('✅ Connected to PostgreSQL database via config');
 } else {
   // In development, use SQLite directly
   const sqlite3 = require('sqlite3').verbose();
-  db = new sqlite3.Database('./database.sqlite', (err) => {
-  if (err) logger.error('❌ DB error:', err);
-  else {
+  dbConfig = new DatabaseConfig(); // Still need this for wrapper
+  rawDb = new sqlite3.Database('./database.sqlite', (err) => {
+    if (err) {
+      logger.error('❌ DB error:', err);
+      return;
+    }
+    
     logger.info('✅ Connected to SQLite');
+    // Create wrapper for consistent interface
+    db = new DatabaseWrapper(rawDb, dbConfig);
     db.run(`
       CREATE TABLE IF NOT EXISTS quick_checks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -836,7 +845,6 @@ if (isProduction) {
         });
       }
     });
-  }
   });
 }
 
