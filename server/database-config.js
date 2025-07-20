@@ -1,4 +1,3 @@
-const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 class DatabaseConfig {
@@ -18,14 +17,21 @@ class DatabaseConfig {
   }
 
   getSQLiteConnection() {
-    const dbPath = path.resolve(this.databaseUrl);
-    return new sqlite3.Database(dbPath, (err) => {
-      if (err) {
-        console.error('Error opening SQLite database:', err.message);
-      } else {
-        console.log('Connected to SQLite database');
-      }
-    });
+    try {
+      const sqlite3 = require('sqlite3').verbose();
+      const dbPath = path.resolve(this.databaseUrl);
+      return new sqlite3.Database(dbPath, (err) => {
+        if (err) {
+          console.error('Error opening SQLite database:', err.message);
+        } else {
+          console.log('Connected to SQLite database');
+        }
+      });
+    } catch (error) {
+      console.error('SQLite3 package not available. Using PostgreSQL instead.');
+      this.databaseType = 'postgresql';
+      return this.getPostgreSQLConnection();
+    }
   }
 
   getPostgreSQLConnection() {
