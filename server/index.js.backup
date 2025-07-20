@@ -1,0 +1,2910 @@
+// === Core modules & setup ===
+const express = require('express');
+const cors = require('cors');
+const jwt = require('jsonwebtoken');
+const csv = require('csv-parser');
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
+const sqlite3 = require('sqlite3').verbose();
+const http = require('http');
+const os = require('os');
+const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
+const logger = require('./logger');
+
+const app = express();
+const port = process.env.PORT || 5001;
+const isProduction = process.env.NODE_ENV === 'production';
+
+// === Environment variables ===
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const SALT_ROUNDS = 10;
+
+// === Production-specific configurations ===
+if (isProduction) {
+  // Serve static files from the React build
+  app.use(express.static(path.join(__dirname, '../dist')));
+  
+  // Handle React routing, return all requests to React app
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      return next();
+    }
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
+  });
+}
+
+// === Rate limiting ===
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: isProduction ? 3 : 5, // Stricter limits in production
+  message: { error: 'Too many login attempts, please try again later' }
+});
+
+// === Input validation ===
+const validateEmail = (email) => {
+  return email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
+};
+
+const validatePassword = (password) => {
+  return password.length >= 6;
+};
+
+// === Utility: Get local IP ===
+function getLocalIP() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal && !iface.address.startsWith('169.254')) {
+        return iface.address;
+      }
+    }
+  }
+  return 'localhost';
+}
+
+// === Create HTTP server ===
+const server = http.createServer(app);
+
+// === Middleware ===
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Enhanced CORS configuration
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow localhost and any IP address on port 3000
+    const allowedOrigins = [
+      /^http:\/\/localhost:3000$/,
+      /^http:\/\/127\.0\.0\.1:3000$/,
+      /^http:\/\/(\d{1,3}\.){3}\d{1,3}:3000$/,  // Any IP address on port 3000
+    ];
+    
+    // Check if the origin matches any of our allowed patterns
+    const isAllowed = allowedOrigins.some(pattern => pattern.test(origin));
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+}));
+
+// Add OPTIONS handler for preflight requests
+app.options('*', cors());
+
+// Add headers middleware
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  next();
+});
+
+app.use('/uploads', express.static('uploads'));
+
+// === SQLite setup ===
+const db = new sqlite3.Database('./database.sqlite', (err) => {
+  if (err) logger.error('❌ DB error:', err);
+  else {
+    logger.info('✅ Connected to SQLite');
+    db.run(`
+      CREATE TABLE IF NOT EXISTS quick_checks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_email TEXT NOT NULL,
+        user_name TEXT NOT NULL,
+        title TEXT NOT NULL,
+        data TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        duration_seconds INTEGER DEFAULT 0,
+        archived_at DATETIME,
+        archived_by TEXT,
+        archived_by_name TEXT
+      )
+    `, (err) => {
+      if (err) {
+        logger.error('Error creating table:', err);
+      } else {
+        // Migration: Add archive columns if they don't exist
+        db.get("PRAGMA table_info(quick_checks)", (err, rows) => {
+          if (err) {
+            logger.error('Error checking table schema:', err);
+            return;
+          }
+          
+          // Check if archived_at column exists
+          db.get("SELECT name FROM pragma_table_info('quick_checks') WHERE name='archived_at'", (err, row) => {
+            if (err) {
+              logger.error('Error checking for archived_at column:', err);
+              return;
+            }
+            
+            if (!row) {
+              logger.info('Adding archive columns to quick_checks table...');
+              db.run('ALTER TABLE quick_checks ADD COLUMN archived_at DATETIME', (err) => {
+                if (err) {
+                  logger.error('Error adding archived_at column:', err);
+                } else {
+                  logger.info('✅ Added archived_at column');
+                }
+              });
+              
+              db.run('ALTER TABLE quick_checks ADD COLUMN archived_by TEXT', (err) => {
+                if (err) {
+                  logger.error('Error adding archived_by column:', err);
+                } else {
+                  logger.info('✅ Added archived_by column');
+                }
+              });
+              
+              db.run('ALTER TABLE quick_checks ADD COLUMN archived_by_name TEXT', (err) => {
+                if (err) {
+                  logger.error('Error adding archived_by_name column:', err);
+                } else {
+                  logger.info('✅ Added archived_by_name column');
+                }
+              });
+            } else {
+              logger.info('Archive columns already exist in quick_checks table');
+            }
+          });
+          
+          // Check if updated_at column exists
+          db.get("SELECT name FROM pragma_table_info('quick_checks') WHERE name='updated_at'", (err, row) => {
+            if (err) {
+              logger.error('Error checking for updated_at column:', err);
+              return;
+            }
+            
+            if (!row) {
+              logger.info('Adding updated_at column to quick_checks table...');
+              db.run('ALTER TABLE quick_checks ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP', (err) => {
+                if (err) {
+                  logger.error('Error adding updated_at column:', err);
+                } else {
+                  logger.info('✅ Added updated_at column');
+                }
+              });
+            } else {
+              logger.info('updated_at column already exists in quick_checks table');
+            }
+          });
+          
+          // Check if duration_seconds column exists
+          db.get("SELECT name FROM pragma_table_info('quick_checks') WHERE name='duration_seconds'", (err, row) => {
+            if (err) {
+              logger.error('Error checking for duration_seconds column:', err);
+              return;
+            }
+            
+            if (!row) {
+              logger.info('Adding duration_seconds column to quick_checks table...');
+              db.run('ALTER TABLE quick_checks ADD COLUMN duration_seconds INTEGER DEFAULT 0', (err) => {
+                if (err) {
+                  logger.error('Error adding duration_seconds column:', err);
+                } else {
+                  logger.info('✅ Added duration_seconds column');
+                }
+              });
+            } else {
+              logger.info('duration_seconds column already exists in quick_checks table');
+            }
+          });
+          
+          // Check if saved_at column exists
+          db.get("SELECT name FROM pragma_table_info('quick_checks') WHERE name='saved_at'", (err, row) => {
+            if (err) {
+              logger.error('Error checking for saved_at column:', err);
+              return;
+            }
+            
+            if (!row) {
+              logger.info('Adding saved_at column to quick_checks table...');
+              db.run('ALTER TABLE quick_checks ADD COLUMN saved_at DATETIME', (err) => {
+                if (err) {
+                  logger.error('Error adding saved_at column:', err);
+                } else {
+                  logger.info('✅ Added saved_at column');
+                  
+                  // Set saved_at for existing records to updated_at (since they were saved when created)
+                  db.run('UPDATE quick_checks SET saved_at = updated_at WHERE saved_at IS NULL', (err) => {
+                    if (err) {
+                      logger.error('Error setting saved_at for existing records:', err);
+                    } else {
+                      logger.info('✅ Set saved_at for existing records');
+                    }
+                  });
+                }
+              });
+            } else {
+              logger.info('saved_at column already exists in quick_checks table');
+              
+              // Check if there are any records with null saved_at and set them
+              db.run('UPDATE quick_checks SET saved_at = updated_at WHERE saved_at IS NULL', (err) => {
+                if (err) {
+                  logger.error('Error setting saved_at for existing records:', err);
+                } else {
+                  logger.info('✅ Updated saved_at for records that were missing it');
+                }
+              });
+            }
+          });
+          
+          // Check if tab timing columns exist
+          db.get("SELECT name FROM pragma_table_info('quick_checks') WHERE name='tab_info_start'", (err, row) => {
+            if (err) {
+              logger.error('Error checking for tab timing columns:', err);
+              return;
+            }
+            
+            if (!row) {
+              logger.info('Adding tab timing columns to quick_checks table...');
+              
+              // Add tab start times
+              db.run('ALTER TABLE quick_checks ADD COLUMN tab_info_start DATETIME', (err) => {
+                if (err) logger.error('Error adding tab_info_start column:', err);
+                else logger.info('✅ Added tab_info_start column');
+              });
+              
+              db.run('ALTER TABLE quick_checks ADD COLUMN tab_pulling_start DATETIME', (err) => {
+                if (err) logger.error('Error adding tab_pulling_start column:', err);
+                else logger.info('✅ Added tab_pulling_start column');
+              });
+              
+              db.run('ALTER TABLE quick_checks ADD COLUMN tab_underhood_start DATETIME', (err) => {
+                if (err) logger.error('Error adding tab_underhood_start column:', err);
+                else logger.info('✅ Added tab_underhood_start column');
+              });
+              
+              db.run('ALTER TABLE quick_checks ADD COLUMN tab_tires_start DATETIME', (err) => {
+                if (err) logger.error('Error adding tab_tires_start column:', err);
+                else logger.info('✅ Added tab_tires_start column');
+              });
+              
+              // Add tab end times
+              db.run('ALTER TABLE quick_checks ADD COLUMN tab_info_end DATETIME', (err) => {
+                if (err) logger.error('Error adding tab_info_end column:', err);
+                else logger.info('✅ Added tab_info_end column');
+              });
+              
+              db.run('ALTER TABLE quick_checks ADD COLUMN tab_pulling_end DATETIME', (err) => {
+                if (err) logger.error('Error adding tab_pulling_end column:', err);
+                else logger.info('✅ Added tab_pulling_end column');
+              });
+              
+              db.run('ALTER TABLE quick_checks ADD COLUMN tab_underhood_end DATETIME', (err) => {
+                if (err) logger.error('Error adding tab_underhood_end column:', err);
+                else logger.info('✅ Added tab_underhood_end column');
+              });
+              
+              db.run('ALTER TABLE quick_checks ADD COLUMN tab_tires_end DATETIME', (err) => {
+                if (err) logger.error('Error adding tab_tires_end column:', err);
+                else logger.info('✅ Added tab_tires_end column');
+              });
+              
+              // Add tab durations
+              db.run('ALTER TABLE quick_checks ADD COLUMN tab_info_duration INTEGER DEFAULT 0', (err) => {
+                if (err) logger.error('Error adding tab_info_duration column:', err);
+                else logger.info('✅ Added tab_info_duration column');
+              });
+              
+              db.run('ALTER TABLE quick_checks ADD COLUMN tab_pulling_duration INTEGER DEFAULT 0', (err) => {
+                if (err) logger.error('Error adding tab_pulling_duration column:', err);
+                else logger.info('✅ Added tab_pulling_duration column');
+              });
+              
+              db.run('ALTER TABLE quick_checks ADD COLUMN tab_underhood_duration INTEGER DEFAULT 0', (err) => {
+                if (err) logger.error('Error adding tab_underhood_duration column:', err);
+                else logger.info('✅ Added tab_underhood_duration column');
+              });
+              
+              db.run('ALTER TABLE quick_checks ADD COLUMN tab_tires_duration INTEGER DEFAULT 0', (err) => {
+                if (err) logger.error('Error adding tab_tires_duration column:', err);
+                else logger.info('✅ Added tab_tires_duration column');
+              });
+              
+              // Add submission to archive duration
+              db.run('ALTER TABLE quick_checks ADD COLUMN submitted_to_archived_duration INTEGER DEFAULT 0', (err) => {
+                if (err) logger.error('Error adding submitted_to_archived_duration column:', err);
+                else logger.info('✅ Added submitted_to_archived_duration column');
+              });
+              
+              // Add created to archived duration
+              db.run('ALTER TABLE quick_checks ADD COLUMN created_to_archived_duration INTEGER DEFAULT 0', (err) => {
+                if (err) logger.error('Error adding created_to_archived_duration column:', err);
+                else logger.info('✅ Added created_to_archived_duration column');
+              });
+              
+            } else {
+              logger.info('Tab timing columns already exist in quick_checks table');
+            }
+          });
+        });
+      }
+    });
+  }
+});
+
+// === Multer file upload ===
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const dir = './uploads';
+    try {
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+        logger.info('Created uploads directory');
+      }
+      // Check if directory is writable
+      fs.access(dir, fs.constants.W_OK, (err) => {
+        if (err) {
+          logger.error('Uploads directory is not writable:', err);
+          cb(new Error('Uploads directory is not writable'));
+        } else {
+          cb(null, dir);
+        }
+      });
+    } catch (err) {
+      logger.error('Error setting up uploads directory:', err);
+      cb(err);
+    }
+  },
+  filename: function (req, file, cb) {
+    // Get the quick check ID from the request
+    const quickCheckId = req.params.id || req.body.quickCheckId || 'draft';
+    const fieldName = file.fieldname;
+    const ext = path.extname(file.originalname);
+    
+    // Get the current position for this field
+    let position = 1;
+    const existingFiles = fs.readdirSync('./uploads').filter(f => 
+      f.startsWith(`${quickCheckId}_${fieldName}_`) && f.endsWith(ext)
+    );
+    
+    if (existingFiles.length > 0) {
+      // Find the highest position number
+      const positions = existingFiles.map(f => {
+        const match = f.match(new RegExp(`${quickCheckId}_${fieldName}_(\\d+)(-1)?${ext.replace('.', '\\.')}$`));
+        return match ? parseInt(match[1]) : 0;
+      });
+      position = Math.max(...positions) + 1;
+    }
+    
+    // Create filename: quickCheckId_fieldName_position.ext
+    const filename = `${quickCheckId}_${fieldName}_${position}${ext}`;
+    cb(null, filename);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Not an image! Please upload only images.'), false);
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 25 * 1024 * 1024 // 25MB limit
+  },
+  fileFilter: fileFilter
+});
+
+// Create a custom upload middleware that handles multiple file fields
+const uploadFields = upload.fields([
+  { name: 'dashLights', maxCount: 5 },
+  { name: 'tpms_placard', maxCount: 5 },
+  { name: 'washer_fluid', maxCount: 5 },
+  { name: 'engine_air_filter', maxCount: 5 },
+  { name: 'battery', maxCount: 5 },
+  { name: 'tpms_tool', maxCount: 5 },
+  { name: 'front_brakes', maxCount: 5 },
+  { name: 'rear_brakes', maxCount: 5 },
+  { name: 'tire_passenger_front', maxCount: 5 },
+  { name: 'tire_driver_front', maxCount: 5 },
+  { name: 'tire_driver_rear', maxCount: 5 },
+  { name: 'tire_passenger_rear', maxCount: 5 },
+  { name: 'tire_spare', maxCount: 5 },
+  { name: 'tire_undercarriage', maxCount: 5 },
+  // Tire repair image fields
+  { name: 'tire_repair_driver_front_not_repairable', maxCount: 5 },
+  { name: 'tire_repair_driver_front_tire_size_brand', maxCount: 5 },
+  { name: 'tire_repair_driver_front_repairable_spot', maxCount: 5 },
+  { name: 'tire_repair_passenger_front_not_repairable', maxCount: 5 },
+  { name: 'tire_repair_passenger_front_tire_size_brand', maxCount: 5 },
+  { name: 'tire_repair_passenger_front_repairable_spot', maxCount: 5 },
+  { name: 'tire_repair_driver_rear_outer_not_repairable', maxCount: 5 },
+  { name: 'tire_repair_driver_rear_outer_tire_size_brand', maxCount: 5 },
+  { name: 'tire_repair_driver_rear_outer_repairable_spot', maxCount: 5 },
+  { name: 'tire_repair_driver_rear_inner_not_repairable', maxCount: 5 },
+  { name: 'tire_repair_driver_rear_inner_tire_size_brand', maxCount: 5 },
+  { name: 'tire_repair_driver_rear_inner_repairable_spot', maxCount: 5 },
+  { name: 'tire_repair_passenger_rear_inner_not_repairable', maxCount: 5 },
+  { name: 'tire_repair_passenger_rear_inner_tire_size_brand', maxCount: 5 },
+  { name: 'tire_repair_passenger_rear_inner_repairable_spot', maxCount: 5 },
+  { name: 'tire_repair_passenger_rear_outer_not_repairable', maxCount: 5 },
+  { name: 'tire_repair_passenger_rear_outer_tire_size_brand', maxCount: 5 },
+  { name: 'tire_repair_passenger_rear_outer_repairable_spot', maxCount: 5 },
+  { name: 'tire_repair_spare_not_repairable', maxCount: 5 },
+  { name: 'tire_repair_spare_tire_size_brand', maxCount: 5 },
+  { name: 'tire_repair_spare_repairable_spot', maxCount: 5 }
+]);
+
+// Add error handling middleware for multer
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    logger.error('Multer error:', err);
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'File size too large. Maximum size is 25MB.' });
+    }
+    return res.status(400).json({ error: 'File upload error: ' + err.message });
+  } else if (err) {
+    logger.error('Unexpected error:', err);
+    return res.status(500).json({ error: 'An unexpected error occurred: ' + err.message });
+  }
+  next();
+});
+
+// === Auth middleware ===
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Authentication token required' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+    req.user = user;
+    next();
+  });
+};
+
+// === Helper: Read CSV with improved error handling ===
+const readUsersFromCSV = () => {
+  return new Promise((resolve, reject) => {
+    const filePath = path.join(__dirname, 'users.csv');
+    // Create the file with headers if it doesn't exist
+    if (!fs.existsSync(filePath)) {
+      const headers = 'email,password,name,enabled,role\n';
+      fs.writeFileSync(filePath, headers);
+      logger.info('Created new users.csv file with headers');
+    }
+    const users = [];
+    fs.createReadStream(filePath)
+      .pipe(csv({
+        mapHeaders: ({ header }) => header.trim(),
+        mapValues: ({ value }) => value.trim()
+      }))
+      .on('data', (data) => {
+        // Normalize enabled and role fields
+        users.push({
+          ...data,
+          enabled: data.enabled === undefined ? true : (data.enabled === 'true' || data.enabled === true),
+          role: data.role || 'Technician'
+        });
+      })
+      .on('end', () => resolve(users))
+      .on('error', (err) => {
+        logger.error('CSV read error:', err);
+        reject(new Error('Failed to read users file'));
+      });
+  });
+};
+
+// === Helper: Write to CSV with improved error handling ===
+const writeUserToCSV = async (email, password, name, role = 'Technician', enabled = true) => {
+  return new Promise((resolve, reject) => {
+    const filePath = path.join(__dirname, 'users.csv');
+    const hashedPassword = bcrypt.hashSync(password, SALT_ROUNDS);
+    const newLine = `\n${email},${hashedPassword},${name},${enabled},${role}`;
+    fs.appendFile(filePath, newLine, (err) => {
+      if (err) {
+        logger.error('Error writing to CSV:', err);
+        reject(new Error('Failed to write user data'));
+        return;
+      }
+      resolve();
+    });
+  });
+};
+
+// === Helper to convert photo arrays to array of objects with url property ===
+function normalizePhotoFields(data) {
+  const photoFields = [
+    'dash_lights_photos',
+    'tpms_placard',
+    'washer_fluid_photo',
+    'engine_air_filter_photo',
+    'battery_photos',
+    'tpms_tool_photo',
+    'front_brakes',
+    'rear_brakes'
+  ];
+  photoFields.forEach(field => {
+    if (Array.isArray(data[field]) && data[field].length > 0 && typeof data[field][0] === 'string') {
+      data[field] = data[field].map(url => ({ url }));
+    }
+  });
+  // Normalize tire_photos
+  if (Array.isArray(data.tire_photos)) {
+    data.tire_photos = data.tire_photos.map(tp => ({
+      ...tp,
+      photos: Array.isArray(tp.photos) && tp.photos.length > 0 && typeof tp.photos[0] === 'string'
+        ? tp.photos.map(url => ({ url }))
+        : tp.photos
+    }));
+  }
+  return data;
+}
+
+// === Helper function to delete photo by renaming with -1 suffix ===
+function deletePhoto(quickCheckId, fieldName, position) {
+  try {
+    const uploadsDir = './uploads';
+    const files = fs.readdirSync(uploadsDir);
+    
+    // Find the file to delete
+    const fileToDelete = files.find(f => {
+      const match = f.match(new RegExp(`^${quickCheckId}_${fieldName}_${position}(-1)?\\.[^.]+$`));
+      return match && !f.includes('-1'); // Don't match already deleted files
+    });
+    
+    if (fileToDelete) {
+      const oldPath = path.join(uploadsDir, fileToDelete);
+      const ext = path.extname(fileToDelete);
+      const newFilename = `${quickCheckId}_${fieldName}_${position}-1${ext}`;
+      const newPath = path.join(uploadsDir, newFilename);
+      
+      // Rename the file to mark it as deleted
+      fs.renameSync(oldPath, newPath);
+      logger.info(`Marked photo as deleted: ${fileToDelete} -> ${newFilename}`);
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    logger.error('Error deleting photo:', error);
+    return false;
+  }
+}
+
+// === Helper function to rename draft files to final quick check files ===
+function renameDraftFiles(draftId, finalId) {
+  try {
+    const uploadsDir = './uploads';
+    const files = fs.readdirSync(uploadsDir);
+    const renamedFiles = [];
+    
+    logger.info(`Looking for draft files with prefix: ${draftId}_`);
+    logger.info(`Available files in uploads directory:`, files);
+    
+    // Find all files that start with the draft ID
+    const draftFiles = files.filter(f => f.startsWith(`${draftId}_`));
+    logger.info(`Found ${draftFiles.length} draft files to rename:`, draftFiles);
+    
+    draftFiles.forEach(file => {
+      const oldPath = path.join(uploadsDir, file);
+      const newFilename = file.replace(`${draftId}_`, `${finalId}_`);
+      const newPath = path.join(uploadsDir, newFilename);
+      
+      // Check if source file exists
+      if (!fs.existsSync(oldPath)) {
+        logger.warn(`Source file does not exist: ${oldPath}`);
+        return;
+      }
+      
+      // Check if destination file already exists
+      if (fs.existsSync(newPath)) {
+        logger.warn(`Destination file already exists: ${newPath}`);
+        return;
+      }
+      
+      // Rename the file
+      fs.renameSync(oldPath, newPath);
+      renamedFiles.push({ old: file, new: newFilename });
+      logger.info(`Successfully renamed draft file: ${file} -> ${newFilename}`);
+    });
+    
+    logger.info(`Total files renamed: ${renamedFiles.length}`);
+    return renamedFiles;
+  } catch (error) {
+    logger.error('Error renaming draft files:', error);
+    return [];
+  }
+}
+
+// === Helper function to update file URLs in data after renaming ===
+function updateFileUrlsInData(data, draftId, finalId) {
+  try {
+    const updatedData = JSON.parse(JSON.stringify(data)); // Deep clone
+    
+    logger.info(`Updating URLs from draft ID ${draftId} to final ID ${finalId}`);
+    
+    // Helper function to update URLs in an array
+    const updateUrlsInArray = (urls) => {
+      if (!Array.isArray(urls)) return urls;
+      const updatedUrls = urls.map(url => {
+        if (typeof url === 'string' && url.includes(`/uploads/${draftId}_`)) {
+          const newUrl = url.replace(`/uploads/${draftId}_`, `/uploads/${finalId}_`);
+          logger.info(`Updated URL: ${url} -> ${newUrl}`);
+          return newUrl;
+        }
+        return url;
+      });
+      
+      if (updatedUrls.some(url => url !== urls[urls.indexOf(url)])) {
+        logger.info(`Updated ${updatedUrls.length} URLs in array`);
+      }
+      
+      return updatedUrls;
+    };
+    
+    // Update all photo arrays
+    if (updatedData.dash_lights_photos) {
+      updatedData.dash_lights_photos = updateUrlsInArray(updatedData.dash_lights_photos);
+    }
+    if (updatedData.tpms_placard) {
+      updatedData.tpms_placard = updateUrlsInArray(updatedData.tpms_placard);
+    }
+    if (updatedData.washer_fluid_photo) {
+      updatedData.washer_fluid_photo = updateUrlsInArray(updatedData.washer_fluid_photo);
+    }
+    if (updatedData.engine_air_filter_photo) {
+      updatedData.engine_air_filter_photo = updateUrlsInArray(updatedData.engine_air_filter_photo);
+    }
+    if (updatedData.battery_photos) {
+      updatedData.battery_photos = updateUrlsInArray(updatedData.battery_photos);
+    }
+    if (updatedData.tpms_tool_photo) {
+      updatedData.tpms_tool_photo = updateUrlsInArray(updatedData.tpms_tool_photo);
+    }
+    if (updatedData.front_brakes) {
+      updatedData.front_brakes = updateUrlsInArray(updatedData.front_brakes);
+    }
+    if (updatedData.rear_brakes) {
+      updatedData.rear_brakes = updateUrlsInArray(updatedData.rear_brakes);
+    }
+    
+    // Update tire photos
+    if (updatedData.tire_photos && Array.isArray(updatedData.tire_photos)) {
+      updatedData.tire_photos.forEach(tirePhoto => {
+        if (tirePhoto.photos) {
+          tirePhoto.photos = updateUrlsInArray(tirePhoto.photos);
+        }
+      });
+    }
+    
+    logger.info('Successfully updated all file URLs in data');
+    return updatedData;
+  } catch (error) {
+    logger.error('Error updating file URLs in data:', error);
+    return data;
+  }
+}
+
+// === Helper: Admin check middleware
+function requireAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'Admin') {
+    return res.status(403).json({ error: 'Admin privileges required' });
+  }
+  next();
+}
+
+// === Routes ===
+
+// Login with improved validation and error handling
+app.post('/api/login', loginLimiter, async (req, res) => {
+  const { email, password } = req.body;
+  // Input validation
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+  if (!validateEmail(email)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+  try {
+    const users = await readUsersFromCSV();
+    const user = users.find(u => u.email.toLowerCase().trim() === email.toLowerCase().trim());
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    if (!user.enabled) {
+      return res.status(403).json({ error: 'User account is disabled' });
+    }
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    // Generate token with expiration and role
+    const token = jwt.sign(
+      { email: user.email, name: user.name, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    res.json({ 
+      token,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      tokenType: 'Bearer',
+      expiresIn: 86400 // 24 hours in seconds
+    });
+  } catch (err) {
+    logger.error('Login error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Register with improved validation and error handling
+app.post('/api/register', async (req, res) => {
+  const { email, password, name, role } = req.body;
+  logger.info('--- /api/register called ---');
+  logger.info('Request body:', req.body);
+  logger.info('Received fields:', { 
+    email: email || 'missing', 
+    password: password ? '[REDACTED]' : 'missing', 
+    name: name || 'missing',
+    role: role || 'Technician'
+  });
+  // Input validation
+  if (!email || !password || !name) {
+    logger.info('Missing fields:', { 
+      email: !!email, 
+      password: !!password, 
+      name: !!name 
+    });
+    return res.status(400).json({ error: 'All fields are required' });
+  }
+  if (!validateEmail(email)) {
+    logger.info('Invalid email format:', email);
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+  if (!validatePassword(password)) {
+    logger.info('Invalid password format');
+    return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+  }
+  try {
+    const users = await readUsersFromCSV();
+    logger.info('Loaded users:', users.map(u => ({ email: u.email, name: u.name })));
+    // Check if email already exists
+    if (users.some(u => u.email.toLowerCase().trim() === email.toLowerCase().trim())) {
+      logger.info('Email already registered:', email);
+      return res.status(400).json({ error: 'Email already registered' });
+    }
+    // Write new user to CSV (enabled true, role default Technician)
+    await writeUserToCSV(email, password, name, role || 'Technician', true);
+    logger.info('User registered successfully:', { email, name, role: role || 'Technician' });
+    res.status(201).json({ message: 'Registration successful' });
+  } catch (err) {
+    logger.error('Registration error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update profile information
+app.put('/api/profile', authenticateToken, async (req, res) => {
+  const { name, email } = req.body;
+  const currentUserEmail = req.user.email;
+
+  logger.info('--- /api/profile PUT called ---');
+  logger.info('Current user:', currentUserEmail);
+  logger.info('Request body:', { name, email });
+
+  // Input validation
+  if (!name || !email) {
+    return res.status(400).json({ error: 'Name and email are required' });
+  }
+
+  if (!validateEmail(email)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+
+  try {
+    const users = await readUsersFromCSV();
+    const currentUser = users.find(u => u.email.toLowerCase().trim() === currentUserEmail.toLowerCase().trim());
+    
+    if (!currentUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check if new email is already taken by another user
+    if (email.toLowerCase().trim() !== currentUserEmail.toLowerCase().trim()) {
+      const emailExists = users.some(u => 
+        u.email.toLowerCase().trim() === email.toLowerCase().trim() &&
+        u.email.toLowerCase().trim() !== currentUserEmail.toLowerCase().trim()
+      );
+      
+      if (emailExists) {
+        return res.status(400).json({ error: 'Email already taken by another user' });
+      }
+    }
+
+    // Update user in CSV
+    const updatedUsers = users.map(user => {
+      if (user.email.toLowerCase().trim() === currentUserEmail.toLowerCase().trim()) {
+        return { ...user, name, email };
+      }
+      return user;
+    });
+
+    // Write updated users back to CSV
+    const filePath = path.join(__dirname, 'users.csv');
+    const csvHeader = 'email,password,name,enabled,role\n';
+    const csvContent = updatedUsers.map(user => `${user.email},${user.password},${user.name},${user.enabled},${user.role}`).join('\n');
+    
+    fs.writeFileSync(filePath, csvHeader + csvContent);
+    
+    logger.info('Profile updated successfully:', { oldEmail: currentUserEmail, newEmail: email, name });
+    res.json({ message: 'Profile updated successfully' });
+  } catch (err) {
+    logger.error('Profile update error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update password
+app.put('/api/profile/password', authenticateToken, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const currentUserEmail = req.user.email;
+
+  logger.info('--- /api/profile/password PUT called ---');
+  logger.info('Current user:', currentUserEmail);
+
+  // Input validation
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Current password and new password are required' });
+  }
+
+  if (!validatePassword(newPassword)) {
+    return res.status(400).json({ error: 'New password must be at least 6 characters long' });
+  }
+
+  try {
+    const users = await readUsersFromCSV();
+    const currentUser = users.find(u => u.email.toLowerCase().trim() === currentUserEmail.toLowerCase().trim());
+    
+    if (!currentUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verify current password
+    const isValidPassword = await bcrypt.compare(currentPassword, currentUser.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    // Hash new password
+    const hashedNewPassword = bcrypt.hashSync(newPassword, SALT_ROUNDS);
+
+    // Update user password in CSV
+    const updatedUsers = users.map(user => {
+      if (user.email.toLowerCase().trim() === currentUserEmail.toLowerCase().trim()) {
+        return { ...user, password: hashedNewPassword };
+      }
+      return user;
+    });
+
+    // Write updated users back to CSV
+    const filePath = path.join(__dirname, 'users.csv');
+    const csvHeader = 'email,password,name,enabled,role\n';
+    const csvContent = updatedUsers.map(user => `${user.email},${user.password},${user.name},${user.enabled},${user.role}`).join('\n');
+    
+    fs.writeFileSync(filePath, csvHeader + csvContent);
+    
+    logger.info('Password updated successfully for user:', currentUserEmail);
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    logger.error('Password update error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete all users (admin only)
+app.delete('/api/users', authenticateToken, requireAdmin, async (req, res) => {
+  const currentUserEmail = req.user.email;
+
+  logger.info('--- /api/users DELETE called ---');
+  logger.info('Current user:', currentUserEmail);
+
+  try {
+    // Check if current user is admin (you can customize this logic)
+    const users = await readUsersFromCSV();
+    const currentUser = users.find(u => u.email.toLowerCase().trim() === currentUserEmail.toLowerCase().trim());
+    
+    if (!currentUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Optional: Add admin check here if needed
+    // if (!currentUser.isAdmin) {
+    //   return res.status(403).json({ error: 'Admin privileges required' });
+    // }
+
+    // Clear all users by writing only the header
+    const filePath = path.join(__dirname, 'users.csv');
+    const csvHeader = 'email,password,name,enabled,role\n';
+    
+    fs.writeFileSync(filePath, csvHeader);
+    
+    logger.info('All users deleted successfully by:', currentUserEmail);
+    res.json({ message: 'All users deleted successfully' });
+  } catch (err) {
+    logger.error('Delete all users error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// List all users (admin only)
+app.get('/api/users', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const users = await readUsersFromCSV();
+    res.json(users);
+  } catch (err) {
+    logger.error('Error fetching users:', err);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// Delete a user by email (admin only)
+app.delete('/api/users/:email', authenticateToken, requireAdmin, async (req, res) => {
+  const email = req.params.email.toLowerCase().trim();
+  try {
+    let users = await readUsersFromCSV();
+    const initialLength = users.length;
+    users = users.filter(u => u.email.toLowerCase().trim() !== email);
+    if (users.length === initialLength) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    // Write updated users back to CSV
+    const filePath = path.join(__dirname, 'users.csv');
+    const csvHeader = 'email,password,name,enabled,role\n';
+    const csvContent = users.map(user => `${user.email},${user.password},${user.name},${user.enabled},${user.role}`).join('\n');
+    fs.writeFileSync(filePath, csvHeader + csvContent);
+    res.json({ message: 'User deleted successfully' });
+  } catch (err) {
+    logger.error('Error deleting user:', err);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// Enable a user (admin only)
+app.put('/api/users/:email/enable', authenticateToken, requireAdmin, async (req, res) => {
+  const email = req.params.email.toLowerCase().trim();
+  try {
+    let users = await readUsersFromCSV();
+    let found = false;
+    users = users.map(u => {
+      if (u.email.toLowerCase().trim() === email) {
+        found = true;
+        return { ...u, enabled: true };
+      }
+      return u;
+    });
+    if (!found) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    // Write updated users back to CSV
+    const filePath = path.join(__dirname, 'users.csv');
+    const csvHeader = 'email,password,name,enabled,role\n';
+    const csvContent = users.map(user => `${user.email},${user.password},${user.name},${user.enabled},${user.role}`).join('\n');
+    fs.writeFileSync(filePath, csvHeader + csvContent);
+    res.json({ message: 'User enabled successfully' });
+  } catch (err) {
+    logger.error('Error enabling user:', err);
+    res.status(500).json({ error: 'Failed to enable user' });
+  }
+});
+
+// Disable a user (admin only)
+app.put('/api/users/:email/disable', authenticateToken, requireAdmin, async (req, res) => {
+  const email = req.params.email.toLowerCase().trim();
+  try {
+    let users = await readUsersFromCSV();
+    let found = false;
+    users = users.map(u => {
+      if (u.email.toLowerCase().trim() === email) {
+        found = true;
+        return { ...u, enabled: false };
+      }
+      return u;
+    });
+    if (!found) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    // Write updated users back to CSV
+    const filePath = path.join(__dirname, 'users.csv');
+    const csvHeader = 'email,password,name,enabled,role\n';
+    const csvContent = users.map(user => `${user.email},${user.password},${user.name},${user.enabled},${user.role}`).join('\n');
+    fs.writeFileSync(filePath, csvHeader + csvContent);
+    res.json({ message: 'User disabled successfully' });
+  } catch (err) {
+    logger.error('Error disabling user:', err);
+    res.status(500).json({ error: 'Failed to disable user' });
+  }
+});
+
+// Change a user's role (admin only)
+app.put('/api/users/:email/role', authenticateToken, requireAdmin, async (req, res) => {
+  const email = req.params.email.toLowerCase().trim();
+  const { role } = req.body;
+  if (!role || !['Admin', 'Technician', 'Service advisor'].includes(role)) {
+    return res.status(400).json({ error: 'Invalid role' });
+  }
+  try {
+    let users = await readUsersFromCSV();
+    let found = false;
+    users = users.map(u => {
+      if (u.email.toLowerCase().trim() === email) {
+        found = true;
+        return { ...u, role };
+      }
+      return u;
+    });
+    if (!found) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    // Write updated users back to CSV
+    const filePath = path.join(__dirname, 'users.csv');
+    const csvHeader = 'email,password,name,enabled,role\n';
+    const csvContent = users.map(user => `${user.email},${user.password},${user.name},${user.enabled},${user.role}`).join('\n');
+    fs.writeFileSync(filePath, csvHeader + csvContent);
+    res.json({ message: 'User role updated successfully' });
+  } catch (err) {
+    logger.error('Error updating user role:', err);
+    res.status(500).json({ error: 'Failed to update user role' });
+  }
+});
+
+// Get all quick checks
+app.get('/api/quick-checks', authenticateToken, (req, res) => {
+  db.all('SELECT * FROM quick_checks ORDER BY created_at DESC', [], (err, rows) => {
+    if (err) {
+      logger.error('Error fetching quick checks:', err);
+      return res.status(500).json({ error: 'Failed to fetch quick checks' });
+    }
+    res.json(rows.map(row => ({
+      ...row,
+      data: normalizePhotoFields(JSON.parse(row.data))
+    })));
+  });
+});
+
+// Get in-progress quick checks
+app.get('/api/quick-checks/in-progress', authenticateToken, (req, res) => {
+  db.all('SELECT * FROM quick_checks WHERE status = ? ORDER BY created_at DESC', ['pending'], (err, rows) => {
+    if (err) {
+      logger.error('Error fetching in-progress quick checks:', err);
+      return res.status(500).json({ error: 'Failed to fetch in-progress quick checks' });
+    }
+    res.json(rows.map(row => ({
+      ...row,
+      data: normalizePhotoFields(JSON.parse(row.data))
+    })));
+  });
+});
+
+// Get submitted (non-archived) quick checks
+app.get('/api/quick-checks/submitted', authenticateToken, (req, res) => {
+  db.all('SELECT * FROM quick_checks WHERE status = ? ORDER BY created_at DESC', ['submitted'], (err, rows) => {
+    if (err) {
+      logger.error('Error fetching submitted quick checks:', err);
+      return res.status(500).json({ error: 'Failed to fetch submitted quick checks' });
+    }
+    res.json(rows.map(row => ({
+      ...row,
+      data: normalizePhotoFields(JSON.parse(row.data))
+    })));
+  });
+});
+
+// Get archived quick checks
+app.get('/api/quick-checks/archived', authenticateToken, (req, res) => {
+  db.all('SELECT * FROM quick_checks WHERE status = ? ORDER BY archived_at DESC', ['archived'], (err, rows) => {
+    if (err) {
+      logger.error('Error fetching archived quick checks:', err);
+      return res.status(500).json({ error: 'Failed to fetch archived quick checks' });
+    }
+    res.json(rows.map(row => ({
+      ...row,
+      data: normalizePhotoFields(JSON.parse(row.data))
+    })));
+  });
+});
+
+// Legacy endpoint for backward compatibility (redirects to submitted)
+app.get('/api/quick-checks/active', authenticateToken, (req, res) => {
+  db.all('SELECT * FROM quick_checks WHERE status = ? ORDER BY created_at DESC', ['submitted'], (err, rows) => {
+    if (err) {
+      logger.error('Error fetching submitted quick checks:', err);
+      return res.status(500).json({ error: 'Failed to fetch submitted quick checks' });
+    }
+    res.json(rows.map(row => ({
+      ...row,
+      data: normalizePhotoFields(JSON.parse(row.data))
+    })));
+  });
+});
+
+// GET all draft quick checks (status = 'pending')
+app.get('/api/quick-checks/draft', authenticateToken, (req, res) => {
+  db.all(
+    "SELECT * FROM quick_checks WHERE status = 'pending' ORDER BY created_at DESC",
+    (err, rows) => {
+      if (err) {
+        logger.error('Error fetching draft quick checks:', err);
+        return res.status(500).json({ error: 'Failed to fetch draft quick checks' });
+      }
+      res.json(rows);
+    }
+  );
+});
+
+// Get a quick check by ID
+app.get('/api/quick-checks/:id', authenticateToken, (req, res) => {
+  const id = req.params.id;
+  logger.info('--- /api/quick-checks/:id GET called ---');
+  logger.info('Fetching quick check:', id);
+  
+  db.get('SELECT * FROM quick_checks WHERE id = ?', [id], (err, row) => {
+    if (err) {
+      logger.error('Error fetching quick check:', err);
+      return res.status(500).json({ error: 'Failed to fetch quick check' });
+    }
+    if (!row) {
+      return res.status(404).json({ error: 'Quick check not found' });
+    }
+    
+    try {
+      const parsedData = JSON.parse(row.data);
+      logger.info('Retrieved quick check data:', {
+        id: row.id,
+        status: row.status,
+        hasArchivedDatetime: !!parsedData.archived_datetime,
+        archivedDatetime: parsedData.archived_datetime,
+        hasCreatedDatetime: !!parsedData.created_datetime,
+        hasSubmittedDatetime: !!parsedData.submitted_datetime
+      });
+      // Calculate durations
+      let technician_duration = null;
+      let service_advisor_duration = null;
+      if (parsedData.created_datetime && parsedData.submitted_datetime) {
+        technician_duration = Math.floor((new Date(parsedData.submitted_datetime) - new Date(parsedData.created_datetime)) / 1000);
+      }
+      if (parsedData.submitted_datetime && parsedData.archived_datetime) {
+        service_advisor_duration = Math.floor((new Date(parsedData.archived_datetime) - new Date(parsedData.submitted_datetime)) / 1000);
+      }
+      res.json({
+        ...row,
+        data: normalizePhotoFields(parsedData),
+        technician_duration,
+        service_advisor_duration
+      });
+    } catch (parseErr) {
+      logger.error('Error parsing quick check data:', parseErr);
+      return res.status(500).json({ error: 'Failed to parse quick check data' });
+    }
+  });
+});
+
+// Create an in-progress quick check (draft)
+app.post('/api/quick-checks/draft', authenticateToken, async (req, res) => {
+  try {
+    const { title, data } = req.body;
+    const userEmail = req.user.email;
+    const userName = req.user.name;
+
+    logger.info('--- /api/quick-checks/draft POST called ---');
+    logger.info('Creating draft quick check for user:', { userEmail, userName });
+
+    if (!title) {
+      return res.status(400).json({ error: 'Title is required for draft' });
+    }
+
+    // For drafts, data is optional
+    let parsedData = data ? JSON.parse(data) : {};
+
+    // Log the draft creation data
+    logger.info('=== DRAFT CREATION DATA ===');
+    logger.info('Title:', title);
+    logger.info('User:', { email: userEmail, name: userName });
+    logger.info('Form data summary:', {
+      vin: parsedData.vin,
+      date: parsedData.date,
+      user: parsedData.user,
+      mileage: parsedData.mileage,
+      windshield_condition: parsedData.windshield_condition,
+      wiper_blades: parsedData.wiper_blades,
+      washer_squirters: parsedData.washer_squirters,
+      dash_lights_photos_count: parsedData.dash_lights_photos?.length || 0,
+      tpms_placard_count: parsedData.tpms_placard?.length || 0,
+      state_inspection_status: parsedData.state_inspection_status,
+      washer_fluid: parsedData.washer_fluid,
+      washer_fluid_photo_count: parsedData.washer_fluid_photo?.length || 0,
+      engine_air_filter: parsedData.engine_air_filter,
+      engine_air_filter_photo_count: parsedData.engine_air_filter_photo?.length || 0,
+      battery_condition: parsedData.battery_condition,
+      battery_photos_count: parsedData.battery_photos?.length || 0,
+      tpms_tool_photo_count: parsedData.tpms_tool_photo?.length || 0,
+      passenger_front_tire: parsedData.passenger_front_tire,
+      driver_front_tire: parsedData.driver_front_tire,
+      driver_rear_tire: parsedData.driver_rear_tire,
+      passenger_rear_tire: parsedData.passenger_rear_tire,
+      spare_tire: parsedData.spare_tire,
+      front_brakes_count: parsedData.front_brakes?.length || 0,
+      rear_brakes_count: parsedData.rear_brakes?.length || 0,
+      front_brake_pads: parsedData.front_brake_pads,
+      rear_brake_pads: parsedData.rear_brake_pads,
+      tire_photos_count: parsedData.tire_photos?.length || 0,
+      tire_repair_status: parsedData.tire_repair_status,
+      tpms_type: parsedData.tpms_type,
+      tire_rotation: parsedData.tire_rotation,
+      static_sticker: parsedData.static_sticker,
+      drain_plug_type: parsedData.drain_plug_type,
+      notes: parsedData.notes,
+      tire_repair_statuses: parsedData.tire_repair_statuses,
+      tpms_statuses: parsedData.tpms_statuses,
+      tire_comments: parsedData.tire_comments,
+      tire_dates: parsedData.tire_dates,
+      tire_tread: parsedData.tire_tread
+    });
+    logger.info('Complete draft data (JSON):', JSON.stringify(parsedData, null, 2));
+    logger.info('=== END DRAFT CREATION DATA ===');
+
+    // Create new draft with status 'pending'
+    // Server sets created_at, updated_at, and duration_seconds - doesn't trust client data
+    const stmt = db.prepare(`
+      INSERT INTO quick_checks (user_email, user_name, title, data, created_at, updated_at, status, duration_seconds, saved_at)
+      VALUES (?, ?, ?, ?, datetime('now'), datetime('now'), ?, 0, datetime('now'))
+    `);
+
+    stmt.run(
+      userEmail,
+      userName,
+      title,
+      JSON.stringify(parsedData),
+      'pending', // New status for drafts
+      function(err) {
+        if (err) {
+          logger.error('Database error creating draft quick check:', err);
+          return res.status(500).json({ error: 'Failed to create draft quick check: ' + err.message });
+        }
+        logger.info('=== DRAFT CREATION RESULT ===');
+        logger.info('Successfully created draft quick check with ID:', this.lastID);
+        logger.info('Status: pending');
+        logger.info('Duration: 0 seconds (new draft)');
+        logger.info('=== END DRAFT CREATION RESULT ===');
+        res.status(201).json({ id: this.lastID });
+      }
+    );
+  } catch (err) {
+    logger.error('Unexpected error in draft quick-checks endpoint:', err);
+    res.status(500).json({ error: 'An unexpected error occurred: ' + err.message });
+  }
+});
+
+// Update draft data for existing quick check (tab change)
+app.put('/api/quick-checks/:id/draft', authenticateToken, (req, res) => {
+  const id = req.params.id;
+  const { title, data } = req.body;
+  const userEmail = req.user.email;
+  const userName = req.user.name;
+
+  logger.info('--- /api/quick-checks/:id/draft PUT called ---');
+  logger.info('Updating draft data for quick check:', { id, userEmail, userName });
+
+  if (!data) {
+    return res.status(400).json({ error: 'Data is required for draft update' });
+  }
+
+  // Parse the data if it's a string
+  let parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
+  // Update the database with the new data, title, and set updated_at timestamp
+  // Server controls updated_at - doesn't trust client data
+  const stmt = db.prepare(`
+    UPDATE quick_checks 
+    SET data = ?, title = ?, updated_at = datetime('now'), saved_at = datetime('now')
+    WHERE id = ? AND status = ?
+  `);
+
+  stmt.run(JSON.stringify(parsedData), title || null, id, 'pending', function(err) {
+    if (err) {
+      logger.error('Database error updating draft quick check:', err);
+      return res.status(500).json({ error: 'Failed to update draft quick check: ' + err.message });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Draft not found or not in pending status' });
+    }
+    logger.info('Successfully updated draft data for quick check:', { id, title });
+    res.json({ message: 'Draft updated successfully' });
+  });
+});
+
+// Update draft data with file uploads for existing quick check
+app.put('/api/quick-checks/:id/draft/upload', authenticateToken, uploadFields, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { title, data } = req.body;
+    const userEmail = req.user.email;
+    const userName = req.user.name;
+
+    logger.info('--- /api/quick-checks/:id/draft/upload PUT called ---');
+    logger.info('Updating draft data with files for quick check:', { id, userEmail, userName });
+    logger.info('Files received:', req.files ? Object.keys(req.files).map(key => ({
+      field: key,
+      files: req.files[key].map(f => ({ filename: f.filename, size: f.size }))
+    })) : 'No files');
+
+    if (!data) {
+      return res.status(400).json({ error: 'Data is required for draft update' });
+    }
+
+    // Parse the data if it's a string
+    let parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
+    // Process uploaded files and update the data
+    if (req.files) {
+      // Process dash lights photos
+      if (req.files.dashLights) {
+        parsedData.dash_lights_photos = req.files.dashLights.map(file => ({
+          url: `/uploads/${file.filename}`,
+          filename: file.filename
+        }));
+      }
+
+      // Process TPMS placard photos
+      if (req.files.tpms_placard) {
+        parsedData.tpms_placard = req.files.tpms_placard.map(file => ({
+          url: `/uploads/${file.filename}`,
+          filename: file.filename
+        }));
+      }
+
+      // Process washer fluid photos
+      if (req.files.washer_fluid) {
+        parsedData.washer_fluid_photo = req.files.washer_fluid.map(file => ({
+          url: `/uploads/${file.filename}`,
+          filename: file.filename
+        }));
+      }
+
+      // Process engine air filter photos
+      if (req.files.engine_air_filter) {
+        parsedData.engine_air_filter_photo = req.files.engine_air_filter.map(file => ({
+          url: `/uploads/${file.filename}`,
+          filename: file.filename
+        }));
+      }
+
+      // Process battery photos
+      if (req.files.battery) {
+        parsedData.battery_photos = req.files.battery.map(file => ({
+          url: `/uploads/${file.filename}`,
+          filename: file.filename
+        }));
+      }
+
+      // Process TPMS tool photos
+      if (req.files.tpms_tool) {
+        parsedData.tpms_tool_photo = req.files.tpms_tool.map(file => ({
+          url: `/uploads/${file.filename}`,
+          filename: file.filename
+        }));
+      }
+
+      // Process front brakes photos
+      if (req.files.front_brakes) {
+        parsedData.front_brakes = req.files.front_brakes.map(file => ({
+          url: `/uploads/${file.filename}`,
+          filename: file.filename
+        }));
+      }
+
+      // Process rear brakes photos
+      if (req.files.rear_brakes) {
+        parsedData.rear_brakes = req.files.rear_brakes.map(file => ({
+          url: `/uploads/${file.filename}`,
+          filename: file.filename
+        }));
+      }
+
+      // Process tire photos
+      Object.keys(req.files).forEach(key => {
+        if (key.startsWith('tire_')) {
+          const tireType = key.replace('tire_', '');
+          if (!parsedData.tire_photos) {
+            parsedData.tire_photos = [];
+          }
+          
+          // Find existing tire photo entry or create new one
+          let tirePhotoEntry = parsedData.tire_photos.find(tp => tp.type === tireType);
+          if (!tirePhotoEntry) {
+            tirePhotoEntry = { type: tireType, photos: [] };
+            parsedData.tire_photos.push(tirePhotoEntry);
+          }
+          
+          // Add the new photos
+          req.files[key].forEach(file => {
+            tirePhotoEntry.photos.push({
+              url: `/uploads/${file.filename}`,
+              filename: file.filename
+            });
+          });
+        }
+      });
+
+      // Process tire repair images
+      Object.keys(req.files).forEach(key => {
+        if (key.startsWith('tire_repair_')) {
+          const parts = key.replace('tire_repair_', '').split('_');
+          if (parts.length >= 2) {
+            // Extract position and image type
+            const imageType = parts[parts.length - 1] === 'repairable' && parts[parts.length - 2] === 'spot' 
+              ? 'repairable_spot' 
+              : parts[parts.length - 1] === 'brand' && parts[parts.length - 2] === 'size' && parts[parts.length - 3] === 'tire'
+              ? 'tire_size_brand'
+              : parts[parts.length - 1] === 'repairable' && parts[parts.length - 2] === 'not'
+              ? 'not_repairable'
+              : null;
+            
+            if (imageType) {
+              const position = imageType === 'repairable_spot' 
+                ? parts.slice(0, -2).join('_')
+                : imageType === 'tire_size_brand'
+                ? parts.slice(0, -3).join('_')
+                : imageType === 'not_repairable'
+                ? parts.slice(0, -2).join('_')
+                : null;
+              
+              if (position) {
+                // Initialize tire_repair_images if it doesn't exist
+                if (!parsedData.tire_repair_images) {
+                  parsedData.tire_repair_images = {};
+                }
+                
+                // Initialize position if it doesn't exist
+                if (!parsedData.tire_repair_images[position]) {
+                  parsedData.tire_repair_images[position] = {
+                    not_repairable: [],
+                    tire_size_brand: [],
+                    repairable_spot: []
+                  };
+                }
+                
+                // Add the new photos
+                req.files[key].forEach(file => {
+                  parsedData.tire_repair_images[position][imageType].push({
+                    url: `/uploads/${file.filename}`,
+                    filename: file.filename
+                  });
+                });
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Update the database with the new data, title, and set updated_at timestamp
+    // Server controls updated_at - doesn't trust client data
+    const stmt = db.prepare(`
+      UPDATE quick_checks 
+      SET data = ?, title = ?, updated_at = datetime('now'), saved_at = datetime('now')
+      WHERE id = ? AND status = ?
+    `);
+
+    stmt.run(JSON.stringify(parsedData), title || null, id, 'pending', function(err) {
+      if (err) {
+        logger.error('Database error updating draft quick check with files:', err);
+        return res.status(500).json({ error: 'Failed to update draft quick check: ' + err.message });
+      }
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Draft not found or not in pending status' });
+      }
+      logger.info('Successfully updated draft data with files for quick check:', { id, title });
+      res.json({ message: 'Draft updated successfully with files' });
+    });
+  } catch (err) {
+    logger.error('Unexpected error in draft upload endpoint:', err);
+    res.status(500).json({ error: 'An unexpected error occurred: ' + err.message });
+  }
+});
+
+// Update quick check status (e.g., from pending to submitted)
+app.put('/api/quick-checks/:id/status', authenticateToken, (req, res) => {
+  const id = req.params.id;
+  const { status } = req.body;
+  const userEmail = req.user.email;
+  const userName = req.user.name;
+
+  logger.info('--- /api/quick-checks/:id/status PUT called ---');
+  logger.info('Updating quick check status:', { id, status, userEmail, userName });
+
+  if (!status || !['pending', 'submitted', 'archived'].includes(status)) {
+    return res.status(400).json({ error: 'Invalid status. Must be pending, submitted, or archived' });
+  }
+
+  let updateQuery = 'UPDATE quick_checks SET status = ?, updated_at = datetime("now") WHERE id = ?';
+  let params = [status, id];
+
+  // If setting to archived, also set archived_at and archived_by
+  if (status === 'archived') {
+    updateQuery = 'UPDATE quick_checks SET status = ?, archived_at = datetime("now"), archived_by = ?, archived_by_name = ?, updated_at = datetime("now"), submitted_to_archived_duration = CAST((julianday(datetime("now")) - julianday(updated_at)) * 24 * 3600 AS INTEGER), created_to_archived_duration = CAST((julianday(datetime("now")) - julianday(created_at)) * 24 * 3600 AS INTEGER) WHERE id = ?';
+    params = [status, userEmail, userName, id];
+  }
+
+  db.run(updateQuery, params, function(err) {
+    if (err) {
+      logger.error('Error updating quick check status:', err);
+      return res.status(500).json({ error: 'Failed to update quick check status' });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Quick check not found' });
+    }
+    logger.info('Successfully updated quick check status:', { id, status });
+    res.json({ message: 'Quick check status updated successfully' });
+  });
+});
+
+// Track tab entry (when user enters a tab)
+app.post('/api/quick-checks/:id/tab-entry', authenticateToken, (req, res) => {
+  const id = req.params.id;
+  const { tabIndex } = req.body;
+  const userEmail = req.user.email;
+
+  logger.info('--- /api/quick-checks/:id/tab-entry POST called ---');
+  logger.info('Tab entry tracking:', { id, tabIndex, userEmail });
+
+  if (tabIndex === undefined || tabIndex < 0 || tabIndex > 3) {
+    return res.status(400).json({ error: 'Invalid tab index. Must be 0-3' });
+  }
+
+  const tabColumns = [
+    'tab_info_start',
+    'tab_pulling_start', 
+    'tab_underhood_start',
+    'tab_tires_start'
+  ];
+
+  const columnName = tabColumns[tabIndex];
+  if (!columnName) {
+    return res.status(400).json({ error: 'Invalid tab index' });
+  }
+
+  // Only set the start time if it's the first time visiting this tab (start time is NULL)
+  // Allow timing tracking for both pending and submitted records
+  const updateQuery = `
+    UPDATE quick_checks 
+    SET ${columnName} = CASE 
+      WHEN ${columnName} IS NULL THEN datetime('now') 
+      ELSE ${columnName} 
+    END, 
+    updated_at = datetime('now') 
+    WHERE id = ? AND status = 'pending'
+  `;
+
+  db.run(updateQuery, [id], function(err) {
+    if (err) {
+      logger.error('Error tracking tab entry:', err);
+      return res.status(500).json({ error: 'Failed to track tab entry' });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Quick check not found or not in pending status' });
+    }
+    logger.info('Successfully tracked tab entry:', { id, tabIndex, columnName });
+    res.json({ message: 'Tab entry tracked successfully' });
+  });
+});
+
+// Track tab exit (when user leaves a tab)
+app.post('/api/quick-checks/:id/tab-exit', authenticateToken, (req, res) => {
+  const id = req.params.id;
+  const { tabIndex } = req.body;
+  const userEmail = req.user.email;
+
+  logger.info('--- /api/quick-checks/:id/tab-exit POST called ---');
+  logger.info('Tab exit tracking:', { id, tabIndex, userEmail });
+
+  if (tabIndex === undefined || tabIndex < 0 || tabIndex > 3) {
+    return res.status(400).json({ error: 'Invalid tab index. Must be 0-3' });
+  }
+
+  const tabEndColumns = [
+    'tab_info_end',
+    'tab_pulling_end', 
+    'tab_underhood_end',
+    'tab_tires_end'
+  ];
+
+  const tabDurationColumns = [
+    'tab_info_duration',
+    'tab_pulling_duration', 
+    'tab_underhood_duration',
+    'tab_tires_duration'
+  ];
+
+  const endColumnName = tabEndColumns[tabIndex];
+  const durationColumnName = tabDurationColumns[tabIndex];
+  
+  if (!endColumnName || !durationColumnName) {
+    return res.status(400).json({ error: 'Invalid tab index' });
+  }
+
+  // Calculate duration and update both end time and duration
+  const startColumnName = endColumnName.replace('_end', '_start');
+  
+  // First, get the current duration and start time to calculate the new accumulated duration
+  // Allow timing tracking for both pending and submitted records
+  const getCurrentDataQuery = `
+    SELECT ${startColumnName}, ${durationColumnName}
+    FROM quick_checks 
+    WHERE id = ? AND status IN ('pending', 'submitted')
+  `;
+
+  db.get(getCurrentDataQuery, [id], (err, row) => {
+    if (err) {
+      logger.error('Error getting current tab data:', err);
+      return res.status(500).json({ error: 'Failed to get current tab data' });
+    }
+    if (!row) {
+      return res.status(404).json({ error: 'Quick check not found or not in pending/submitted status' });
+    }
+
+    const currentStartTime = row[startColumnName];
+    const currentDuration = row[durationColumnName] || 0;
+    
+    if (!currentStartTime) {
+      logger.warn('No start time found for tab, skipping duration calculation');
+      // Just update the end time without duration calculation
+      const updateQuery = `
+        UPDATE quick_checks 
+        SET ${endColumnName} = datetime('now'), 
+            updated_at = datetime('now') 
+        WHERE id = ? AND status IN ('pending', 'submitted')
+      `;
+      
+      db.run(updateQuery, [id], function(err) {
+        if (err) {
+          logger.error('Error tracking tab exit:', err);
+          return res.status(500).json({ error: 'Failed to track tab exit' });
+        }
+        logger.info('Successfully tracked tab exit (no duration calculation):', { id, tabIndex });
+        res.json({ message: 'Tab exit tracked successfully' });
+      });
+      return;
+    }
+
+    // Calculate the duration for this session and add it to the existing duration
+    // Use a more robust calculation to prevent negative durations
+    const calculateDurationQuery = `
+      SELECT MAX(0, CAST((julianday(datetime('now')) - julianday(?)) * 24 * 3600 AS INTEGER)) as session_duration
+    `;
+
+    db.get(calculateDurationQuery, [currentStartTime], (err, durationRow) => {
+      if (err) {
+        logger.error('Error calculating session duration:', err);
+        return res.status(500).json({ error: 'Failed to calculate session duration' });
+      }
+
+      const sessionDuration = Math.max(0, durationRow.session_duration || 0);
+      const newTotalDuration = currentDuration + sessionDuration;
+
+      // Update with accumulated duration
+      const updateQuery = `
+        UPDATE quick_checks 
+        SET ${endColumnName} = datetime('now'), 
+            ${durationColumnName} = ?,
+            updated_at = datetime('now') 
+        WHERE id = ? AND status IN ('pending', 'submitted')
+      `;
+
+      db.run(updateQuery, [newTotalDuration, id], function(err) {
+        if (err) {
+          logger.error('Error tracking tab exit:', err);
+          return res.status(500).json({ error: 'Failed to track tab exit' });
+        }
+        logger.info('Successfully tracked tab exit with accumulated duration:', { 
+          id, 
+          tabIndex, 
+          sessionDuration, 
+          previousTotal: currentDuration, 
+          newTotal: newTotalDuration 
+        });
+        res.json({ 
+          message: 'Tab exit tracked successfully',
+          sessionDuration,
+          totalDuration: newTotalDuration
+        });
+      });
+    });
+  });
+});
+
+// Get timing summary for a quick check
+app.get('/api/quick-checks/:id/timing', authenticateToken, (req, res) => {
+  const id = req.params.id;
+
+  logger.info('--- /api/quick-checks/:id/timing GET called ---');
+  logger.info('Getting timing summary for quick check:', id);
+
+  const query = `
+    SELECT 
+      id,
+      created_at,
+      updated_at,
+      archived_at,
+      duration_seconds,
+      tab_info_start,
+      tab_info_end,
+      tab_info_duration,
+      tab_pulling_start,
+      tab_pulling_end,
+      tab_pulling_duration,
+      tab_underhood_start,
+      tab_underhood_end,
+      tab_underhood_duration,
+      tab_tires_start,
+      tab_tires_end,
+      tab_tires_duration,
+      submitted_to_archived_duration,
+      created_to_archived_duration,
+      status,
+      data
+    FROM quick_checks 
+    WHERE id = ?
+  `;
+
+  db.get(query, [id], (err, row) => {
+    if (err) {
+      logger.error('Error fetching timing data:', err);
+      return res.status(500).json({ error: 'Failed to fetch timing data' });
+    }
+    if (!row) {
+      return res.status(404).json({ error: 'Quick check not found' });
+    }
+
+    // Parse form data to get datetime fields
+    let parsedData = {};
+    try {
+      parsedData = JSON.parse(row.data);
+    } catch (parseErr) {
+      logger.warn('Could not parse form data for timing calculations:', parseErr);
+    }
+
+    // Get technician and service advisor durations from form data
+    let technician_duration = parsedData.technician_duration || null;
+    let service_advisor_duration = parsedData.service_advisor_duration || null;
+    
+    // Get tab timings from form data
+    let tab_timings = parsedData.tab_timings || {};
+    
+    logger.info('Retrieved durations from form data:', {
+      technician_duration,
+      service_advisor_duration,
+      hasTechnicianDuration: !!parsedData.technician_duration,
+      hasServiceAdvisorDuration: !!parsedData.service_advisor_duration,
+      tab_timings: tab_timings
+    });
+    
+    // Calculate total time from created to current status
+    const now = new Date();
+    const created = new Date(row.created_at);
+    const totalDuration = Math.floor((now.getTime() - created.getTime()) / 1000);
+
+    // Calculate current session duration for each tab if it has a start time but no end time
+    const calculateCurrentSessionDuration = (startTime, endTime, accumulatedDuration) => {
+      if (!startTime) return accumulatedDuration || 0;
+      if (endTime) return accumulatedDuration || 0; // Session is complete
+      
+      // Session is active, calculate current duration
+      const start = new Date(startTime);
+      const currentSessionDuration = Math.max(0, Math.floor((now.getTime() - start.getTime()) / 1000));
+      return (accumulatedDuration || 0) + currentSessionDuration;
+    };
+
+    const timingSummary = {
+      id: row.id,
+      status: row.status,
+      totalDuration,
+      technician_duration,
+      service_advisor_duration,
+      tab_timings_from_form: tab_timings, // Add tab timings from form data
+      tabTimings: {
+        info: {
+          start: row.tab_info_start,
+          end: row.tab_info_end,
+          duration: calculateCurrentSessionDuration(row.tab_info_start, row.tab_info_end, row.tab_info_duration),
+          isActive: row.tab_info_start && !row.tab_info_end
+        },
+        pulling: {
+          start: row.tab_pulling_start,
+          end: row.tab_pulling_end,
+          duration: calculateCurrentSessionDuration(row.tab_pulling_start, row.tab_pulling_end, row.tab_pulling_duration),
+          isActive: row.tab_pulling_start && !row.tab_pulling_end
+        },
+        underhood: {
+          start: row.tab_underhood_start,
+          end: row.tab_underhood_end,
+          duration: calculateCurrentSessionDuration(row.tab_underhood_start, row.tab_underhood_end, row.tab_underhood_duration),
+          isActive: row.tab_underhood_start && !row.tab_underhood_end
+        },
+        tires: {
+          start: row.tab_tires_start,
+          end: row.tab_tires_end,
+          duration: calculateCurrentSessionDuration(row.tab_tires_start, row.tab_tires_end, row.tab_tires_duration),
+          isActive: row.tab_tires_start && !row.tab_tires_end
+        }
+      },
+      durations: {
+        createdToSubmitted: row.duration_seconds || 0,
+        submittedToArchived: row.submitted_to_archived_duration || 0,
+        createdToArchived: row.created_to_archived_duration || 0
+      },
+      timestamps: {
+        created: row.created_at,
+        updated: row.updated_at,
+        archived: row.archived_at
+      }
+    };
+
+    logger.info('Timing summary:', timingSummary);
+    res.json(timingSummary);
+  });
+});
+
+// Delete a specific photo from a quick check
+app.delete('/api/quick-checks/:id/photos/:field/:position', authenticateToken, async (req, res) => {
+  try {
+    const { id, field, position } = req.params;
+    
+    logger.info(`--- /api/quick-checks/:id/photos/:field/:position DELETE called ---`);
+    logger.info(`Deleting photo: Quick Check ID: ${id}, Field: ${field}, Position: ${position}`);
+    
+    // Validate position is a number
+    const positionNum = parseInt(position);
+    if (isNaN(positionNum) || positionNum < 1) {
+      return res.status(400).json({ error: 'Invalid position number' });
+    }
+    
+    // Delete the photo
+    const deleted = deletePhoto(id, field, positionNum);
+    
+    if (deleted) {
+      logger.info(`Successfully deleted photo for quick check: ${id}, field: ${field}, position: ${position}`);
+      res.json({ message: 'Photo deleted successfully' });
+    } else {
+      logger.warn(`Photo not found for deletion: ${id}, field: ${field}, position: ${position}`);
+      res.status(404).json({ error: 'Photo not found' });
+    }
+  } catch (error) {
+    logger.error('Error deleting photo:', error);
+    res.status(500).json({ error: 'Failed to delete photo' });
+  }
+});
+
+// Bulk delete all drafts for the authenticated user
+app.delete('/api/quick-checks/draft/bulk', authenticateToken, (req, res) => {
+  const userEmail = req.user.email;
+  const userName = req.user.name;
+
+  logger.info('--- /api/quick-checks/draft/bulk DELETE called ---');
+  logger.info('Bulk deleting all drafts for user:', { userEmail, userName });
+
+  db.run(
+    'DELETE FROM quick_checks WHERE status = ? AND user_email = ?',
+    ['pending', userEmail],
+    function(err) {
+      if (err) {
+        logger.error('Error bulk deleting drafts:', err);
+        return res.status(500).json({ error: 'Failed to delete drafts' });
+      }
+      logger.info(`Successfully deleted ${this.changes} drafts for user:`, userEmail);
+      res.json({ 
+        success: true, 
+        message: `Successfully deleted ${this.changes} drafts`,
+        deletedCount: this.changes 
+      });
+    }
+  );
+});
+
+// Create a new quick check (submit)
+app.post('/api/quick-checks', authenticateToken, uploadFields, async (req, res) => {
+  try {
+    const { title, data, draftId } = req.body;
+    const userEmail = req.user.email;
+    const userName = req.user.name;
+
+    logger.info('--- /api/quick-checks POST called ---');
+    logger.info('Authenticated user:', { userEmail, userName });
+    logger.info('Request body:', { title, data: data ? '[REDACTED]' : undefined, draftId });
+    logger.info('Files received:', req.files ? Object.keys(req.files).map(key => ({
+      field: key,
+      files: req.files[key].map(f => ({ filename: f.filename, size: f.size }))
+    })) : 'No files');
+
+    if (!title || !data) {
+      logger.error('Missing required fields:', { title: !!title, data: !!data });
+      return res.status(400).json({ error: 'Title and data are required' });
+    }
+
+    // Handle file uploads if any
+    let parsedData;
+    try {
+      parsedData = JSON.parse(data);
+      logger.info('Successfully parsed form data');
+      
+      // Add file URLs to the parsed data
+      if (req.files) {
+        Object.keys(req.files).forEach(field => {
+          const files = req.files[field];
+          const urls = files.map(file => `/uploads/${file.filename}`);
+          
+          // Map the field names to the data structure
+          switch (field) {
+            case 'dashLights':
+              parsedData.dash_lights_photos = urls;
+              break;
+            case 'tpms_placard':
+              parsedData.tpms_placard = urls;
+              break;
+            case 'washer_fluid':
+              parsedData.washer_fluid_photo = urls;
+              break;
+            case 'engine_air_filter':
+              parsedData.engine_air_filter_photo = urls;
+              break;
+            case 'battery':
+              parsedData.battery_photos = urls;
+              break;
+            case 'tpms_tool':
+              parsedData.tpms_tool_photo = urls;
+              break;
+            case 'front_brakes':
+              parsedData.front_brakes = urls;
+              break;
+            case 'rear_brakes':
+              parsedData.rear_brakes = urls;
+              break;
+            default:
+              if (field.startsWith('tire_')) {
+                const tireType = field.replace('tire_', '');
+                const tirePhoto = parsedData.tire_photos.find(tp => tp.type === tireType);
+                if (tirePhoto) {
+                  tirePhoto.photos = urls;
+                }
+              }
+          }
+        });
+      }
+      
+      logger.info('Form data structure:', {
+        hasDashLightsPhotos: !!parsedData.dash_lights_photos,
+        hasTpmsPlacard: !!parsedData.tpms_placard,
+        hasWasherFluidPhoto: !!parsedData.washer_fluid_photo,
+        hasEngineAirFilterPhoto: !!parsedData.engine_air_filter_photo,
+        hasBatteryPhotos: !!parsedData.battery_photos,
+        hasTpmsToolPhoto: !!parsedData.tpms_tool_photo,
+        hasFrontBrakes: !!parsedData.front_brakes,
+        hasRearBrakes: !!parsedData.rear_brakes,
+        hasTirePhotos: !!parsedData.tire_photos
+      });
+    } catch (err) {
+      logger.error('Failed to parse form data:', err);
+      logger.error('Raw data:', data);
+      return res.status(400).json({ error: 'Invalid data format' });
+    }
+
+    // If this is a draft submission, update the existing draft
+    if (draftId && draftId !== 'draft') {
+      logger.info('Submitting existing draft. Draft ID:', draftId);
+      
+      try {
+        // Rename the files on disk if any new files were uploaded
+        if (req.files && Object.keys(req.files).length > 0) {
+          logger.info('Renaming draft files from draft ID:', draftId, 'to final ID:', draftId);
+          const renamedFiles = renameDraftFiles(draftId, draftId);
+          logger.info('Renamed files:', renamedFiles);
+          
+          // Update the URLs in the data to reflect the new file names
+          parsedData = updateFileUrlsInData(parsedData, draftId, draftId);
+        }
+        
+        // Log the complete submitted data
+        logger.info('=== COMPLETE SUBMITTED DATA ===');
+        logger.info('Title:', title);
+        logger.info('User:', { email: userEmail, name: userName });
+        logger.info('Draft ID:', draftId);
+        logger.info('Files uploaded:', req.files ? Object.keys(req.files).map(key => ({
+          field: key,
+          count: req.files[key].length,
+          files: req.files[key].map(f => ({ filename: f.filename, size: f.size, mimetype: f.mimetype }))
+        })) : 'No files');
+        logger.info('Form data summary:', {
+          vin: parsedData.vin,
+          date: parsedData.date,
+          user: parsedData.user,
+          mileage: parsedData.mileage,
+          windshield_condition: parsedData.windshield_condition,
+          wiper_blades: parsedData.wiper_blades,
+          washer_squirters: parsedData.washer_squirters,
+          dash_lights_photos_count: parsedData.dash_lights_photos?.length || 0,
+          tpms_placard_count: parsedData.tpms_placard?.length || 0,
+          state_inspection_status: parsedData.state_inspection_status,
+          washer_fluid: parsedData.washer_fluid,
+          washer_fluid_photo_count: parsedData.washer_fluid_photo?.length || 0,
+          engine_air_filter: parsedData.engine_air_filter,
+          engine_air_filter_photo_count: parsedData.engine_air_filter_photo?.length || 0,
+          battery_condition: parsedData.battery_condition,
+          battery_photos_count: parsedData.battery_photos?.length || 0,
+          tpms_tool_photo_count: parsedData.tpms_tool_photo?.length || 0,
+          passenger_front_tire: parsedData.passenger_front_tire,
+          driver_front_tire: parsedData.driver_front_tire,
+          driver_rear_tire: parsedData.driver_rear_tire,
+          passenger_rear_tire: parsedData.passenger_rear_tire,
+          spare_tire: parsedData.spare_tire,
+          front_brakes_count: parsedData.front_brakes?.length || 0,
+          rear_brakes_count: parsedData.rear_brakes?.length || 0,
+          front_brake_pads: parsedData.front_brake_pads,
+          rear_brake_pads: parsedData.rear_brake_pads,
+          tire_photos_count: parsedData.tire_photos?.length || 0,
+          tire_repair_status: parsedData.tire_repair_status,
+          tpms_type: parsedData.tpms_type,
+          tire_rotation: parsedData.tire_rotation,
+          static_sticker: parsedData.static_sticker,
+          drain_plug_type: parsedData.drain_plug_type,
+          notes: parsedData.notes,
+          tire_repair_statuses: parsedData.tire_repair_statuses,
+          tpms_statuses: parsedData.tpms_statuses,
+          tire_comments: parsedData.tire_comments,
+          tire_dates: parsedData.tire_dates,
+          tire_tread: parsedData.tire_tread
+        });
+        logger.info('Complete form data (JSON):', JSON.stringify(parsedData, null, 2));
+        logger.info('=== END SUBMITTED DATA ===');
+        
+        // Update the existing draft record to submitted status with calculated duration
+        // Server calculates all timing values - doesn't trust client data
+        db.run(
+          `UPDATE quick_checks 
+           SET title = ?, data = ?, status = ?, 
+               updated_at = CASE 
+                 WHEN CAST((julianday(datetime("now")) - julianday(created_at)) * 24 * 3600 AS INTEGER) = 0 
+                 THEN datetime(created_at, '+1 second')
+                 ELSE datetime("now")
+               END,
+               duration_seconds = CASE 
+                 WHEN CAST((julianday(datetime("now")) - julianday(created_at)) * 24 * 3600 AS INTEGER) = 0 
+                 THEN 1 
+                 ELSE CAST((julianday(datetime("now")) - julianday(created_at)) * 24 * 3600 AS INTEGER) 
+               END
+           WHERE id = ? AND status = ?`,
+          [title, JSON.stringify(parsedData), 'submitted', draftId, 'pending'],
+          function(err) {
+            if (err) {
+              logger.error('Error updating draft to submitted:', err);
+              return res.status(500).json({ error: 'Failed to submit draft: ' + err.message });
+            }
+            if (this.changes === 0) {
+              return res.status(404).json({ error: 'Draft not found or not in pending status' });
+            }
+            
+            // Calculate and store technician_duration in form data
+            if (parsedData.created_datetime && !parsedData.submitted_datetime) {
+              parsedData.submitted_datetime = new Date().toISOString();
+            }
+            
+            if (parsedData.created_datetime && parsedData.submitted_datetime) {
+              parsedData.technician_duration = Math.floor((new Date(parsedData.submitted_datetime) - new Date(parsedData.created_datetime)) / 1000);
+              logger.info('Calculated and stored technician_duration:', parsedData.technician_duration);
+              
+              // Update the form data with the calculated duration
+              db.run(
+                'UPDATE quick_checks SET data = ? WHERE id = ?',
+                [JSON.stringify(parsedData), draftId],
+                function(updateErr) {
+                  if (updateErr) {
+                    logger.error('Error updating form data with technician_duration:', updateErr);
+                  } else {
+                    logger.info('Successfully updated form data with technician_duration');
+                  }
+                }
+              );
+            }
+            
+            // Log the final result with duration
+            logger.info('=== SUBMISSION RESULT ===');
+            logger.info('Successfully updated draft to submitted status');
+            logger.info('Final ID:', draftId);
+            logger.info('Duration calculation applied');
+            logger.info('Technician duration calculated:', parsedData.technician_duration);
+            logger.info('=== END SUBMISSION RESULT ===');
+            
+            res.json({ id: parseInt(draftId) });
+          }
+        );
+        
+      } catch (renameErr) {
+        logger.error('Error during draft file renaming:', renameErr);
+        return res.status(500).json({ error: 'Failed to process draft submission' });
+      }
+    } else {
+      // This is a new quick check (not a draft submission)
+      logger.info('Creating new quick check (not a draft submission)');
+      
+      // Log the complete submitted data for new quick checks
+      logger.info('=== COMPLETE NEW QUICK CHECK DATA ===');
+      logger.info('Title:', title);
+      logger.info('User:', { email: userEmail, name: userName });
+      logger.info('Files uploaded:', req.files ? Object.keys(req.files).map(key => ({
+        field: key,
+        count: req.files[key].length,
+        files: req.files[key].map(f => ({ filename: f.filename, size: f.size, mimetype: f.mimetype }))
+      })) : 'No files');
+      logger.info('Form data summary:', {
+        vin: parsedData.vin,
+        date: parsedData.date,
+        user: parsedData.user,
+        mileage: parsedData.mileage,
+        windshield_condition: parsedData.windshield_condition,
+        wiper_blades: parsedData.wiper_blades,
+        washer_squirters: parsedData.washer_squirters,
+        dash_lights_photos_count: parsedData.dash_lights_photos?.length || 0,
+        tpms_placard_count: parsedData.tpms_placard?.length || 0,
+        state_inspection_status: parsedData.state_inspection_status,
+        washer_fluid: parsedData.washer_fluid,
+        washer_fluid_photo_count: parsedData.washer_fluid_photo?.length || 0,
+        engine_air_filter: parsedData.engine_air_filter,
+        engine_air_filter_photo_count: parsedData.engine_air_filter_photo?.length || 0,
+        battery_condition: parsedData.battery_condition,
+        battery_photos_count: parsedData.battery_photos?.length || 0,
+        tpms_tool_photo_count: parsedData.tpms_tool_photo?.length || 0,
+        passenger_front_tire: parsedData.passenger_front_tire,
+        driver_front_tire: parsedData.driver_front_tire,
+        driver_rear_tire: parsedData.driver_rear_tire,
+        passenger_rear_tire: parsedData.passenger_rear_tire,
+        spare_tire: parsedData.spare_tire,
+        front_brakes_count: parsedData.front_brakes?.length || 0,
+        rear_brakes_count: parsedData.rear_brakes?.length || 0,
+        front_brake_pads: parsedData.front_brake_pads,
+        rear_brake_pads: parsedData.rear_brake_pads,
+        tire_photos_count: parsedData.tire_photos?.length || 0,
+        tire_repair_status: parsedData.tire_repair_status,
+        tpms_type: parsedData.tpms_type,
+        tire_rotation: parsedData.tire_rotation,
+        static_sticker: parsedData.static_sticker,
+        drain_plug_type: parsedData.drain_plug_type,
+        notes: parsedData.notes,
+        tire_repair_statuses: parsedData.tire_repair_statuses,
+        tpms_statuses: parsedData.tpms_statuses,
+        tire_comments: parsedData.tire_comments,
+        tire_dates: parsedData.tire_dates,
+        tire_tread: parsedData.tire_tread
+      });
+      logger.info('Complete form data (JSON):', JSON.stringify(parsedData, null, 2));
+      logger.info('=== END NEW QUICK CHECK DATA ===');
+      
+      // Create new quick check with server-calculated timing
+      // Server sets created_at, updated_at, and duration_seconds - doesn't trust client data
+      const stmt = db.prepare(`
+        INSERT INTO quick_checks (user_email, user_name, title, data, created_at, updated_at, status, duration_seconds, saved_at)
+        VALUES (?, ?, ?, ?, datetime('now'), datetime('now'), ?, 0, datetime('now'))
+      `);
+
+      stmt.run(
+        userEmail,
+        userName,
+        title,
+        JSON.stringify(parsedData),
+        'submitted', // Default to submitted status
+        function(err) {
+          if (err) {
+            logger.error('Database error creating quick check:', err);
+            logger.error('Error details:', {
+              code: err.code,
+              message: err.message,
+              stack: err.stack
+            });
+            return res.status(500).json({ error: 'Failed to create quick check: ' + err.message });
+          }
+          
+          const finalId = this.lastID;
+          
+          // Calculate and store technician_duration in form data
+          if (parsedData.created_datetime && !parsedData.submitted_datetime) {
+            parsedData.submitted_datetime = new Date().toISOString();
+          }
+          
+          if (parsedData.created_datetime && parsedData.submitted_datetime) {
+            parsedData.technician_duration = Math.floor((new Date(parsedData.submitted_datetime) - new Date(parsedData.created_datetime)) / 1000);
+            logger.info('Calculated and stored technician_duration:', parsedData.technician_duration);
+            
+            // Update the form data with the calculated duration
+            db.run(
+              'UPDATE quick_checks SET data = ? WHERE id = ?',
+              [JSON.stringify(parsedData), finalId],
+              function(updateErr) {
+                if (updateErr) {
+                  logger.error('Error updating form data with technician_duration:', updateErr);
+                } else {
+                  logger.info('Successfully updated form data with technician_duration');
+                }
+              }
+            );
+          }
+          
+          logger.info('=== NEW QUICK CHECK RESULT ===');
+          logger.info('Successfully created quick check with ID:', finalId);
+          logger.info('Duration: 0 seconds (new quick check)');
+          logger.info('Technician duration calculated:', parsedData.technician_duration);
+          logger.info('=== END NEW QUICK CHECK RESULT ===');
+          res.status(201).json({ id: finalId });
+        }
+      );
+    }
+  } catch (err) {
+    logger.error('Unexpected error in quick-checks endpoint:', err);
+    logger.error('Error details:', {
+      code: err.code,
+      message: err.message,
+      stack: err.stack
+    });
+    res.status(500).json({ error: 'An unexpected error occurred: ' + err.message });
+  }
+});
+
+// Delete a quick check by ID
+app.delete('/api/quick-checks/:id', authenticateToken, (req, res) => {
+  const id = req.params.id;
+  db.run('DELETE FROM quick_checks WHERE id = ?', [id], function(err) {
+    if (err) {
+      logger.error('Error deleting quick check:', err);
+      return res.status(500).json({ error: 'Failed to delete quick check' });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Quick check not found' });
+    }
+    res.json({ success: true });
+  });
+});
+
+// Archive a quick check
+app.put('/api/quick-checks/:id/archive', authenticateToken, (req, res) => {
+  const id = req.params.id;
+  const userEmail = req.user.email;
+  const userName = req.user.name;
+
+  logger.info('--- /api/quick-checks/:id/archive PUT called ---');
+  logger.info('Archiving quick check:', { id, userEmail, userName });
+
+  // First, get the current form data to update the archived_datetime field
+  db.get('SELECT data FROM quick_checks WHERE id = ?', [id], (err, row) => {
+    if (err) {
+      logger.error('Error fetching quick check data:', err);
+      return res.status(500).json({ error: 'Failed to fetch quick check data' });
+    }
+    if (!row) {
+      return res.status(404).json({ error: 'Quick check not found' });
+    }
+
+    try {
+      // Parse the current form data
+      const currentData = JSON.parse(row.data);
+      logger.info('Current form data before update:', {
+        hasArchivedDatetime: !!currentData.archived_datetime,
+        archivedDatetime: currentData.archived_datetime,
+        hasCreatedDatetime: !!currentData.created_datetime,
+        hasSubmittedDatetime: !!currentData.submitted_datetime
+      });
+      
+      // Update the archived_datetime field with current timestamp
+      const newArchivedDatetime = new Date().toISOString();
+      currentData.archived_datetime = newArchivedDatetime;
+      
+      // Calculate and store technician and service advisor durations in form data
+      if (currentData.created_datetime && currentData.submitted_datetime) {
+        currentData.technician_duration = Math.floor((new Date(currentData.submitted_datetime) - new Date(currentData.created_datetime)) / 1000);
+        logger.info('Calculated technician_duration:', currentData.technician_duration);
+      }
+      
+      if (currentData.submitted_datetime && newArchivedDatetime) {
+        currentData.service_advisor_duration = Math.floor((new Date(newArchivedDatetime) - new Date(currentData.submitted_datetime)) / 1000);
+        logger.info('Calculated service_advisor_duration:', currentData.service_advisor_duration);
+      }
+      
+      logger.info('Updated form data with durations:', {
+        newArchivedDatetime,
+        hasArchivedDatetime: !!currentData.archived_datetime,
+        technician_duration: currentData.technician_duration,
+        service_advisor_duration: currentData.service_advisor_duration
+      });
+      
+      // Update the quick check with new data and archive status
+      db.run(
+        'UPDATE quick_checks SET status = ?, archived_at = datetime("now"), archived_by = ?, archived_by_name = ?, data = ? WHERE id = ?',
+        ['archived', userEmail, userName, JSON.stringify(currentData), id],
+        function(err) {
+          if (err) {
+            logger.error('Error archiving quick check:', err);
+            return res.status(500).json({ error: 'Failed to archive quick check' });
+          }
+          if (this.changes === 0) {
+            return res.status(404).json({ error: 'Quick check not found' });
+          }
+          logger.info('Successfully archived quick check:', id);
+          logger.info('Updated form data with archived_datetime and durations:', {
+            archived_datetime: newArchivedDatetime,
+            technician_duration: currentData.technician_duration,
+            service_advisor_duration: currentData.service_advisor_duration
+          });
+          res.json({ message: 'Quick check archived successfully' });
+        }
+      );
+    } catch (parseErr) {
+      logger.error('Error parsing quick check data:', parseErr);
+      return res.status(500).json({ error: 'Failed to parse quick check data' });
+    }
+  });
+});
+
+// Reset and recalculate timing for a quick check
+app.post('/api/quick-checks/:id/reset-timing', authenticateToken, (req, res) => {
+  const id = req.params.id;
+  const userEmail = req.user.email;
+
+  logger.info('--- /api/quick-checks/:id/reset-timing POST called ---');
+  logger.info('Resetting timing for quick check:', { id, userEmail });
+
+  // Reset all timing fields to NULL/0
+  const resetQuery = `
+    UPDATE quick_checks 
+    SET tab_info_start = NULL,
+        tab_info_end = NULL,
+        tab_info_duration = 0,
+        tab_pulling_start = NULL,
+        tab_pulling_end = NULL,
+        tab_pulling_duration = 0,
+        tab_underhood_start = NULL,
+        tab_underhood_end = NULL,
+        tab_underhood_duration = 0,
+        tab_tires_start = NULL,
+        tab_tires_end = NULL,
+        tab_tires_duration = 0,
+        updated_at = datetime('now')
+    WHERE id = ? AND status IN ('pending', 'submitted')
+  `;
+
+  db.run(resetQuery, [id], function(err) {
+    if (err) {
+      logger.error('Error resetting timing:', err);
+      return res.status(500).json({ error: 'Failed to reset timing' });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Quick check not found or not in pending/submitted status' });
+    }
+    logger.info('Successfully reset timing for quick check:', id);
+    res.json({ message: 'Timing reset successfully' });
+  });
+});
+
+// === Start server ===
+server.listen(port, '0.0.0.0', () => {
+  logger.info(`✅ Backend running at:`);
+  logger.info(`   Local:   http://localhost:${port}`);
+  logger.info(`   Network: http://${getLocalIP()}:${port}`);
+});
+
+// === Chat Functionality ===
+
+// Initialize chat tables if they don't exist
+const initializeChatTables = () => {
+  try {
+    // Drop existing chat tables to recreate with new schema
+    db.exec(`DROP TABLE IF EXISTS chat_messages`);
+    db.exec(`DROP TABLE IF EXISTS chat_rooms`);
+
+    // Direct messages table - user to user conversations
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS chat_conversations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user1_email VARCHAR(255) NOT NULL,
+        user1_name VARCHAR(255) NOT NULL,
+        user2_email VARCHAR(255) NOT NULL,
+        user2_name VARCHAR(255) NOT NULL,
+        last_message_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user1_email, user2_email)
+      )
+    `);
+
+    // Chat messages table for direct messages
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        conversation_id INTEGER NOT NULL,
+        sender_email VARCHAR(255) NOT NULL,
+        sender_name VARCHAR(255) NOT NULL,
+        receiver_email VARCHAR(255) NOT NULL,
+        receiver_name VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        message_type TEXT DEFAULT 'text' CHECK (message_type IN ('text', 'system')),
+        is_read BOOLEAN DEFAULT FALSE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id) ON DELETE CASCADE
+      )
+    `);
+
+    logger.info('Direct messaging chat tables initialized successfully');
+  } catch (error) {
+    logger.error('Error initializing chat tables:', error);
+  }
+};
+
+// Call initialization function
+initializeChatTables();
+
+// === Chat API Endpoints ===
+
+// Get all conversations for the current user
+app.get('/api/chat/conversations', authenticateToken, (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const userRole = req.user.role;
+    
+    // Get conversations where the user is either user1 or user2
+    const query = `
+      SELECT 
+        c.*,
+        CASE 
+          WHEN c.user1_email = ? THEN c.user2_email 
+          ELSE c.user1_email 
+        END as other_user_email,
+        CASE 
+          WHEN c.user1_email = ? THEN c.user2_name 
+          ELSE c.user1_name 
+        END as other_user_name,
+        (SELECT COUNT(*) FROM chat_messages cm WHERE cm.conversation_id = c.id) as message_count,
+        (SELECT COUNT(*) FROM chat_messages cm WHERE cm.conversation_id = c.id AND cm.receiver_email = ? AND cm.is_read = 0) as unread_count,
+        (SELECT message FROM chat_messages cm WHERE cm.conversation_id = c.id ORDER BY cm.created_at DESC LIMIT 1) as last_message
+      FROM chat_conversations c
+      WHERE c.user1_email = ? OR c.user2_email = ?
+      ORDER BY c.last_message_at DESC
+    `;
+
+    db.all(query, [userEmail, userEmail, userEmail, userEmail, userEmail], (err, rows) => {
+      if (err) {
+        logger.error('Error fetching conversations:', err);
+        return res.status(500).json({ error: 'Failed to fetch conversations' });
+      }
+      res.json(rows || []);
+    });
+  } catch (error) {
+    logger.error('Error fetching conversations:', error);
+    res.status(500).json({ error: 'Failed to fetch conversations' });
+  }
+});
+
+// Get all available users for starting conversations
+app.get('/api/chat/users', authenticateToken, async (req, res) => {
+  try {
+    const currentUserEmail = req.user.email;
+    const currentUserRole = req.user.role;
+    
+    // Use the same data source as the users list page
+    const allUsers = await readUsersFromCSV();
+    
+    let filteredUsers;
+    if (currentUserRole === 'Technician') {
+      // Technicians can only message Service Writers
+      filteredUsers = allUsers.filter(user => 
+        user.role === 'Service advisor' && 
+        user.email !== currentUserEmail &&
+        user.enabled
+      );
+    } else if (currentUserRole === 'Service advisor') {
+      // Service Writers can message anyone
+      filteredUsers = allUsers.filter(user => 
+        user.email !== currentUserEmail &&
+        user.enabled
+      );
+    } else {
+      // Admins can message anyone  
+      filteredUsers = allUsers.filter(user => 
+        user.email !== currentUserEmail &&
+        user.enabled
+      );
+    }
+
+    // Format the response to match the same structure as the users list page
+    const chatUsers = filteredUsers.map(user => ({
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      enabled: user.enabled
+    }));
+
+    logger.info(`Chat users fetched for ${currentUserRole} ${currentUserEmail}: ${chatUsers.length} users available`);
+    res.json(chatUsers);
+  } catch (error) {
+    logger.error('Error fetching chat users:', error);
+    res.status(500).json({ error: 'Failed to fetch chat users' });
+  }
+});
+
+// Get or create a conversation between two users
+app.post('/api/chat/conversations', authenticateToken, async (req, res) => {
+  try {
+    const { otherUserEmail } = req.body;
+    const currentUserEmail = req.user.email;
+    const currentUserName = req.user.name;
+    const currentUserRole = req.user.role;
+
+    if (!otherUserEmail) {
+      return res.status(400).json({ error: 'Other user email is required' });
+    }
+
+    if (otherUserEmail === currentUserEmail) {
+      return res.status(400).json({ error: 'Cannot start conversation with yourself' });
+    }
+
+    // Get the other user's details from CSV
+    const allUsers = await readUsersFromCSV();
+    const otherUser = allUsers.find(user => user.email === otherUserEmail && user.enabled);
+    
+    if (!otherUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check permissions
+    if (currentUserRole === 'Technician' && otherUser.role !== 'Service advisor') {
+      return res.status(403).json({ error: 'Technicians can only message Service Writers' });
+    }
+
+    // Create conversation key (always put emails in alphabetical order for consistency)
+    const [user1Email, user1Name] = currentUserEmail < otherUserEmail 
+      ? [currentUserEmail, currentUserName]
+      : [otherUserEmail, otherUser.name];
+    const [user2Email, user2Name] = currentUserEmail < otherUserEmail 
+      ? [otherUserEmail, otherUser.name]
+      : [currentUserEmail, currentUserName];
+
+    // Check if conversation already exists
+    const checkConversationQuery = `
+      SELECT * FROM chat_conversations 
+      WHERE user1_email = ? AND user2_email = ?
+    `;
+
+    db.get(checkConversationQuery, [user1Email, user2Email], (err, conversation) => {
+      if (err) {
+        logger.error('Error checking existing conversation:', err);
+        return res.status(500).json({ error: 'Failed to check existing conversation' });
+      }
+
+      if (conversation) {
+        // Add the other user info for the response
+        conversation.other_user_email = otherUserEmail;
+        conversation.other_user_name = otherUser.name;
+        conversation.message_count = 0;
+        conversation.unread_count = 0;
+
+        logger.info(`Existing conversation found between ${currentUserName} and ${otherUser.name}`);
+        return res.json(conversation);
+      }
+
+      // Create new conversation
+      const createConversationQuery = `
+        INSERT INTO chat_conversations (user1_email, user1_name, user2_email, user2_name)
+        VALUES (?, ?, ?, ?)
+      `;
+
+      db.run(createConversationQuery, [user1Email, user1Name, user2Email, user2Name], function(insertErr) {
+        if (insertErr) {
+          logger.error('Error creating conversation:', insertErr);
+          return res.status(500).json({ error: 'Failed to create conversation' });
+        }
+
+        const getNewConversationQuery = 'SELECT * FROM chat_conversations WHERE id = ?';
+        
+        db.get(getNewConversationQuery, [this.lastID], (getErr, newConversation) => {
+          if (getErr) {
+            logger.error('Error fetching new conversation:', getErr);
+            return res.status(500).json({ error: 'Failed to fetch new conversation' });
+          }
+
+          // Add the other user info for the response
+          newConversation.other_user_email = otherUserEmail;
+          newConversation.other_user_name = otherUser.name;
+          newConversation.message_count = 0;
+          newConversation.unread_count = 0;
+
+          logger.info(`New conversation created between ${currentUserName} and ${otherUser.name}`);
+          res.json(newConversation);
+        });
+      });
+    });
+  } catch (error) {
+    logger.error('Error creating conversation:', error);
+    res.status(500).json({ error: 'Failed to create conversation' });
+  }
+});
+
+// Get messages for a specific conversation
+app.get('/api/chat/conversations/:conversationId/messages', authenticateToken, (req, res) => {
+  try {
+    const conversationId = parseInt(req.params.conversationId);
+    const userEmail = req.user.email;
+
+    // Check if user is part of this conversation
+    const checkConversationQuery = `
+      SELECT * FROM chat_conversations 
+      WHERE id = ? AND (user1_email = ? OR user2_email = ?)
+    `;
+
+    db.get(checkConversationQuery, [conversationId, userEmail, userEmail], (err, conversation) => {
+      if (err) {
+        logger.error('Error checking conversation access:', err);
+        return res.status(500).json({ error: 'Failed to check conversation access' });
+      }
+
+      if (!conversation) {
+        return res.status(404).json({ error: 'Conversation not found or access denied' });
+      }
+
+      const messagesQuery = `
+        SELECT * FROM chat_messages 
+        WHERE conversation_id = ? 
+        ORDER BY created_at ASC
+      `;
+
+      db.all(messagesQuery, [conversationId], (err, messages) => {
+        if (err) {
+          logger.error('Error fetching messages:', err);
+          return res.status(500).json({ error: 'Failed to fetch messages' });
+        }
+
+        // Mark messages as read for the current user
+        const markReadQuery = `
+          UPDATE chat_messages 
+          SET is_read = 1 
+          WHERE conversation_id = ? AND receiver_email = ?
+        `;
+
+        db.run(markReadQuery, [conversationId, userEmail], (markReadErr) => {
+          if (markReadErr) {
+            logger.warn('Error marking messages as read:', markReadErr);
+          }
+        });
+
+        res.json(messages || []);
+      });
+    });
+  } catch (error) {
+    logger.error('Error fetching messages:', error);
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
+
+// Send a message in a conversation
+app.post('/api/chat/conversations/:conversationId/messages', authenticateToken, (req, res) => {
+  try {
+    const conversationId = parseInt(req.params.conversationId);
+    const { message } = req.body;
+    const senderEmail = req.user.email;
+    const senderName = req.user.name;
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Message content is required' });
+    }
+
+    // Check if user is part of this conversation
+    const checkConversationQuery = `
+      SELECT * FROM chat_conversations 
+      WHERE id = ? AND (user1_email = ? OR user2_email = ?)
+    `;
+
+    db.get(checkConversationQuery, [conversationId, senderEmail, senderEmail], (err, conversation) => {
+      if (err) {
+        logger.error('Error checking conversation access:', err);
+        return res.status(500).json({ error: 'Failed to check conversation access' });
+      }
+
+      if (!conversation) {
+        return res.status(404).json({ error: 'Conversation not found or access denied' });
+      }
+
+      // Determine receiver
+      const receiverEmail = conversation.user1_email === senderEmail 
+        ? conversation.user2_email 
+        : conversation.user1_email;
+      const receiverName = conversation.user1_email === senderEmail 
+        ? conversation.user2_name 
+        : conversation.user1_name;
+
+      // Insert the message
+      const insertMessageQuery = `
+        INSERT INTO chat_messages (conversation_id, sender_email, sender_name, receiver_email, receiver_name, message)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `;
+
+      db.run(insertMessageQuery, [conversationId, senderEmail, senderName, receiverEmail, receiverName, message.trim()], function(insertErr) {
+        if (insertErr) {
+          logger.error('Error inserting message:', insertErr);
+          return res.status(500).json({ error: 'Failed to send message' });
+        }
+
+        // Update conversation's last_message_at timestamp
+        const updateConversationQuery = `
+          UPDATE chat_conversations SET last_message_at = CURRENT_TIMESTAMP WHERE id = ?
+        `;
+
+        db.run(updateConversationQuery, [conversationId], (updateErr) => {
+          if (updateErr) {
+            logger.warn('Error updating conversation timestamp:', updateErr);
+          }
+        });
+
+        // Get the inserted message
+        const getMessageQuery = `
+          SELECT * FROM chat_messages WHERE id = ?
+        `;
+
+        db.get(getMessageQuery, [this.lastID], (getErr, newMessage) => {
+          if (getErr) {
+            logger.error('Error fetching new message:', getErr);
+            return res.status(500).json({ error: 'Failed to fetch new message' });
+          }
+
+          logger.info(`New message sent from ${senderName} to ${receiverName}`);
+          res.status(201).json(newMessage);
+        });
+      });
+    });
+  } catch (error) {
+    logger.error('Error sending message:', error);
+    res.status(500).json({ error: 'Failed to send message' });
+  }
+});
+
+// Delete a message (only by the sender)
+app.delete('/api/chat/messages/:messageId', authenticateToken, (req, res) => {
+  try {
+    const messageId = parseInt(req.params.messageId);
+    const userEmail = req.user.email;
+
+    if (!messageId) {
+      return res.status(400).json({ error: 'Message ID is required' });
+    }
+
+    // Check if the message exists and belongs to the user
+    const checkMessageQuery = `
+      SELECT * FROM chat_messages WHERE id = ? AND sender_email = ?
+    `;
+
+    db.get(checkMessageQuery, [messageId, userEmail], (err, message) => {
+      if (err) {
+        logger.error('Error checking message ownership:', err);
+        return res.status(500).json({ error: 'Failed to check message ownership' });
+      }
+
+      if (!message) {
+        return res.status(404).json({ error: 'Message not found or you do not have permission to delete it' });
+      }
+
+      // Delete the message
+      const deleteMessageQuery = `DELETE FROM chat_messages WHERE id = ?`;
+
+      db.run(deleteMessageQuery, [messageId], function(deleteErr) {
+        if (deleteErr) {
+          logger.error('Error deleting message:', deleteErr);
+          return res.status(500).json({ error: 'Failed to delete message' });
+        }
+
+        if (this.changes === 0) {
+          return res.status(404).json({ error: 'Message not found' });
+        }
+
+        logger.info(`Message ${messageId} deleted by ${userEmail}`);
+        res.json({ message: 'Message deleted successfully' });
+      });
+    });
+  } catch (error) {
+    logger.error('Error deleting message:', error);
+    res.status(500).json({ error: 'Failed to delete message' });
+  }
+});
+
+// Delete an entire conversation (only by participants)
+app.delete('/api/chat/conversations/:conversationId', authenticateToken, (req, res) => {
+  try {
+    const conversationId = parseInt(req.params.conversationId);
+    const userEmail = req.user.email;
+
+    if (!conversationId) {
+      return res.status(400).json({ error: 'Conversation ID is required' });
+    }
+
+    // Check if the user is a participant in this conversation
+    const checkConversationQuery = `
+      SELECT * FROM chat_conversations 
+      WHERE id = ? AND (user1_email = ? OR user2_email = ?)
+    `;
+
+    db.get(checkConversationQuery, [conversationId, userEmail, userEmail], (err, conversation) => {
+      if (err) {
+        logger.error('Error checking conversation ownership:', err);
+        return res.status(500).json({ error: 'Failed to check conversation ownership' });
+      }
+
+      if (!conversation) {
+        return res.status(404).json({ error: 'Conversation not found or you do not have permission to delete it' });
+      }
+
+      // Delete the conversation (messages will be deleted automatically due to CASCADE)
+      const deleteConversationQuery = `DELETE FROM chat_conversations WHERE id = ?`;
+
+      db.run(deleteConversationQuery, [conversationId], function(deleteErr) {
+        if (deleteErr) {
+          logger.error('Error deleting conversation:', deleteErr);
+          return res.status(500).json({ error: 'Failed to delete conversation' });
+        }
+
+        if (this.changes === 0) {
+          return res.status(404).json({ error: 'Conversation not found' });
+        }
+
+        const otherUserEmail = conversation.user1_email === userEmail 
+          ? conversation.user2_email 
+          : conversation.user1_email;
+        const otherUserName = conversation.user1_email === userEmail 
+          ? conversation.user2_name 
+          : conversation.user1_name;
+
+        logger.info(`Conversation ${conversationId} between ${userEmail} and ${otherUserEmail} deleted by ${userEmail}`);
+        res.json({ message: 'Conversation deleted successfully' });
+      });
+    });
+  } catch (error) {
+    logger.error('Error deleting conversation:', error);
+    res.status(500).json({ error: 'Failed to delete conversation' });
+  }
+});

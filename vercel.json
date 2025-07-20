@@ -1,0 +1,43 @@
+{
+  "version": 2,
+  "name": "quickcheck-frontend",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/manifest.json",
+      "dest": "/manifest.json"
+    },
+    {
+      "src": "/service-worker.js",
+      "dest": "/service-worker.js"
+    },
+    {
+      "src": "/icon-(.*).svg",
+      "dest": "/icon-$1.svg"
+    },
+    {
+      "src": "/icon-(.*).png",
+      "dest": "/icon-$1.png"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "env": {
+    "VITE_API_BASE_URL": "@vite_api_base_url",
+    "VITE_UPLOAD_URL": "@vite_upload_url"
+  }
+} 

@@ -1,0 +1,7 @@
+email,password,name,enabled,role
+test@example.com,password123,Test User,true,Technician
+admin@example.com,admin123,Admin User,true,Technician
+admin@qualitytirelube.com,$2a$10$BSaPzH3Sg3zSpMbhpu0p8ev4MXQgoLkpmvThty/2vLA.tY1/q9/TW,Admin User,true,Admin
+a@a.com,$2a$10$1lehH1oRm2fVuZWcbbhU9O/CcceDmArciUf8eTfkB1JAsLJOTQ01y,Stephen Villavaso,true,Admin
+B@b.com,$2a$10$rJ.48mlrmXupwFps.yiT5urbF3d2Y0yuj7L8X.Sq1d3nAK.9g4qBu,Victor villavaso,true,Admin
+Qualitybilling26@gmail.com,$2a$10$vPRUHZJ5Tg2HLeviGtqbjeFvS4PJF1mz1/wlBvkC8N2hjogGbLkIe,Ashtyn Mills,true,Admin

@@ -1,0 +1,197 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradients for realistic metallic appearance -->
+    <radialGradient id="drumGradient" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stopColor="#E8E8E8" />
+      <stop offset="50%" stopColor="#B8B8B8" />
+      <stop offset="100%" stopColor="#888888" />
+    </radialGradient>
+    
+    <radialGradient id="backingPlateGradient" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stopColor="#F5F5F5" />
+      <stop offset="50%" stopColor="#D0D0D0" />
+      <stop offset="100%" stopColor="#A8A8A8" />
+    </radialGradient>
+    
+    <linearGradient id="shoeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#8B7355" />
+      <stop offset="50%" stopColor="#A0522D" />
+      <stop offset="100%" stopColor="#654321" />
+    </linearGradient>
+    
+    <radialGradient id="centerHubGradient" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stopColor="#E0E0E0" />
+      <stop offset="100%" stopColor="#606060" />
+    </radialGradient>
+  </defs>
+  
+  <!-- Outer drum housing (semi-transparent) -->
+  <circle cx="100" cy="100" r="90" 
+          fill="rgba(180, 180, 180, 0.4)" 
+          stroke="#666" 
+          stroke-width="3"/>
+  
+  <!-- Inner drum edge -->
+  <circle cx="100" cy="100" r="85" 
+          fill="none" 
+          stroke="#999" 
+          stroke-width="2"/>
+  
+  <!-- Backing plate -->
+  <circle cx="100" cy="100" r="78" 
+          fill="url(#backingPlateGradient)" 
+          stroke="#999" 
+          stroke-width="2"/>
+  
+  <!-- Primary brake shoe (leading) -->
+  <path d="M 100 25 A 75 75 0 0 1 160 75 A 65 65 0 0 0 100 35 Z" 
+        fill="url(#shoeGradient)" 
+        stroke="#654321" 
+        stroke-width="2"/>
+  
+  <!-- Secondary brake shoe (trailing) -->
+  <path d="M 160 75 A 75 75 0 0 1 160 125 A 65 65 0 0 0 160 85 Z" 
+        fill="url(#shoeGradient)" 
+        stroke="#654321" 
+        stroke-width="2"/>
+  
+  <!-- Primary brake shoe (leading) bottom -->
+  <path d="M 160 125 A 75 75 0 0 1 100 175 A 65 65 0 0 0 160 135 Z" 
+        fill="url(#shoeGradient)" 
+        stroke="#654321" 
+        stroke-width="2"/>
+  
+  <!-- Secondary brake shoe (trailing) bottom -->
+  <path d="M 100 175 A 75 75 0 0 1 40 125 A 65 65 0 0 0 100 165 Z" 
+        fill="url(#shoeGradient)" 
+        stroke="#654321" 
+        stroke-width="2"/>
+  
+  <!-- Secondary brake shoe (trailing) left -->
+  <path d="M 40 125 A 75 75 0 0 1 40 75 A 65 65 0 0 0 40 115 Z" 
+        fill="url(#shoeGradient)" 
+        stroke="#654321" 
+        stroke-width="2"/>
+  
+  <!-- Primary brake shoe (leading) left -->
+  <path d="M 40 75 A 75 75 0 0 1 100 25 A 65 65 0 0 0 40 85 Z" 
+        fill="url(#shoeGradient)" 
+        stroke="#654321" 
+        stroke-width="2"/>
+  
+  <!-- Brake lining (friction material) -->
+  <path d="M 100 30 A 70 70 0 0 1 155 80 A 60 60 0 0 0 100 40 Z" 
+        fill="#CD853F" 
+        opacity="0.9"/>
+  <path d="M 155 80 A 70 70 0 0 1 155 120 A 60 60 0 0 0 155 90 Z" 
+        fill="#CD853F" 
+        opacity="0.9"/>
+  <path d="M 155 120 A 70 70 0 0 1 100 170 A 60 60 0 0 0 155 130 Z" 
+        fill="#CD853F" 
+        opacity="0.9"/>
+  <path d="M 100 170 A 70 70 0 0 1 45 120 A 60 60 0 0 0 100 160 Z" 
+        fill="#CD853F" 
+        opacity="0.9"/>
+  <path d="M 45 120 A 70 70 0 0 1 45 80 A 60 60 0 0 0 45 110 Z" 
+        fill="#CD853F" 
+        opacity="0.9"/>
+  <path d="M 45 80 A 70 70 0 0 1 100 30 A 60 60 0 0 0 45 90 Z" 
+        fill="#CD853F" 
+        opacity="0.9"/>
+  
+  <!-- Wheel cylinder (top) -->
+  <rect x="90" y="18" width="20" height="12" rx="6" 
+        fill="url(#centerHubGradient)" 
+        stroke="#666" 
+        stroke-width="2"/>
+  
+  <!-- Wheel cylinder pistons -->
+  <rect x="88" y="20" width="6" height="8" rx="3" 
+        fill="#FFD700" 
+        stroke="#DAA520" 
+        stroke-width="1"/>
+  <rect x="106" y="20" width="6" height="8" rx="3" 
+        fill="#FFD700" 
+        stroke="#DAA520" 
+        stroke-width="1"/>
+  
+  <!-- Adjuster mechanism (bottom) -->
+  <rect x="90" y="170" width="20" height="12" rx="6" 
+        fill="url(#centerHubGradient)" 
+        stroke="#666" 
+        stroke-width="2"/>
+  
+  <!-- Adjuster star wheel -->
+  <circle cx="100" cy="176" r="4" 
+          fill="#B8860B" 
+          stroke="#8B7355" 
+          stroke-width="1"/>
+  
+  <!-- Return springs (curved) -->
+  <path d="M 75 65 Q 100 45 125 65" 
+        fill="none" 
+        stroke="#C0C0C0" 
+        stroke-width="3"/>
+  <path d="M 75 135 Q 100 155 125 135" 
+        fill="none" 
+        stroke="#C0C0C0" 
+        stroke-width="3"/>
+  
+  <!-- Spring anchors -->
+  <circle cx="75" cy="65" r="3" 
+          fill="#666" 
+          stroke="#333" 
+          stroke-width="1"/>
+  <circle cx="125" cy="65" r="3" 
+          fill="#666" 
+          stroke="#333" 
+          stroke-width="1"/>
+  <circle cx="75" cy="135" r="3" 
+          fill="#666" 
+          stroke="#333" 
+          stroke-width="1"/>
+  <circle cx="125" cy="135" r="3" 
+          fill="#666" 
+          stroke="#333" 
+          stroke-width="1"/>
+  
+  <!-- Hold-down springs -->
+  <circle cx="65" cy="100" r="4" 
+          fill="#FFD700" 
+          stroke="#DAA520" 
+          stroke-width="2"/>
+  <circle cx="135" cy="100" r="4" 
+          fill="#FFD700" 
+          stroke="#DAA520" 
+          stroke-width="2"/>
+  
+  <!-- Center hub -->
+  <circle cx="100" cy="100" r="20" 
+          fill="url(#centerHubGradient)" 
+          stroke="#666" 
+          stroke-width="2"/>
+  
+  <!-- Bolt holes in center hub -->
+  <circle cx="100" cy="85" r="3" 
+          fill="#333" 
+          stroke="#666" 
+          stroke-width="1"/>
+  <circle cx="115" cy="100" r="3" 
+          fill="#333" 
+          stroke="#666" 
+          stroke-width="1"/>
+  <circle cx="100" cy="115" r="3" 
+          fill="#333" 
+          stroke="#666" 
+          stroke-width="1"/>
+  <circle cx="85" cy="100" r="3" 
+          fill="#333" 
+          stroke="#666" 
+          stroke-width="1"/>
+  
+  <!-- Drum brake outer ring highlight -->
+  <circle cx="100" cy="100" r="90" 
+          fill="none" 
+          stroke="rgba(255, 255, 255, 0.3)" 
+          stroke-width="2"/>
+</svg> 
