@@ -6,10 +6,6 @@ import {
   Paper,
   TextField,
   Button,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Card,
   CardContent,
   CardActions,
@@ -29,7 +25,6 @@ import {
   Delete as DeleteIcon,
   Print as PrintIcon,
   QrCode as QrCodeIcon,
-  Edit as EditIcon,
   Close as CloseIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';

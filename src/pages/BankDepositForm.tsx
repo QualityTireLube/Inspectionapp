@@ -229,14 +229,14 @@ const BankDepositForm: React.FC = () => {
           {/* Image Upload Sections */}
           <SingleImageUploadField
             label="Cash Deposit Slip"
-            image={formData.cashDepositSlip}
+            value={formData.cashDepositSlip || ''}
             onChange={(image) => handleInputChange('cashDepositSlip', image)}
             disabled={submitting}
           />
 
           <SingleImageUploadField
             label="Check Deposit Slip"
-            image={formData.checkDepositSlip}
+            value={formData.checkDepositSlip || ''}
             onChange={(image) => handleInputChange('checkDepositSlip', image)}
             disabled={submitting}
           />
@@ -251,7 +251,7 @@ const BankDepositForm: React.FC = () => {
 
           <SingleImageUploadField
             label="SMS Payment Types"
-            image={formData.smsPaymentTypes}
+            value={formData.smsPaymentTypes || ''}
             onChange={(image) => handleInputChange('smsPaymentTypes', image)}
             disabled={submitting}
           />
