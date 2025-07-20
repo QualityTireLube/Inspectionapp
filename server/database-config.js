@@ -3,8 +3,12 @@ const path = require('path');
 class DatabaseConfig {
   constructor() {
     this.isProduction = process.env.NODE_ENV === 'production';
-    this.databaseType = process.env.DATABASE_TYPE || (this.isProduction ? 'postgresql' : 'sqlite');
+    // Force PostgreSQL in production, SQLite only in development
+    this.databaseType = this.isProduction ? 'postgresql' : (process.env.DATABASE_TYPE || 'sqlite');
     this.databaseUrl = process.env.DATABASE_URL || './database.sqlite';
+    
+    // Log the database configuration
+    console.log(`Database Config: Environment=${process.env.NODE_ENV}, Type=${this.databaseType}, Production=${this.isProduction}`);
   }
 
   getConnection() {
@@ -17,6 +21,11 @@ class DatabaseConfig {
   }
 
   getSQLiteConnection() {
+    // In production, don't even try to load SQLite
+    if (this.isProduction) {
+      throw new Error('SQLite is not available in production. Use PostgreSQL instead.');
+    }
+    
     try {
       const sqlite3 = require('sqlite3').verbose();
       const dbPath = path.resolve(this.databaseUrl);

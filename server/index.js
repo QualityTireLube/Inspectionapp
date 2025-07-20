@@ -6,7 +6,7 @@ const csv = require('csv-parser');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
-const sqlite3 = require('sqlite3').verbose();
+// Database configuration will handle SQLite/PostgreSQL selection
 const https = require('https');
 const http = require('http');
 const os = require('os');
