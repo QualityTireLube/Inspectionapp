@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, IconButton, Typography } from '@mui/material';
+import { Box, IconButton } from '@mui/material';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 
 interface ImageUpload {
@@ -13,7 +13,6 @@ interface ImageUpload {
 
 interface ImageUploadFieldProps {
   photos: ImageUpload[];
-  onImageUpload: (file: File) => void;
   onImageClick: (photos: ImageUpload[]) => void;
   onCameraOpen: () => void;
   label?: string;
@@ -23,7 +22,6 @@ interface ImageUploadFieldProps {
 
 const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
   photos,
-  onImageUpload,
   onImageClick,
   onCameraOpen,
   label = 'Photos',

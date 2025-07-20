@@ -1,8 +1,6 @@
 import React from 'react';
 import {
   Box,
-  Card,
-  CardContent,
   Typography,
   TextField,
   Switch,
@@ -17,7 +15,6 @@ import {
   AccordionSummary,
   AccordionDetails,
   Chip,
-  Paper,
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
@@ -35,7 +32,7 @@ interface ElementEditorProps {
   settings?: StickerSettings;
 }
 
-const ElementEditor: React.FC<ElementEditorProps> = ({ element, onChange, allElements = [], settings }) => {
+const ElementEditor: React.FC<ElementEditorProps> = ({ element, onChange, settings }) => {
   const handleChange = (field: keyof StickerElement, value: any) => {
     onChange({ ...element, [field]: value });
   };

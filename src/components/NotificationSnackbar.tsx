@@ -1,5 +1,5 @@
 import React from 'react';
-import { Snackbar, Alert, AlertTitle } from '@mui/material';
+import { Snackbar, Alert } from '@mui/material';
 import { NotificationState } from '../hooks/useNotification';
 
 interface NotificationSnackbarProps {

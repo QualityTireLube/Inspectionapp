@@ -19,8 +19,6 @@ import {
   MenuItem,
   ListItemIcon,
   Collapse,
-  useTheme,
-  useMediaQuery,
   Badge,
   Paper,
   Popover,
@@ -33,21 +31,15 @@ import {
   DialogActions,
   BottomNavigation,
   BottomNavigationAction,
-  Fab
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
   Settings as SettingsIcon,
-  AccountCircle as AccountCircleIcon,
   Home as HomeIcon,
   QuestionAnswer as QuestionAnswerIcon,
-  Description as DescriptionIcon,
-  Assessment as AssessmentIcon,
-  Archive as ArchiveIcon,
   ExpandLess,
   ExpandMore,
-  Group as GroupIcon,
   Receipt as ReceiptIcon,
   Chat as ChatIcon,
   Message as MessageIcon,
@@ -57,13 +49,9 @@ import {
   Add as AddIcon,
   Delete as DeleteIcon,
   Assignment as AssignmentIcon,
-  People as PeopleIcon,
   Person as PersonIcon,
   Logout as LogoutIcon,
-  Badge as BadgeIcon,
   Refresh as RefreshIcon,
-  Architecture as ArchitectureIcon,
-  Analytics as AnalyticsIcon,
   AccountBalance as CashIcon,
   LocalPolice as LocalPoliceIcon
 } from '@mui/icons-material';
@@ -109,7 +97,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [bottomNavValue, setBottomNavValue] = useState(0);
 
   const currentUserEmail = localStorage.getItem('userEmail') || '';
-  const currentUserName = localStorage.getItem('userName') || '';
 
   // Initialize audio on first user interaction (required for mobile)
   const initializeAudio = async () => {
@@ -457,11 +444,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     window.location.reload();
   };
 
-  const menuItems = [
-    { text: 'Home', path: '/' },
-    { text: 'Quick Check', path: '/quick-check' },
-  ];
-
   const archivedMenuItems = [
     { text: 'Archived Static Stickers', path: '/oil-change-stickers/archived' },
     { text: 'Archived Quick Check', path: '/history' }
@@ -478,10 +460,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { text: 'State Inspection Analytics', path: '/state-inspection-records?tab=2' },
     { text: 'Drawer Settings', path: '/drawer-settings' },
     { text: 'Cash Analytics', path: '/cash-analytics' }
-  ];
-
-  const regularMenuItems = [
-    // Removed Oil Change Stickers
   ];
 
   const drawer = (

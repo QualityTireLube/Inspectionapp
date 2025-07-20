@@ -9,13 +9,11 @@ import {
   DialogContent,
   Alert,
   CircularProgress,
-  Badge,
   Chip,
 } from '@mui/material';
 import {
   PhotoCamera,
   Delete as DeleteIcon,
-  Visibility as VisibilityIcon,
   Close as CloseIcon,
   ArrowBack as ArrowBackIcon,
   ArrowForward as ArrowForwardIcon,
@@ -186,7 +184,7 @@ const MultipleImageUploadField: React.FC<MultipleImageUploadFieldProps> = ({
       setError(errorMessage);
       
       // Remove failed uploads and clean up URLs
-      setUploadingImages(prev => []);
+      setUploadingImages(() => []);
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -212,7 +210,6 @@ const MultipleImageUploadField: React.FC<MultipleImageUploadFieldProps> = ({
   };
 
   const goToPrevious = () => {
-    const totalImages = images.length + uploadingImages.length;
     if (currentImageIndex > 0) {
       setCurrentImageIndex(currentImageIndex - 1);
     }

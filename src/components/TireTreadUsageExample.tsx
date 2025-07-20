@@ -1,5 +1,6 @@
 import React from 'react';
-import PassengerFrontTireTreadField, { TireTreadData } from './PassengerFrontTireTreadField';
+import PassengerFrontTireTreadField from './PassengerFrontTireTreadField';
+import { TireTreadData } from './TireTreadSection';
 
 // This is an example of how to use the new TireTreadField component
 // to replace the existing Passenger Front Tire Tread implementation in QuickCheck.tsx

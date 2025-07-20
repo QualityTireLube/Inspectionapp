@@ -12,20 +12,14 @@ import {
   Paper,
   Alert,
   CircularProgress,
-  Divider,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
 } from '@mui/material';
 import Grid from '../components/CustomGrid';
 import {
   Print as PrintIcon,
   Close as CloseIcon,
   Label as LabelIcon,
-  Save as SaveIcon
 } from '@mui/icons-material';
-import { LabelTemplate, LabelField } from '../types/labelTemplates';
+import { LabelTemplate } from '../types/labelTemplates';
 import { LabelPdfGenerator, LabelData } from '../services/labelPdfGenerator';
 import { LabelApiService } from '../services/labelApi';
 

@@ -17,7 +17,6 @@ import {
   AppBar,
   Toolbar,
 } from '@mui/material';
-import { TransitionProps } from '@mui/material/transitions';
 import Grid from '../CustomGrid';
 import {
   PhotoCamera,
@@ -411,7 +410,7 @@ const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
       setError(errorMessage);
       
       // Remove failed uploads and clean up URLs
-      setUploadingImages(prev => []);
+      setUploadingImages(() => []);
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -617,7 +616,7 @@ const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
                     height: '100%',
                     objectFit: 'cover',
                   }}
-                  onError={(e) => {
+                  onError={() => {
                     console.error('Thumbnail failed to load:', getImageUrl(filename));
                   }}
                 />

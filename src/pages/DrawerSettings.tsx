@@ -36,7 +36,6 @@ import {
   createDrawerSettings,
   updateDrawerSettings,
   deleteDrawerSettings,
-  calculateTotalCash,
 } from '../services/cashManagementApi';
 import { useCashManagementStore, initializeDefaultDrawers } from '../stores/cashManagementStore';
 import { DrawerSettings as DrawerSettingsType, DenominationCount } from '../types/cashManagement';
@@ -124,6 +123,7 @@ const DrawerSettings: React.FC = () => {
           fives: 10,
           tens: 5,
           twenties: 3,
+          fifties: 1,
           hundreds: 0,
         },
       });

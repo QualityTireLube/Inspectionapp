@@ -9,16 +9,11 @@ import {
   Button,
   Alert,
   CircularProgress,
-  Stack,
-  Fab,
-  Tooltip,
 } from '@mui/material';
 import {
   Close as CloseIcon,
   PhotoCamera as PhotoCameraIcon,
   CameraAlt as CameraAltIcon,
-  CheckCircle as CheckCircleIcon,
-  Error as ErrorIcon,
 } from '@mui/icons-material';
 import { extractVinFromImage } from '../services/api';
 

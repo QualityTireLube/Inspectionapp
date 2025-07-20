@@ -55,7 +55,6 @@ const ImageFieldRectangle: React.FC<ImageFieldRectangleProps> = ({
   };
 
   const hasImages = images && Array.isArray(images) && images.length > 0;
-  const canUploadMore = !maxFiles || images.length < maxFiles;
 
   return (
     <Box sx={{ mb: 3 }}>

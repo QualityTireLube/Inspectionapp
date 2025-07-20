@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -30,7 +30,6 @@ import ShopMonkey from './pages/ShopMonkey';
 import Databases from './pages/Databases';
 import ImageUploadTest from './pages/ImageUploadTest';
 import { WebSocketProvider } from './contexts/WebSocketProvider';
-import tokenManager from './services/tokenManager';
 import TokenExpirationTest from './components/TokenExpirationTest';
 
 const theme = createTheme({

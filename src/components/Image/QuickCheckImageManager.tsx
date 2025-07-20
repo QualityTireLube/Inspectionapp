@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Box, IconButton, Typography, Paper, Button } from '@mui/material';
+import { Box, IconButton, Typography, Button } from '@mui/material';
 import { PhotoCamera, Delete } from '@mui/icons-material';
 import { ImageUpload } from '../../types/quickCheck';
 import { getFullImageUrl } from '../../services/imageUpload';
@@ -12,7 +12,6 @@ interface QuickCheckImageManagerProps {
   label?: string;
   multiple?: boolean;
   showLabel?: boolean;
-  aspectRatio?: string;
   maxPhotos?: number;
   disabled?: boolean;
 }
@@ -25,7 +24,6 @@ const QuickCheckImageManager: React.FC<QuickCheckImageManagerProps> = ({
   label,
   multiple = true,
   showLabel = true,
-  aspectRatio = '4/1',
   maxPhotos = 10,
   disabled = false
 }) => {
@@ -103,7 +101,6 @@ const QuickCheckImageManager: React.FC<QuickCheckImageManagerProps> = ({
 
   // Handle photo removal
   const handleRemovePhoto = (index: number) => {
-    const updatedPhotos = activePhotos.filter((_, i) => i !== index);
     // Map back to include deleted photos but with current active photos
     const allPhotos = [...photos];
     const activeIndices = photos

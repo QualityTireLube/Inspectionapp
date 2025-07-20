@@ -1,13 +1,11 @@
-import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { IconButton, Alert, CircularProgress, Box } from '@mui/material';
 import { PhotoCamera, PhotoLibrary } from '@mui/icons-material';
-import heic2any from 'heic2any';
 import { 
   logImageUploadAttempt, 
   showSafariImageAlert, 
   detectBrowser,
   isHEICFile,
-  convertHEICToJPEG,
   processImageForUpload 
 } from '../../services/imageUploadDebug';
 

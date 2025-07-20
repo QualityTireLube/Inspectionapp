@@ -19,7 +19,6 @@ import {
   Info as InfoIcon,
   ErrorOutline as ErrorIcon,
   CheckCircle as CheckCircleIcon,
-  Warning as WarningIcon,
   Wifi as WifiIcon
 } from '@mui/icons-material';
 import { useWebSocket } from '../contexts/WebSocketProvider';

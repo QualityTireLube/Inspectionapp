@@ -26,8 +26,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Autocomplete,
-  Switch,
   CircularProgress,
   IconButton,
   Menu,
@@ -1503,12 +1501,9 @@ const QuickCheck: React.FC = () => {
                   onImageUpload={handleImageUpload}
                   onImageClick={handleImageClick}
                   onInfoClick={handleInfoClick}
-                  onScannerOpen={handleScannerOpen}
                   onFormUpdate={handleFormUpdate}
-                  onBatteryConditionToggle={handleBatteryConditionToggle}
                   onBatteryConditionChange={handleBatteryConditionChange}
                   onBatteryTerminalsToggle={handleBatteryTerminalsToggle}
-                  onVehicleDetailsOpen={() => setVehicleDetailsOpen(true)}
                   onFieldNotesChange={handleFieldNotesChange}
                   onDeleteImage={handleDeleteImage}
                   vinDecodeLoading={vinDecodeLoading}
@@ -1526,7 +1521,6 @@ const QuickCheck: React.FC = () => {
                   onImageUpload={handleImageUpload}
                   onImageClick={handleImageClick}
                   onInfoClick={handleInfoClick}
-                  onFormUpdate={handleFormUpdate}
                   onTreadChange={handleTreadChange}
                   onTreadConditionChange={handleTreadConditionChange}
                   onTirePhotoClick={handleTirePhotoClick}

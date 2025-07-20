@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { QuickCheckForm, BatteryCondition, ImageUpload, TreadCondition, PhotoType, InspectionType } from '../types/quickCheck';
+import { QuickCheckForm, BatteryCondition, ImageUpload, TreadCondition, PhotoType } from '../types/quickCheck';
 
 const createInitialForm = (user: string): QuickCheckForm => ({
   inspection_type: 'quick_check',

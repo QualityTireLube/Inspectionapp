@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import websocketService, { 
   ConnectionStatus, 
-  WebSocketMessage, 
   WebSocketEventCallback,
   QuickCheckUpdateData 
 } from '../services/websocketService';
