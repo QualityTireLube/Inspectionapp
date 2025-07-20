@@ -6,22 +6,16 @@ import {
   Box, 
   Stack, 
   Chip, 
-  IconButton,
-  CircularProgress
+  IconButton
 } from '@mui/material';
 import { 
-  PhotoCamera as PhotoCameraIcon, 
   Close as CloseIcon,
-  Info as InfoIcon,
-  PhotoLibrary as PhotoLibraryIcon
+  Info as InfoIcon
 } from '@mui/icons-material';
-import Grid from '../../CustomGrid';
 import { QuickCheckForm } from '../../../types/quickCheck';
 import NotesField from './NotesField';
-import { ImageFieldDisplay, SafariImageUpload, ImageFieldRectangle } from '../../Image';
+import { SafariImageUpload, ImageFieldRectangle } from '../../Image';
 import { getFullImageUrl } from '../../../services/imageUpload';
-
-type ImageUploadType = 'passenger_front' | 'driver_front' | 'driver_rear' | 'passenger_rear' | 'spare' | 'undercarriage_photos' | 'front_brakes' | 'rear_brakes' | 'tpms_placard' | 'washer_fluid' | 'engine_air_filter' | 'battery' | 'tpms_tool' | 'dashLights' | 'mileage' | 'windshield_condition' | 'wiper_blades' | 'washer_squirters';
 
 interface ImageUpload {
   file: File;
@@ -37,7 +31,7 @@ interface PullingIntoBayTabProps {
   loading: boolean;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRadioChange: (name: string, value: string) => void;
-  onImageUpload: (file: File, type: ImageUploadType) => Promise<void>;
+  onImageUpload: (file: File, type: string) => Promise<void>;
   onImageClick: (photos: ImageUpload[], photoType?: string) => void;
   onInfoClick: (event: React.MouseEvent<HTMLElement>, content: string) => void;
   onFormUpdate: (updates: Partial<QuickCheckForm>) => void;
@@ -106,7 +100,7 @@ export const PullingIntoBayTab: React.FC<PullingIntoBayTabProps> = ({
           onImageRemove={(index) => onFormUpdate({
             dash_lights_photos: form.dash_lights_photos.filter((_, i) => i !== index)
           })}
-          onImageView={(imageUrl) => onImageClick(form.dash_lights_photos, 'dash_lights_photos')}
+          onImageView={() => onImageClick(form.dash_lights_photos, 'dash_lights_photos')}
           uploadType="dashLights"
           disabled={loading}
           multiple={true}

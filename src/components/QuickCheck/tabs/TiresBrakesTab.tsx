@@ -2,14 +2,12 @@ import React from 'react';
 import {
   Typography,
   TextField,
-  Button,
   Box,
   FormControl,
   FormLabel,
   Stack,
   Chip,
   IconButton,
-  CircularProgress,
   Divider
 } from '@mui/material';
 import {
@@ -30,7 +28,7 @@ import BrakePadFrontAxleView from '../../BrakePadFrontAxleView';
 import TireRepairLayout from '../../TireRepairLayout';
 import TPMSLayout from '../../TPMSLayout';
 import NotesField from './NotesField';
-import { ImageFieldDisplay, SafariImageUpload, ImageFieldRectangle } from '../../Image';
+import { SafariImageUpload, ImageFieldRectangle } from '../../Image';
 import { BrakePadConditionSelector } from '../../BrakePadConditionSelector';
 import { getFullImageUrl } from '../../../services/imageUpload';
 
@@ -42,7 +40,6 @@ interface TiresBrakesTabProps {
   onImageUpload: (file: File, type: PhotoType) => Promise<void>;
   onImageClick: (photos: ImageUpload[], photoType?: string) => void;
   onInfoClick: (event: React.MouseEvent<HTMLElement>, content: string) => void;
-  onFormUpdate: (updates: Partial<QuickCheckForm>) => void;
   onTreadChange: (position: string, field: string, value: string) => void;
   onTreadConditionChange: (position: string, field: string, condition: 'green' | 'yellow' | 'red') => void;
   onTirePhotoClick: (position: string) => void;
@@ -66,7 +63,6 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
   onImageUpload,
   onImageClick,
   onInfoClick,
-  onFormUpdate,
   onTreadChange,
   onTreadConditionChange,
   onTirePhotoClick,
@@ -99,11 +95,11 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
     center_depth: '',
     outer_depth: '',
     outer_edge_depth: '',
-    inner_edge_condition: 'green' as const,
-    inner_condition: 'green' as const,
-    center_condition: 'green' as const,
-    outer_condition: 'green' as const,
-    outer_edge_condition: 'green' as const,
+    inner_edge_condition: 'green' as 'green' | 'yellow' | 'red',
+    inner_condition: 'green' as 'green' | 'yellow' | 'red',
+    center_condition: 'green' as 'green' | 'yellow' | 'red',
+    outer_condition: 'green' as 'green' | 'yellow' | 'red',
+    outer_edge_condition: 'green' as 'green' | 'yellow' | 'red',
   };
 
   // Ensure consistent tire tread values
@@ -127,88 +123,18 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
     };
   };
   
-  // Helper function to render tire photo section
-  const renderTirePhotos = (tireType: string, label: string) => {
-    const tirePhotos = form.tire_photos.find(p => p.type === tireType)?.photos || [];
-    
-    return (
-      <Box sx={{ mt: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
-            {label} Photos
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
-            <SafariImageUpload
-              onImageUpload={onImageUpload}
-              uploadType={tireType as PhotoType}
-              disabled={loading}
-              multiple={true}
-              size="small"
-            />
-          </Box>
-        </Box>
-        
-        {tirePhotos.length > 0 && (
-          <Box sx={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
-            gap: 2,
-            maxWidth: '400px'
-          }}>
-            {tirePhotos.map((photo, index) => (
-              <Box
-                key={index}
-                sx={{
-                  position: 'relative',
-                  aspectRatio: '1',
-                  borderRadius: 1,
-                  overflow: 'hidden',
-                  border: '1px solid #ddd',
-                  cursor: 'pointer',
-                  '&:hover .delete-button': {
-                    opacity: 1
-                  }
-                }}
-              >
-                <img
-                  src={getDisplayUrl(photo)}
-                  alt={`${label} ${index + 1}`}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover'
-                  }}
-                  onClick={() => onImageClick(tirePhotos, `${tireType}_tire`)}
-                />
-                <IconButton
-                  className="delete-button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteTirePhoto(tireType, index);
-                  }}
-                  sx={{
-                    position: 'absolute',
-                    top: 4,
-                    right: 4,
-                    bgcolor: 'rgba(0,0,0,0.7)',
-                    color: 'white',
-                    opacity: 0,
-                    transition: 'opacity 0.2s',
-                    '&:hover': {
-                      bgcolor: 'rgba(0,0,0,0.9)',
-                    },
-                    padding: '4px',
-                  }}
-                  size="small"
-                >
-                  <CloseIcon sx={{ fontSize: '16px' }} />
-                </IconButton>
-              </Box>
-            ))}
-          </Box>
-        )}
-      </Box>
-    );
+  // Helper function to convert TireTread to TireTreadData
+  const convertToTireTreadData = (tireTread: any): any => {
+    if (!tireTread) return defaultTireTread;
+    return {
+      ...defaultTireTread,
+      ...tireTread,
+      inner_edge_condition: tireTread.inner_edge_condition || 'green',
+      inner_condition: tireTread.inner_condition || 'green',
+      center_condition: tireTread.center_condition || 'green',
+      outer_condition: tireTread.outer_condition || 'green',
+      outer_edge_condition: tireTread.outer_edge_condition || 'green',
+    };
   };
 
   // Helper function to render brake pad section
@@ -219,12 +145,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
     photos: ImageUpload[],
     photoType: PhotoType
   ) => {
-    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-      e.target.select();
-    };
-
     const renderSideSection = (side: 'driver' | 'passenger', sideData: { inner: BrakePadCondition; outer: BrakePadCondition; rotor_condition: RotorCondition }) => {
-      const fieldPrefix = `${title.replace(/\s+/g, '_').toLowerCase()}_${side}`;
       const sideTitle = side.charAt(0).toUpperCase() + side.slice(1);
 
       return (
@@ -312,10 +233,10 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
           <BrakePadFrontAxleView
             driverInnerPad={frontBrakePadData.driver?.inner || ''}
             driverOuterPad={frontBrakePadData.driver?.outer || ''}
-            driverRotorCondition={frontBrakePadData.driver?.rotor_condition || ''}
+            driverRotorCondition={frontBrakePadData.driver?.rotor_condition as RotorCondition}
             passengerInnerPad={frontBrakePadData.passenger?.inner || ''}
             passengerOuterPad={frontBrakePadData.passenger?.outer || ''}
-            passengerRotorCondition={frontBrakePadData.passenger?.rotor_condition || ''}
+            passengerRotorCondition={frontBrakePadData.passenger?.rotor_condition as RotorCondition}
           />
         </Box>
 
