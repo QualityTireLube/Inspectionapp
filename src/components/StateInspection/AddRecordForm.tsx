@@ -3,12 +3,7 @@ import {
   Box,
   TextField,
   Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Typography,
-  Paper,
   Alert,
   CircularProgress,
   Dialog,
@@ -17,7 +12,6 @@ import {
   DialogActions,
   IconButton,
   Autocomplete,
-  FormHelperText,
   Chip,
   FormLabel,
 } from '@mui/material';
@@ -28,7 +22,6 @@ import {
   Save as SaveIcon,
   Close as CloseIcon,
   Delete as DeleteIcon,
-  Person as PersonIcon,
 } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { CreateStateInspectionFormData, FleetAccount } from '../../types/stateInspection';
@@ -67,25 +60,11 @@ const AddRecordForm: React.FC<AddRecordFormProps> = ({ onRecordCreated, fleetAcc
   const [pinUser, setPinUser] = useState<{ name: string; email: string; role: string } | null>(null);
   const [pinLoading, setPinLoading] = useState(false);
   const [pinError, setPinError] = useState<string>('');
-  const [currentUserPin, setCurrentUserPin] = useState<string>('');
-  
   const { addRecord, addFleetAccount, updateFleetAccount: updateStoreFleetAccount, removeFleetAccount } = useStateInspectionStore();
 
-  const currentUserName = localStorage.getItem('userName') || '';
   const effectiveUserName = pinUser?.name || '';
 
-  // Load current user's PIN on component mount
-  useEffect(() => {
-    const loadCurrentUserPin = async () => {
-      try {
-        const profile = await getUserProfile();
-        setCurrentUserPin(profile.pin || '');
-      } catch (err) {
-        console.error('Failed to load user profile:', err);
-      }
-    };
-    loadCurrentUserPin();
-  }, []);
+
 
   const {
     control,

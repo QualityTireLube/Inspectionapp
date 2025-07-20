@@ -28,13 +28,12 @@ import {
   ImageUpload,
   StateInspectionStatus,
   WasherFluidCondition,
-  EngineAirFilterCondition,
   BatteryCondition,
   BatteryTerminalCondition,
   PhotoType
 } from '../../../types/quickCheck';
 import NotesField from './NotesField';
-import { ImageFieldDisplay, SafariImageUpload, ImageFieldRectangle } from '../../Image';
+import { SafariImageUpload, ImageFieldRectangle } from '../../Image';
 import { VinDecoder } from '../VinDecoder';
 import { getFullImageUrl } from '../../../services/imageUpload';
 
@@ -46,17 +45,11 @@ interface UnderhoodTabProps {
   onImageUpload: (file: File, type: PhotoType) => Promise<void>;
   onImageClick: (photos: ImageUpload[], photoType?: string) => void;
   onInfoClick: (event: React.MouseEvent<HTMLElement>, content: string) => void;
-  onScannerOpen: () => void;
   onFormUpdate: (updates: Partial<QuickCheckForm>) => void;
-  onBatteryConditionToggle: (condition: BatteryCondition) => void;
   onBatteryConditionChange: (type: 'main' | 'terminals', value: string) => void;
   onBatteryTerminalsToggle: (condition: BatteryTerminalCondition) => void;
-  onVehicleDetailsOpen: () => void;
   onFieldNotesChange: (fieldName: string, noteText: string) => void;
   onDeleteImage: (photoType: string, index: number) => void;
-  vinDecodeLoading: boolean;
-  vinDecodeError: string | null;
-  vehicleDetails: any;
 }
 
 export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
@@ -67,17 +60,11 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
   onImageUpload,
   onImageClick,
   onInfoClick,
-  onScannerOpen,
   onFormUpdate,
-  onBatteryConditionToggle,
   onBatteryConditionChange,
   onBatteryTerminalsToggle,
-  onVehicleDetailsOpen,
   onFieldNotesChange,
-  onDeleteImage,
-  vinDecodeLoading,
-  vinDecodeError,
-  vehicleDetails
+  onDeleteImage
 }) => {
   const [terminalDamageDialogOpen, setTerminalDamageDialogOpen] = useState(false);
   
@@ -168,7 +155,7 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
           onImageRemove={(index) => onFormUpdate({
             tpms_placard: form.tpms_placard.filter((_, i) => i !== index)
           })}
-          onImageView={(imageUrl) => onImageClick(form.tpms_placard, 'tpms_placard')}
+          onImageView={() => onImageClick(form.tpms_placard, 'tpms_placard')}
           uploadType="tpms_placard"
           disabled={loading}
           multiple={true}

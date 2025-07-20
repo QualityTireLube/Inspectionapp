@@ -2,7 +2,8 @@
 // This file shows the BEFORE and AFTER for easy comparison
 
 import React from 'react';
-import { QuickCheckImageManager, ImageUpload, ImageType } from './Image';
+import { QuickCheckImageManager } from './Image';
+import { ImageUpload, PhotoType } from '../types/quickCheck';
 
 // ===== BEFORE: Complex implementation (lines 1450-1650 in QuickCheck.tsx) =====
 /*
@@ -199,16 +200,14 @@ interface MigrationExampleProps {
   form: {
     dash_lights_photos: ImageUpload[];
   };
-  handlePhotosChange: (type: ImageType, photos: ImageUpload[]) => void;
+  handlePhotosChange: (type: string, photos: ImageUpload[]) => void;
   handleImageClick: (photos: ImageUpload[], type?: string) => void;
-  handleInfoClick: (event: React.MouseEvent<HTMLElement>, content: string) => void;
 }
 
 const DashLightsSimplified: React.FC<MigrationExampleProps> = ({
   form,
   handlePhotosChange,
-  handleImageClick,
-  handleInfoClick
+  handleImageClick
 }) => {
   return (
     <>
