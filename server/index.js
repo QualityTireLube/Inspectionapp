@@ -68,13 +68,27 @@ function getLocalIP() {
   return 'localhost';
 }
 
-// === Create HTTPS server ===
-const httpsOptions = {
-  key: fs.readFileSync(path.join(__dirname, '../.cert/key.pem')),
-  cert: fs.readFileSync(path.join(__dirname, '../.cert/cert.pem'))
-};
+// === Create server (HTTPS for development, HTTP for production) ===
+let server;
 
-const server = https.createServer(httpsOptions, app);
+if (isProduction) {
+  // In production (Render), use HTTP since Render handles SSL termination
+  server = http.createServer(app);
+  logger.info('🚀 Production mode: Using HTTP server (SSL handled by Render)');
+} else {
+  // In development, use HTTPS with self-signed certificates
+  try {
+    const httpsOptions = {
+      key: fs.readFileSync(path.join(__dirname, '../.cert/key.pem')),
+      cert: fs.readFileSync(path.join(__dirname, '../.cert/cert.pem'))
+    };
+    server = https.createServer(httpsOptions, app);
+    logger.info('🔒 Development mode: Using HTTPS server with self-signed certificates');
+  } catch (error) {
+    logger.warn('⚠️  SSL certificates not found, falling back to HTTP for development');
+    server = http.createServer(app);
+  }
+}
 
 // === Middleware ===
 // Increase body size limit for image data
@@ -5128,10 +5142,13 @@ function cleanupBlobUrls(data) {
 
 // === Start server ===
 server.listen(port, '0.0.0.0', () => {
-  logger.info(`✅ Backend running with HTTPS at:`);
-  logger.info(`   Local:   https://localhost:${port}`);
-  logger.info(`   Network: https://${getLocalIP()}:${port}`);
-  logger.info(`   ⚠️  Note: You may need to accept the self-signed certificate in your browser`);
+  const protocol = isProduction ? 'http' : 'https';
+  logger.info(`✅ Backend running with ${protocol.toUpperCase()} at:`);
+  logger.info(`   Local:   ${protocol}://localhost:${port}`);
+  logger.info(`   Network: ${protocol}://${getLocalIP()}:${port}`);
+  if (!isProduction) {
+    logger.info(`   ⚠️  Note: You may need to accept the self-signed certificate in your browser`);
+  }
   logger.info(`   📊 Dynamic API: Use /api/tables to list all available tables`);
   logger.info(`   🔍 Example: /api/quick_checks?page=1&limit=10&search=honda`);
 });
