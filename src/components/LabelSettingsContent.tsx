@@ -4,9 +4,7 @@ import {
   Paper,
   Typography,
   Button,
-  Grid,
   Chip,
-  IconButton,
   Alert,
   Divider,
   List,
@@ -21,18 +19,16 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  IconButton,
   Tooltip
 } from '@mui/material';
+import Grid from './CustomGrid';
 import {
   Architecture as ArchitectureIcon,
   Add as AddIcon,
-  Delete as DeleteIcon,
+  Refresh as RefreshIcon,
   Archive as ArchiveIcon,
-  FileCopy as DuplicateIcon,
-  GetApp as DownloadIcon,
-  Visibility as PreviewIcon,
-  Print as PrintIcon,
-  Refresh as RefreshIcon
+  Visibility as PreviewIcon
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { LabelTemplate, PAPER_SIZES } from '../types/labelTemplates';
@@ -46,7 +42,7 @@ const LabelSettingsContent: React.FC = () => {
   const [defaultCopies, setDefaultCopies] = useState(1);
   const [defaultPaperSize, setDefaultPaperSize] = useState<'Brother-QL800' | 'Dymo-TwinTurbo'>('Brother-QL800');
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
-  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  // Removed unused state variables
 
   useEffect(() => {
     loadTemplates();
@@ -170,7 +166,7 @@ const LabelSettingsContent: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* Default Settings */}
-        <Grid item xs={12} md={6}>
+        <Grid xs={12} md={6}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Default Settings
@@ -219,7 +215,7 @@ const LabelSettingsContent: React.FC = () => {
         </Grid>
 
         {/* Statistics */}
-        <Grid item xs={12} md={6}>
+        <Grid xs={12} md={6}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Template Statistics
@@ -269,7 +265,7 @@ const LabelSettingsContent: React.FC = () => {
         </Grid>
 
         {/* Recent Templates */}
-        <Grid item xs={12}>
+        <Grid xs={12}>
           <Paper sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">

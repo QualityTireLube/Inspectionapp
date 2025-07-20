@@ -233,10 +233,10 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
           <BrakePadFrontAxleView
             driverInnerPad={frontBrakePadData.driver?.inner || ''}
             driverOuterPad={frontBrakePadData.driver?.outer || ''}
-            driverRotorCondition={frontBrakePadData.driver?.rotor_condition as RotorCondition}
+            driverRotorCondition={(frontBrakePadData.driver?.rotor_condition || '') as RotorCondition}
             passengerInnerPad={frontBrakePadData.passenger?.inner || ''}
             passengerOuterPad={frontBrakePadData.passenger?.outer || ''}
-            passengerRotorCondition={frontBrakePadData.passenger?.rotor_condition as RotorCondition}
+            passengerRotorCondition={(frontBrakePadData.passenger?.rotor_condition || '') as RotorCondition}
           />
         </Box>
 
@@ -727,7 +727,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
           <TireTreadSection
             label=""
             fieldPrefix="passenger_front_tire_tread"
-            value={form.tire_tread.passenger_front}
+            value={convertToTireTreadData(form.tire_tread.passenger_front)}
             onChange={(field, value) => onTreadChange('passenger_front', field, value)}
             onConditionChange={(field, condition) => onTreadConditionChange('passenger_front', field, condition)}
             onPhotoClick={() => onTirePhotoClick('passenger_front')}
@@ -859,7 +859,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
           <TireTreadSection
             label=""
             fieldPrefix="driver_front_tire_tread"
-            value={form.tire_tread.driver_front}
+            value={convertToTireTreadData(form.tire_tread.driver_front)}
             onChange={(field, value) => onTreadChange('driver_front', field, value)}
             onConditionChange={(field, condition) => onTreadConditionChange('driver_front', field, condition)}
             onPhotoClick={() => onTirePhotoClick('driver_front')}
@@ -984,7 +984,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
           <TireTreadSection
             label=""
             fieldPrefix="driver_rear_tire_tread"
-            value={form.tire_tread.driver_rear}
+            value={convertToTireTreadData(form.tire_tread.driver_rear)}
             onChange={(field, value) => onTreadChange('driver_rear', field, value)}
             onConditionChange={(field, condition) => onTreadConditionChange('driver_rear', field, condition)}
             onPhotoClick={() => onTirePhotoClick('driver_rear')}
@@ -1200,7 +1200,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
           <TireTreadSection
             label=""
             fieldPrefix="spare_tire_tread"
-            value={form.tire_tread.spare}
+            value={convertToTireTreadData(form.tire_tread.spare)}
             onChange={(field, value) => onTreadChange('spare', field, value)}
             onConditionChange={(field, condition) => onTreadConditionChange('spare', field, condition)}
             onPhotoClick={() => onTirePhotoClick('spare')}
@@ -1441,7 +1441,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
           <TireTreadSection
             label=""
             fieldPrefix="passenger_rear_tire_tread"
-            value={form.tire_tread.passenger_rear}
+            value={convertToTireTreadData(form.tire_tread.passenger_rear)}
             onChange={(field, value) => onTreadChange('passenger_rear', field, value)}
             onConditionChange={(field, condition) => onTreadConditionChange('passenger_rear', field, condition)}
             onPhotoClick={() => onTirePhotoClick('passenger_rear')}

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,7 @@ import {
   IconButton,
   Modal,
   Alert,
-  CircularProgress
+
 } from '@mui/material';
 import {
   PhotoCamera as PhotoCameraIcon,
@@ -17,9 +17,7 @@ import {
   FlashOff as FlashOffIcon,
   Close as CloseIcon,
   FlipCameraIos as FlipCameraIosIcon,
-  ArrowBack as ArrowBackIcon,
-  ArrowForward as ArrowForwardIcon,
-  Delete as DeleteIcon,
+
   PhotoLibrary as PhotoLibraryIcon
 } from '@mui/icons-material';
 import heic2any from 'heic2any';
