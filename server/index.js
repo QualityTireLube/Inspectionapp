@@ -3014,6 +3014,11 @@ app.post('/api/quick-checks/:id/tab-exit', authenticateToken, (req, res) => {
 
 // Initialize state inspection tables
 const initializeStateInspectionTables = () => {
+  // Skip table initialization in production (PostgreSQL)
+  if (isProduction) {
+    logger.info('⏭️  Skipping table initialization in production (PostgreSQL)');
+    return;
+  }
   // Create state_inspection_records table
   db.run(`
     CREATE TABLE IF NOT EXISTS state_inspection_records (
@@ -3577,6 +3582,12 @@ app.delete('/api/fleet-accounts/:id', authenticateToken, (req, res) => {
 
 // Initialize chat tables if they don't exist
 const initializeChatTables = () => {
+  // Skip table initialization in production (PostgreSQL)
+  if (isProduction) {
+    logger.info('⏭️  Skipping chat table initialization in production (PostgreSQL)');
+    return;
+  }
+  
   try {
     // Drop existing chat tables to recreate with new schema
     db.exec(`DROP TABLE IF EXISTS chat_messages`);
