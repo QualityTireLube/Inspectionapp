@@ -585,8 +585,19 @@ async function tryBasicVinParser(cleanVin) {
   }
 }
 
-// === SQLite setup ===
-const db = new sqlite3.Database('./database.sqlite', (err) => {
+// === Database setup ===
+let db;
+
+if (isProduction) {
+  // In production, use database config (PostgreSQL)
+  const DatabaseConfig = require('./database-config');
+  const dbConfig = new DatabaseConfig();
+  db = dbConfig.getConnection();
+  logger.info('✅ Connected to PostgreSQL database via config');
+} else {
+  // In development, use SQLite directly
+  const sqlite3 = require('sqlite3').verbose();
+  db = new sqlite3.Database('./database.sqlite', (err) => {
   if (err) logger.error('❌ DB error:', err);
   else {
     logger.info('✅ Connected to SQLite');
@@ -826,7 +837,8 @@ const db = new sqlite3.Database('./database.sqlite', (err) => {
       }
     });
   }
-});
+  });
+}
 
 // === Multer file upload ===
 const storage = multer.diskStorage({
