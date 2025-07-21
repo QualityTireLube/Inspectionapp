@@ -34,12 +34,12 @@ const initializeCashManagementTables = (db) => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       drawer_id TEXT NOT NULL,
       drawer_name TEXT NOT NULL,
-      count_type TEXT NOT NULL DEFAULT 'opening',
+      count_type TEXT CHECK (count_type IN ('opening', 'closing')) DEFAULT 'opening',
       denominations TEXT NOT NULL, -- JSON object of denomination counts
       cash_out TEXT NOT NULL, -- JSON object of cash out amounts
-      total_cash REAL NOT NULL,
+      total_cash REAL NOT NULL DEFAULT 0,
       total_for_deposit REAL NOT NULL,
-      sms_cash REAL, -- SMS cash collected (only for opening counts)
+      sms_cash REAL DEFAULT 0, -- SMS cash collected (only for opening counts)
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
       user_id TEXT NOT NULL,
       user_name TEXT NOT NULL
@@ -50,8 +50,12 @@ const initializeCashManagementTables = (db) => {
     } else {
       logger.info('✅ Drawer counts table ready');
       
-      // Add the count_type column if it doesn't exist (migration)
-      db.get("SELECT name FROM pragma_table_info('drawer_counts') WHERE name='count_type'", (err, row) => {
+      // 🧠 Cursor: Fixed PRAGMA table_info for PostgreSQL - using information_schema instead
+      // Check if count_type column exists
+      db.get(`
+        SELECT column_name FROM information_schema.columns 
+        WHERE table_name = 'drawer_counts' AND column_name = 'count_type'
+      `, (err, row) => {
         if (err) {
           logger.error('Error checking for count_type column:', err);
           return;
@@ -59,18 +63,24 @@ const initializeCashManagementTables = (db) => {
         
         if (!row) {
           logger.info('Adding count_type column to drawer_counts table...');
-          db.run('ALTER TABLE drawer_counts ADD COLUMN count_type TEXT NOT NULL DEFAULT "opening"', (err) => {
+          db.run('ALTER TABLE drawer_counts ADD COLUMN count_type TEXT CHECK (count_type IN (\'opening\', \'closing\')) DEFAULT \'opening\'', (err) => {
             if (err) {
               logger.error('Error adding count_type column:', err);
             } else {
               logger.info('✅ Added count_type column');
             }
           });
+        } else {
+          logger.info('count_type column already exists in drawer_counts table');
         }
       });
       
-      // Add the sms_cash column if it doesn't exist (migration)
-      db.get("SELECT name FROM pragma_table_info('drawer_counts') WHERE name='sms_cash'", (err, row) => {
+      // 🧠 Cursor: Fixed PRAGMA table_info for PostgreSQL - using information_schema instead
+      // Check if sms_cash column exists
+      db.get(`
+        SELECT column_name FROM information_schema.columns 
+        WHERE table_name = 'drawer_counts' AND column_name = 'sms_cash'
+      `, (err, row) => {
         if (err) {
           logger.error('Error checking for sms_cash column:', err);
           return;
@@ -78,29 +88,31 @@ const initializeCashManagementTables = (db) => {
         
         if (!row) {
           logger.info('Adding sms_cash column to drawer_counts table...');
-          db.run('ALTER TABLE drawer_counts ADD COLUMN sms_cash REAL', (err) => {
+          db.run('ALTER TABLE drawer_counts ADD COLUMN sms_cash REAL DEFAULT 0', (err) => {
             if (err) {
               logger.error('Error adding sms_cash column:', err);
             } else {
               logger.info('✅ Added sms_cash column');
             }
           });
+        } else {
+          logger.info('sms_cash column already exists in drawer_counts table');
         }
       });
     }
   });
 
-  // Drawer settings table
+  // Drawer settings table  
   db.run(`
     CREATE TABLE IF NOT EXISTS drawer_settings (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL UNIQUE,
-      target_denominations TEXT NOT NULL, -- JSON object
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      drawer_name TEXT NOT NULL UNIQUE,
       total_amount REAL NOT NULL DEFAULT 0,
-      is_active BOOLEAN NOT NULL DEFAULT 1,
-      show_detailed_calculations BOOLEAN NOT NULL DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      show_detailed_calculations BOOLEAN NOT NULL DEFAULT false,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+      user_id TEXT NOT NULL,
+      user_name TEXT NOT NULL
     )
   `, (err) => {
     if (err) {
@@ -108,8 +120,12 @@ const initializeCashManagementTables = (db) => {
     } else {
       logger.info('✅ Drawer settings table ready');
       
-      // Add the new column if it doesn't exist (migration)
-      db.get("SELECT name FROM pragma_table_info('drawer_settings') WHERE name='show_detailed_calculations'", (err, row) => {
+      // 🧠 Cursor: Fixed PRAGMA table_info for PostgreSQL - using information_schema instead
+      // Check if show_detailed_calculations column exists
+      db.get(`
+        SELECT column_name FROM information_schema.columns 
+        WHERE table_name = 'drawer_settings' AND column_name = 'show_detailed_calculations'
+      `, (err, row) => {
         if (err) {
           logger.error('Error checking for show_detailed_calculations column:', err);
           return;
@@ -117,13 +133,16 @@ const initializeCashManagementTables = (db) => {
         
         if (!row) {
           logger.info('Adding show_detailed_calculations column to drawer_settings table...');
-          db.run('ALTER TABLE drawer_settings ADD COLUMN show_detailed_calculations BOOLEAN NOT NULL DEFAULT 0', (err) => {
+          // 🧠 Cursor: Fixed PostgreSQL boolean default - using false instead of 0
+          db.run('ALTER TABLE drawer_settings ADD COLUMN show_detailed_calculations BOOLEAN NOT NULL DEFAULT false', (err) => {
             if (err) {
               logger.error('Error adding show_detailed_calculations column:', err);
             } else {
               logger.info('✅ Added show_detailed_calculations column');
             }
           });
+        } else {
+          logger.info('show_detailed_calculations column already exists in drawer_settings table');
         }
       });
     }
