@@ -16,6 +16,12 @@ class DatabaseWrapper {
 
   // SQLite-like run method for both databases
   run(query, params = [], callback = () => {}) {
+    // Handle the case where params is actually the callback (SQLite style)
+    if (typeof params === 'function' && !callback) {
+      callback = params;
+      params = [];
+    }
+
     if (this.isPostgreSQL) {
       // Validate database connection
       if (!this.db || typeof this.db.query !== 'function') {
@@ -68,6 +74,12 @@ class DatabaseWrapper {
 
   // SQLite-like all method for both databases
   all(query, params = [], callback = () => {}) {
+    // Handle the case where params is actually the callback (SQLite style)
+    if (typeof params === 'function' && !callback) {
+      callback = params;
+      params = [];
+    }
+
     if (this.isPostgreSQL) {
       if (!this.db || typeof this.db.query !== 'function') {
         logger.error('PostgreSQL database connection not available for all() method');
@@ -106,6 +118,12 @@ class DatabaseWrapper {
 
   // SQLite-like get method for both databases
   get(query, params = [], callback = () => {}) {
+    // Handle the case where params is actually the callback (SQLite style)
+    if (typeof params === 'function' && !callback) {
+      callback = params;
+      params = [];
+    }
+
     if (this.isPostgreSQL) {
       if (!this.db || typeof this.db.query !== 'function') {
         logger.error('PostgreSQL database connection not available for get() method');

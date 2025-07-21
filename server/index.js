@@ -3513,7 +3513,7 @@ app.get('/api/chat/conversations', authenticateToken, (req, res) => {
           ELSE c.user1_name 
         END as other_user_name,
         (SELECT COUNT(*) FROM chat_messages cm WHERE cm.conversation_id = c.id) as message_count,
-        (SELECT COUNT(*) FROM chat_messages cm WHERE cm.conversation_id = c.id AND cm.receiver_email = ? AND cm.is_read = 0) as unread_count,
+        (SELECT COUNT(*) FROM chat_messages cm WHERE cm.conversation_id = c.id AND cm.receiver_email = ? AND cm.is_read = false) as unread_count,
         (SELECT message FROM chat_messages cm WHERE cm.conversation_id = c.id ORDER BY cm.created_at DESC LIMIT 1) as last_message
       FROM chat_conversations c
       WHERE c.user1_email = ? OR c.user2_email = ?
@@ -3716,7 +3716,7 @@ app.get('/api/chat/conversations/:conversationId/messages', authenticateToken, (
         // Mark messages as read for the current user
         const markReadQuery = `
           UPDATE chat_messages 
-          SET is_read = 1 
+          SET is_read = true 
           WHERE conversation_id = ? AND receiver_email = ?
         `;
 
