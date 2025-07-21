@@ -60,19 +60,18 @@ class WebSocketService {
   private isReconnecting = false;
 
   constructor() {
-    // Use the same dynamic IP detection as the API service
+    // Use the same dynamic URL logic as the API service
     const protocol = 'https'; // Always use HTTPS for WebSocket
     const hostname = window.location.hostname;
-    const port = import.meta.env.DEV ? '5001' : '5001';
     
-    // Always use the current hostname for WebSocket connection
-    // This ensures it works with any IP address (localhost, 192.168.x.x, 10.x.x.x, etc.)
-    this.baseUrl = `${protocol}://${hostname}:${port}`;
-    
-    // Validate that we're connecting to the correct backend port
-    if (port !== '5001') {
-      console.error(`❌ WebSocket: Attempting to connect to wrong port ${port} instead of backend port 5001`);
-      throw new Error(`WebSocket configuration error: Cannot connect to port ${port}`);
+    // In development, use port 5001 for separate backend
+    // In production (Render monolith), use same origin (no separate port)
+    if (import.meta.env.DEV) {
+      this.baseUrl = `${protocol}://${hostname}:5001`;
+    } else {
+      // Production: use same origin as the current page (no port specified)
+      const port = window.location.port;
+      this.baseUrl = `${protocol}://${hostname}${port ? `:${port}` : ''}`;
     }
     
     console.log('🔌 WebSocket service initialized with base URL:', this.baseUrl);
@@ -80,8 +79,8 @@ class WebSocketService {
     console.log('📍 Current location:', window.location.href);
     console.log('🏠 Hostname:', window.location.hostname);
     console.log('🔒 Protocol:', protocol);
-    console.log('🚪 Port:', port);
-    console.log('✅ WebSocket will connect to backend server on port 5001');
+    console.log('🏗️ Environment:', import.meta.env.DEV ? 'Development' : 'Production');
+    console.log('✅ WebSocket configured for', import.meta.env.DEV ? 'separate backend server (port 5001)' : 'monolith deployment (same origin)');
     
     // Check for immediate connection if token is available
     const token = localStorage.getItem('token');
