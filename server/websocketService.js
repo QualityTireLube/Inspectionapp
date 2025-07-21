@@ -1,9 +1,45 @@
-const { Server } = require('socket.io');
+// 🧠 Cursor: I'm deploying to Render and added graceful fallback for socket.io module.
+// If socket.io isn't available, creates a mock WebSocket service to prevent crashes.
+
 const jwt = require('jsonwebtoken');
 const logger = require('./logger');
 
+let Server;
+let isSocketIOAvailable = false;
+
+try {
+  const socketIO = require('socket.io');
+  Server = socketIO.Server;
+  isSocketIOAvailable = true;
+  console.log('✅ Socket.IO loaded successfully');
+} catch (error) {
+  console.warn('⚠️  Socket.IO not available, WebSocket features will be disabled:', error.message);
+  isSocketIOAvailable = false;
+}
+
 class WebSocketService {
   constructor(server) {
+    if (!isSocketIOAvailable) {
+      console.warn('⚠️  Socket.IO is not available. WebSocket service will be mocked.');
+      this.io = {
+        on: (event, callback) => {
+          if (event === 'connection') {
+            callback({ id: 'mock-socket-id' });
+          }
+        },
+        emit: (event, data) => {
+          console.log(`Mock WebSocket emit: ${event}`, data);
+        },
+        to: (socketId) => ({ emit: (event, data) => console.log(`Mock WebSocket to ${socketId} emit: ${event}`, data) }),
+        broadcast: { emit: (event, data) => console.log(`Mock WebSocket broadcast emit: ${event}`, data) },
+        engine: { clientsCount: 0 }
+      };
+      this.connectedClients = new Map();
+      this.setupEventHandlers();
+      logger.info('🔌 WebSocket service initialized (mocked)');
+      return;
+    }
+
     this.io = new Server(server, {
       cors: {
         origin: function(origin, callback) {
@@ -154,6 +190,14 @@ class WebSocketService {
 
   // Emit quick check updates to all authenticated clients
   emitQuickCheckUpdate(type, data) {
+    if (!isSocketIOAvailable) {
+      logger.info(`Mock WebSocket: Would emit quick check update - Type: ${type}`, {
+        id: data.id,
+        vin: data.vin || data.data?.vin
+      });
+      return;
+    }
+
     const message = {
       type: 'quick_check_update',
       action: type, // 'created', 'updated', 'deleted', 'archived'
@@ -185,6 +229,11 @@ class WebSocketService {
 
   // Emit timing updates for specific quick check
   emitTimingUpdate(quickCheckId, timingData) {
+    if (!isSocketIOAvailable) {
+      logger.info(`Mock WebSocket: Would emit timing update for Quick Check ${quickCheckId}`);
+      return;
+    }
+
     const message = {
       type: 'timing_update',
       quickCheckId: quickCheckId,
@@ -198,6 +247,11 @@ class WebSocketService {
 
   // Emit status updates (like connection status, server notifications)
   emitStatusUpdate(type, message, targetUserId = null) {
+    if (!isSocketIOAvailable) {
+      logger.info(`Mock WebSocket: Would emit status update (${type}): ${message}`);
+      return;
+    }
+
     const statusMessage = {
       type: 'status_update',
       statusType: type, // 'info', 'warning', 'error', 'success'
@@ -222,6 +276,15 @@ class WebSocketService {
 
   // Get connection statistics
   getStats() {
+    if (!isSocketIOAvailable) {
+      return {
+        connectedClients: 0,
+        totalConnections: 0,
+        clients: [],
+        mocked: true
+      };
+    }
+
     return {
       connectedClients: this.connectedClients.size,
       totalConnections: this.io.engine.clientsCount,
@@ -231,6 +294,11 @@ class WebSocketService {
 
   // Send heartbeat to all clients
   sendHeartbeat() {
+    if (!isSocketIOAvailable) {
+      logger.info('Mock WebSocket: Would send heartbeat');
+      return;
+    }
+
     const heartbeat = {
       type: 'heartbeat',
       timestamp: new Date().toISOString(),
@@ -242,6 +310,10 @@ class WebSocketService {
 
   // Clean up disconnected clients (called periodically)
   cleanup() {
+    if (!isSocketIOAvailable) {
+      return;
+    }
+
     const now = Date.now();
     const staleTimeout = 5 * 60 * 1000; // 5 minutes
 
