@@ -106,8 +106,10 @@ app.use(cors({
     // Define allowed origins based on environment
     const allowedOrigins = isProduction 
       ? [
-          process.env.FRONTEND_URL, // Vercel URL
+          process.env.FRONTEND_URL, // Custom frontend URL if specified
           /^https:\/\/.*\.vercel\.app$/, // Any Vercel preview URLs
+          /^https:\/\/.*\.onrender\.com$/, // Render domains (for monolith deployment)
+          'https://inspectionapp-backend.onrender.com', // Specific Render domain
         ]
       : [
           /^https?:\/\/(localhost|127\.0\.0\.1|\d+\.\d+\.\d+\.\d+):3000$/ // Development
@@ -127,7 +129,7 @@ app.use(cors({
       logger.info(`✅ CORS allowed origin: ${origin}`);
       callback(null, true);
     } else {
-      logger.warn(`❌ CORS blocked origin: ${origin}`);
+      logger.warn(`❌ CORS blocked origin: ${origin}. Allowed origins: ${JSON.stringify(allowedOrigins)}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
