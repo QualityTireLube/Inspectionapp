@@ -5080,10 +5080,10 @@ app.delete('/api/shopmonkey/label/:id/assign', async (req, res) => {
 });
 
 // === DYNAMIC API ROUTES ===
-// Initialize the dynamic API system that can serve any SQLite table
+// Initialize the dynamic API system that can serve any database table
 // IMPORTANT: This must come AFTER all specific routes to avoid conflicts
 const DynamicApiRoutes = require('./dynamicApiRoutes');
-const dynamicApi = new DynamicApiRoutes('./database.sqlite');
+const dynamicApi = new DynamicApiRoutes(); // Uses database-config.js for DB connection
 
 // Root API endpoint - provides information about available endpoints
 app.get('/api', (req, res) => {

@@ -1,0 +1,42 @@
+
+> vehicle-inspection-server@1.0.0 start
+> node index.js
+
+✅ Winston logger initialized successfully
+✅ Socket.IO loaded successfully
+2025-07-20 23:25:48 [INFO]: 🚀 Production mode: Using HTTP server (SSL handled by Render)
+Database Config: Environment=production, Type=postgresql, Production=true
+2025-07-20 23:25:48 [INFO]: ⏭️  Skipping table initialization in production (PostgreSQL)
+2025-07-20 23:25:48 [INFO]: ⏭️  Skipping chat table initialization in production (PostgreSQL)
+Database Config: Environment=production, Type=postgresql, Production=true
+2025-07-20 23:25:48 [INFO]: ✅ Dynamic API routes configured
+2025-07-20 23:25:48 [INFO]: 🔄 Dynamic API system initialized - All database tables are now accessible via /api/[tableName]
+2025-07-20 23:25:48 [INFO]: 🔌 WebSocket service initialized
+2025-07-20 23:25:48 [INFO]: ✅ Backend running with HTTP at:
+2025-07-20 23:25:48 [INFO]:    Port: 3000
+2025-07-20 23:25:48 [INFO]:    Local:   http://localhost:3000
+2025-07-20 23:25:48 [INFO]:    Network: http://172.20.10.9:3000
+2025-07-20 23:25:48 [INFO]:    📊 Dynamic API: Use /api/tables to list all available tables
+2025-07-20 23:25:48 [INFO]:    🔍 Example: /api/quick_checks?page=1&limit=10&search=honda
+Server running on port 3000
+PostgreSQL connection test failed: Error: getaddrinfo ENOTFOUND base
+    at /Users/stephenvillavaso/Github/Inspectionapp/server/node_modules/pg-pool/index.js:45:11
+    at processTicksAndRejections (node:internal/process/task_queues:96:5)
+    at async DatabaseConfig.getPostgreSQLConnection (/Users/stephenvillavaso/Github/Inspectionapp/server/database-config.js:71:28)
+    at async /Users/stephenvillavaso/Github/Inspectionapp/server/index.js:603:15 {
+  errno: -3008,
+  code: 'ENOTFOUND',
+  syscall: 'getaddrinfo',
+  hostname: 'base'
+}
+PostgreSQL connection failed: Error: getaddrinfo ENOTFOUND base
+    at /Users/stephenvillavaso/Github/Inspectionapp/server/node_modules/pg-pool/index.js:45:11
+    at processTicksAndRejections (node:internal/process/task_queues:96:5)
+    at async DatabaseConfig.getPostgreSQLConnection (/Users/stephenvillavaso/Github/Inspectionapp/server/database-config.js:71:28)
+    at async /Users/stephenvillavaso/Github/Inspectionapp/server/index.js:603:15 {
+  errno: -3008,
+  code: 'ENOTFOUND',
+  syscall: 'getaddrinfo',
+  hostname: 'base'
+}
+2025-07-20 23:25:48 [ERROR]: Failed to connect to PostgreSQL: getaddrinfo ENOTFOUND base
