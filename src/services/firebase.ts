@@ -2,9 +2,9 @@
 // Previous fallback implementations replaced with real Firebase imports
 
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getAuth } from 'firebase/auth';
 
 // Initialize Firebase with environment variables
 const firebaseConfig = {
@@ -18,51 +18,63 @@ const firebaseConfig = {
 
 let app: any = null;
 let db: any = null;
-let storage: any = null; 
+let storage: any = null;
 let auth: any = null;
 
 try {
-  // Initialize Firebase only if config is available
-  if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+  // Check if we have Firebase config
+  if (firebaseConfig.apiKey) {
     app = initializeApp(firebaseConfig);
     db = getFirestore(app);
     storage = getStorage(app);
     auth = getAuth(app);
     console.log('✅ Firebase initialized successfully');
   } else {
-    console.warn('⚠️ Firebase config missing, using fallback implementations');
-    throw new Error('Firebase config incomplete');
+    console.warn('⚠️ Firebase config missing - using fallback implementation');
   }
 } catch (error) {
-  console.log('Firebase packages not available or config missing, using fallback implementations');
-  
-  // Fallback implementations for when Firebase is not properly configured
-  db = {
-    collection: () => ({
-      add: () => Promise.resolve({ id: 'mock' }),
-      get: () => Promise.resolve({ docs: [] }),
-      doc: () => ({
-        get: () => Promise.resolve({ exists: false }),
-        set: () => Promise.resolve(),
-        update: () => Promise.resolve(),
-        delete: () => Promise.resolve()
-      })
-    })
-  };
-
-  storage = {
-    ref: () => ({
-      put: () => Promise.resolve({ ref: { getDownloadURL: () => Promise.resolve('') } }),
-      delete: () => Promise.resolve()
-    })
-  };
-
-  auth = {
-    currentUser: null,
-    signInWithEmailAndPassword: () => Promise.resolve({ user: null }),
-    signOut: () => Promise.resolve(),
-    onAuthStateChanged: () => () => {}
-  };
+  console.error('❌ Firebase initialization failed:', error);
 }
 
-export { db, storage, auth }; 
+// Export Firebase services (with fallbacks for development)
+export { auth, db, storage, app };
+
+// Fallback implementations for when Firebase is not available
+export const mockAuth = {
+  currentUser: null,
+  signInWithEmailAndPassword: () => Promise.reject(new Error('Firebase not configured')),
+  signOut: () => Promise.resolve(),
+  onAuthStateChanged: () => () => {}
+};
+
+export const mockDb = {
+  collection: () => ({
+    doc: () => ({
+      set: () => Promise.resolve(),
+      get: () => Promise.resolve({ exists: () => false, data: () => null }),
+      update: () => Promise.resolve(),
+      delete: () => Promise.resolve()
+    }),
+    add: () => Promise.resolve({ id: 'mock-id' }),
+    where: () => ({
+      get: () => Promise.resolve({ empty: true, docs: [] })
+    })
+  })
+};
+
+export const mockStorage = {
+  ref: () => ({
+    child: () => ({
+      put: () => Promise.resolve({ ref: { getDownloadURL: () => Promise.resolve('mock-url') } }),
+      getDownloadURL: () => Promise.resolve('mock-url'),
+      delete: () => Promise.resolve()
+    })
+  })
+};
+
+// Use real Firebase if available, otherwise use mocks
+export default {
+  auth: auth || mockAuth,
+  db: db || mockDb,
+  storage: storage || mockStorage
+}; 

@@ -245,7 +245,6 @@ const BankDepositForm: React.FC = () => {
             label="All Check Images (Individually)"
             images={formData.individualCheckImages}
             onChange={(images) => handleInputChange('individualCheckImages', images)}
-            maxImages={20}
             disabled={submitting}
           />
 
@@ -256,21 +255,15 @@ const BankDepositForm: React.FC = () => {
             disabled={submitting}
           />
 
-          {/* Notes */}
-          <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Notes (Optional)
-            </Typography>
-            <TextField
-              label="Additional notes about this deposit"
-              multiline
-              rows={4}
-              value={formData.notes}
-              onChange={(e) => handleInputChange('notes', e.target.value)}
-              fullWidth
-              placeholder="Enter any additional information about this deposit..."
-            />
-          </Paper>
+          <TextField
+            label="Notes"
+            multiline
+            rows={3}
+            value={formData.notes}
+            onChange={(e) => handleInputChange('notes', e.target.value)}
+            disabled={submitting}
+            fullWidth
+          />
 
           {/* Action Buttons */}
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>

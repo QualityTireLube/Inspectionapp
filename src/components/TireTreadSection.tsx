@@ -2,21 +2,7 @@ import React, { useEffect } from 'react';
 import { Box, Stack, Typography, TextField, IconButton, Chip } from '@mui/material';
 import TireTreadSideView from './TireTreadSideView';
 import CloseIcon from '@mui/icons-material/Close';
-
-export interface TireTreadData {
-  inner_edge_depth: string;
-  inner_depth: string;
-  center_depth: string;
-  outer_depth: string;
-  outer_edge_depth: string;
-  // 🧠 Cursor: TreadCondition allows empty string '' for initial values before measurement
-  // This is intentional for the blank slate approach - users must make conscious choices
-  inner_edge_condition: '' | 'green' | 'yellow' | 'red';
-  inner_condition: '' | 'green' | 'yellow' | 'red';
-  center_condition: '' | 'green' | 'yellow' | 'red';
-  outer_condition: '' | 'green' | 'yellow' | 'red';
-  outer_edge_condition: '' | 'green' | 'yellow' | 'red';
-}
+import { TireTread as TireTreadData } from '../types/quickCheck';
 
 interface TireTreadSectionProps {
   label: string;

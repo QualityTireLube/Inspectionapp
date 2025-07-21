@@ -1,52 +1,46 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import ProtectedRoute from './components/ProtectedRoute';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Home from './pages/Home';
-import QuickCheck from './pages/QuickCheck';
-import QuickCheckRecords from './pages/QuickCheckRecords';
-import History from './pages/History';
+import { ThemeProvider } from '@mui/material/styles';
+import { CssBaseline } from '@mui/material';
+import theme from './theme';
+
+// Pages
 import Layout from './components/Layout';
-import QuickCheckDetail from './pages/QuickCheckDetail';
+import Home from './pages/Home';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
-import ErrorBoundary from './components/ErrorBoundary';
-import QuickCheckDrafts from './pages/QuickCheckDrafts';
+import QuickCheck from './pages/QuickCheck';
+import History from './pages/History';
+import Scanner from './pages/Scanner';
+import QuickCheckRecords from './pages/QuickCheckRecords';
+import QuickCheckDetail from './pages/QuickCheckDetail';
 import QuickCheckDatabase from './pages/QuickCheckDatabase';
+import StateInspectionRecords from './pages/StateInspectionRecords';
+import InspectionForm from './pages/InspectionForm';
+import InspectionRecords from './pages/InspectionRecords';
 import ActiveStickers from './pages/ActiveStickers';
 import ArchivedStickers from './pages/ArchivedStickers';
-import Chat from './pages/Chat';
+import StickerSettings from './pages/StickerSettings';
 import LabelManager from './pages/LabelManager';
-import StateInspectionRecords from './pages/StateInspectionRecords';
+import QuickCheckDrafts from './pages/QuickCheckDrafts';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Chat from './pages/Chat';
+import Users from './pages/Users';
+import Databases from './pages/Databases';
 import BankDepositForm from './pages/BankDepositForm';
 import BankDepositRecords from './pages/BankDepositRecords';
 import DrawerCountForm from './pages/DrawerCountForm';
 import DrawerSettings from './pages/DrawerSettings';
 import CashAnalytics from './pages/CashAnalytics';
 import ShopMonkey from './pages/ShopMonkey';
-import Databases from './pages/Databases';
 import ImageUploadTest from './pages/ImageUploadTest';
-import { WebSocketProvider } from './contexts/WebSocketProvider';
-import TokenExpirationTest from './components/TokenExpirationTest';
 
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: '#024FFF',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-    background: {
-      default: '#ffffff',
-      paper: '#ffffff',
-    },
-  },
-});
+// Components
+import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
+import NotificationSnackbar from './components/NotificationSnackbar';
+import { WebSocketProvider } from './contexts/WebSocketProvider';
 
 function App() {
   // Initialize token manager on app start
@@ -144,7 +138,7 @@ function App() {
             <Route path="/token-expiration-test" element={
               <ProtectedRoute>
                 <Layout>
-                  <TokenExpirationTest />
+                  {/* <TokenExpirationTest /> */}
                 </Layout>
               </ProtectedRoute>
             } />

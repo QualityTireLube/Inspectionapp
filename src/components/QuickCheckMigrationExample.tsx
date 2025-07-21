@@ -1,8 +1,31 @@
 // MIGRATION EXAMPLE: How to replace complex image code with QuickCheckImageManager
 // This file shows the BEFORE and AFTER for easy comparison
 
-import React from 'react';
-import { QuickCheckImageManager } from './Image';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Box,
+  Typography,
+  Button,
+  CircularProgress,
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  Grid,
+  Paper,
+  Card,
+  CardContent,
+  Stepper,
+  Step,
+  StepLabel,
+  StepContent,
+  Divider,
+  Chip
+} from '@mui/material';
+import { Close, PhotoCamera, Upload, CheckCircle, ArrowForward } from '@mui/icons-material';
+import { ImageFieldDisplay } from './Image';
 import { ImageUpload, PhotoType } from '../types/quickCheck';
 
 // ===== BEFORE: Complex implementation (lines 1450-1650 in QuickCheck.tsx) =====
@@ -121,131 +144,16 @@ import { ImageUpload, PhotoType } from '../types/quickCheck';
                       onLoad={() => console.log(`Dash light image ${index} loaded successfully:`, photo.url)}
                       onError={(e) => {
                         console.error(`Failed to load dash light image ${index}:`, photo.url, e);
-                        if (photo.url && !photo.url.startsWith('http') && !photo.url.startsWith('/uploads/')) {
-                          const newUrl = `/uploads/${photo.url}`;
-                          console.log(`Trying alternative URL for image ${index}:`, newUrl);
-                          e.currentTarget.src = newUrl;
-                        }
                       }}
                     />
-                  </Tooltip>
-                  <Box
-                    className="overlay"
-                    sx={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      bgcolor: 'rgba(0,0,0,0.5)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      opacity: 0,
-                      transition: 'opacity 0.2s',
-                    }}
-                  >
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveDashLightsPhoto(index);
-                      }}
-                      sx={{
-                        color: 'white',
-                        bgcolor: 'rgba(0,0,0,0.5)',
-                        '&:hover': {
-                          bgcolor: 'rgba(0,0,0,0.7)',
-                        },
-                      }}
-                    >
-                      <CloseIcon />
-                    </IconButton>
                   </Box>
-                </Box>
-              );
-            })}
+                );
+              })}
+          </Box>
         </Box>
-        <IconButton
-          onClick={() => dashLightsInputRef.current?.click()}
-          sx={{
-            position: 'absolute',
-            top: 8,
-            right: 8,
-            bgcolor: 'rgba(255,255,255,0.9)',
-            '&:hover': {
-              bgcolor: 'rgba(255,255,255,1)',
-            },
-            boxShadow: 1,
-          }}
-        >
-          <CameraAltIcon sx={{ fontSize: 24, color: '#888' }} />
-        </IconButton>
-      </Box>
-    )}
-    <input
-      type="file"
-      accept="image/*"
-      multiple
-      hidden
-      ref={dashLightsInputRef}
-      onChange={e => handleDashLightsPhotoUpload(e.target.files)}
-    />
-  </Box>
-</Grid>
-*/
-
-// ===== AFTER: Simplified implementation =====
-interface MigrationExampleProps {
-  form: {
-    dash_lights_photos: ImageUpload[];
-  };
-  handlePhotosChange: (type: string, photos: ImageUpload[]) => void;
-  handleImageClick: (photos: ImageUpload[], type?: string) => void;
-}
-
-const DashLightsSimplified: React.FC<MigrationExampleProps> = ({
-  form,
-  handlePhotosChange,
-  handleImageClick
-}) => {
-  return (
-    <>
-      {/* Info icon can still be added separately if needed */}
-      <QuickCheckImageManager
-        type="dash_lights_photos"
-        photos={form.dash_lights_photos}
-        onPhotosChange={(photos) => handlePhotosChange('dash_lights_photos', photos)}
-        onPhotoClick={(photos) => handleImageClick(photos, 'dash_lights_photos')}
-        label="Dash Lights"
-        showLabel={true}
-        aspectRatio="4/1"
-        maxPhotos={8}
-      />
-    </>
+      )}
+    </Box>
   );
 };
 
-// ===== COMPARISON =====
-/*
-BEFORE: 200+ lines of complex code
-AFTER:  10 lines of simple code
-
-REMOVED:
-- Complex Box layouts
-- Manual file input handling  
-- Custom overlay effects
-- Repetitive photo mapping
-- Error-prone state management
-- Inconsistent styling
-
-GAINED:
-- Consistent UX across all image types
-- Built-in validation and error handling
-- Responsive design
-- Cleaner, more maintainable code
-- Type safety
-- Easy testing
-*/
-
-export default DashLightsSimplified; 
+export default QuickCheckMigrationExample;

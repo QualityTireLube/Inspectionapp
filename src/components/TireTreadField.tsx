@@ -1,28 +1,19 @@
 import React from 'react';
 import Grid from './CustomGrid';
 import TireTreadSection from './TireTreadSection';
+import { Box, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { TireTread as TireTreadData } from '../types/quickCheck';
 
-interface ImageUpload {
+export interface ImageUpload {
   file: File;
-  progress: number;
-  url?: string;
-  error?: string;
+  url: string;
+  uploadId: string;
   position?: number;
   isDeleted?: boolean;
 }
 
-export interface TireTreadData {
-  inner_edge_depth: string;
-  inner_depth: string;
-  center_depth: string;
-  outer_depth: string;
-  outer_edge_depth: string;
-  inner_edge_condition: '' | 'green' | 'yellow' | 'red';
-  inner_condition: '' | 'green' | 'yellow' | 'red';
-  center_condition: '' | 'green' | 'yellow' | 'red';
-  outer_condition: '' | 'green' | 'yellow' | 'red';
-  outer_edge_condition: '' | 'green' | 'yellow' | 'red';
-}
+// Export the TireTreadData for backward compatibility
+export type { TireTreadData };
 
 type TirePosition = 'passenger_front' | 'driver_front' | 'driver_rear' | 'passenger_rear' | 'spare';
 
