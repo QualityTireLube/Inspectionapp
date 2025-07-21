@@ -5,27 +5,61 @@ class DatabaseWrapper {
     this.db = db;
     this.dbConfig = dbConfig;
     this.isPostgreSQL = dbConfig.databaseType === 'postgresql';
+    
+    // Debug logging
+    if (this.isPostgreSQL) {
+      logger.info('DatabaseWrapper initialized for PostgreSQL');
+      logger.info('Database object type:', typeof this.db);
+      logger.info('Database query method available:', typeof this.db?.query);
+    }
   }
 
   // SQLite-like run method for both databases
   run(query, params = [], callback = () => {}) {
     if (this.isPostgreSQL) {
+      // Validate database connection
+      if (!this.db || typeof this.db.query !== 'function') {
+        logger.error('PostgreSQL database connection not available or missing query method');
+        logger.error('Database object:', this.db);
+        const error = new Error('Database connection not available');
+        callback(error);
+        return;
+      }
+
       // Convert SQLite syntax to PostgreSQL
       const pgQuery = this.convertSQLiteToPostgreSQL(query);
+      logger.info('Executing PostgreSQL query:', pgQuery);
       
-      this.db.query(pgQuery, params)
-        .then(result => {
-          // Mimic SQLite's callback signature
-          const mockThis = {
-            lastID: result.insertId || (result.rows && result.rows[0] && result.rows[0].id) || undefined,
-            changes: result.rowCount || 0
-          };
-          callback.call(mockThis, null);
-        })
-        .catch(err => {
-          logger.error('Database run error:', err);
-          callback(err);
-        });
+      try {
+        const queryResult = this.db.query(pgQuery, params);
+        
+        // Check if query returns a Promise
+        if (!queryResult || typeof queryResult.then !== 'function') {
+          logger.error('Database query did not return a Promise');
+          logger.error('Query result type:', typeof queryResult);
+          logger.error('Query result:', queryResult);
+          const error = new Error('Database query failed - no Promise returned');
+          callback(error);
+          return;
+        }
+
+        queryResult
+          .then(result => {
+            // Mimic SQLite's callback signature
+            const mockThis = {
+              lastID: result.insertId || (result.rows && result.rows[0] && result.rows[0].id) || undefined,
+              changes: result.rowCount || 0
+            };
+            callback.call(mockThis, null);
+          })
+          .catch(err => {
+            logger.error('Database run error:', err);
+            callback(err);
+          });
+      } catch (syncError) {
+        logger.error('Synchronous error in database query:', syncError);
+        callback(syncError);
+      }
     } else {
       // Use SQLite's native run method
       this.db.run(query, params, callback);
@@ -35,16 +69,35 @@ class DatabaseWrapper {
   // SQLite-like all method for both databases
   all(query, params = [], callback = () => {}) {
     if (this.isPostgreSQL) {
+      if (!this.db || typeof this.db.query !== 'function') {
+        logger.error('PostgreSQL database connection not available for all() method');
+        callback(new Error('Database connection not available'), []);
+        return;
+      }
+
       const pgQuery = this.convertSQLiteToPostgreSQL(query);
       
-      this.db.query(pgQuery, params)
-        .then(result => {
-          callback(null, result.rows || []);
-        })
-        .catch(err => {
-          logger.error('Database all error:', err);
-          callback(err, []);
-        });
+      try {
+        const queryResult = this.db.query(pgQuery, params);
+        
+        if (!queryResult || typeof queryResult.then !== 'function') {
+          logger.error('Database query did not return a Promise in all() method');
+          callback(new Error('Database query failed'), []);
+          return;
+        }
+
+        queryResult
+          .then(result => {
+            callback(null, result.rows || []);
+          })
+          .catch(err => {
+            logger.error('Database all error:', err);
+            callback(err, []);
+          });
+      } catch (syncError) {
+        logger.error('Synchronous error in database all query:', syncError);
+        callback(syncError, []);
+      }
     } else {
       // Use SQLite's native all method
       this.db.all(query, params, callback);
@@ -54,17 +107,36 @@ class DatabaseWrapper {
   // SQLite-like get method for both databases
   get(query, params = [], callback = () => {}) {
     if (this.isPostgreSQL) {
+      if (!this.db || typeof this.db.query !== 'function') {
+        logger.error('PostgreSQL database connection not available for get() method');
+        callback(new Error('Database connection not available'), null);
+        return;
+      }
+
       const pgQuery = this.convertSQLiteToPostgreSQL(query);
       
-      this.db.query(pgQuery, params)
-        .then(result => {
-          const row = result.rows && result.rows[0] ? result.rows[0] : null;
-          callback(null, row);
-        })
-        .catch(err => {
-          logger.error('Database get error:', err);
-          callback(err, null);
-        });
+      try {
+        const queryResult = this.db.query(pgQuery, params);
+        
+        if (!queryResult || typeof queryResult.then !== 'function') {
+          logger.error('Database query did not return a Promise in get() method');
+          callback(new Error('Database query failed'), null);
+          return;
+        }
+
+        queryResult
+          .then(result => {
+            const row = result.rows && result.rows[0] ? result.rows[0] : null;
+            callback(null, row);
+          })
+          .catch(err => {
+            logger.error('Database get error:', err);
+            callback(err, null);
+          });
+      } catch (syncError) {
+        logger.error('Synchronous error in database get query:', syncError);
+        callback(syncError, null);
+      }
     } else {
       // Use SQLite's native get method
       this.db.get(query, params, callback);
@@ -103,7 +175,11 @@ class DatabaseWrapper {
   // Method to close connection (for cleanup)
   close(callback = () => {}) {
     if (this.isPostgreSQL) {
-      this.db.end().then(() => callback()).catch(callback);
+      if (this.db && typeof this.db.end === 'function') {
+        this.db.end().then(() => callback()).catch(callback);
+      } else {
+        callback();
+      }
     } else {
       this.db.close(callback);
     }

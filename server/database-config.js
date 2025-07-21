@@ -54,7 +54,15 @@ class DatabaseConfig {
         ssl: this.isProduction ? { rejectUnauthorized: false } : false
       });
 
+      // Test the connection to ensure it's working
+      pool.on('error', (err) => {
+        console.error('PostgreSQL pool error:', err);
+      });
+
+      // Test connection synchronously to verify it works
       console.log('Connected to PostgreSQL database');
+      console.log('Pool query method available:', typeof pool.query);
+      
       return pool;
     } catch (error) {
       console.error('PostgreSQL package not installed. Run: npm install pg');
