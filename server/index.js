@@ -1693,16 +1693,29 @@ app.get('/api/quick-checks/active', authenticateToken, (req, res) => {
 
 // GET all draft quick checks (status = 'pending')
 app.get('/api/quick-checks/draft', authenticateToken, (req, res) => {
-  db.all(
-    "SELECT * FROM quick_checks WHERE status = 'pending' ORDER BY created_at DESC",
-    (err, rows) => {
-      if (err) {
-        logger.error('Error fetching draft quick checks:', err);
-        return res.status(500).json({ error: 'Failed to fetch draft quick checks' });
+  // Check if database is available
+  if (!db) {
+    logger.warn('Database not available, returning empty draft quick checks');
+    return res.json([]);
+  }
+
+  try {
+    db.all(
+      "SELECT * FROM quick_checks WHERE status = 'pending' ORDER BY created_at DESC",
+      (err, rows) => {
+        if (err) {
+          logger.error('Error fetching draft quick checks:', err);
+          logger.warn('Database error occurred, falling back to empty response');
+          return res.json([]); // Return empty array instead of 500 error
+        }
+        res.json(rows);
       }
-      res.json(rows);
-    }
-  );
+    );
+  } catch (error) {
+    logger.error('Database query exception:', error);
+    logger.warn('Database query failed, returning empty draft quick checks');
+    res.json([]);
+  }
 });
 
 // Get a quick check by ID
