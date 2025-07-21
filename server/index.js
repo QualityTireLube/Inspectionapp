@@ -18,7 +18,9 @@ const logger = require('./logger');
 const WebSocketService = require('./websocketService');
 
 const app = express();
-const port = process.env.PORT || 5001;
+// 🧠 Cursor: Updated port to use process.env.PORT || 3000 for Render deployment
+// Render needs the app to bind to process.env.PORT for proper detection
+const port = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
 
 // === Environment variables ===
@@ -5186,16 +5188,20 @@ function cleanupBlobUrls(data) {
 
 
 // === Start server ===
-server.listen(port, '0.0.0.0', () => {
+// 🧠 Cursor: Updated for Render deployment - server binds to process.env.PORT || 3000
+// Render needs the app to bind to process.env.PORT for "No open ports detected" issue
+server.listen(process.env.PORT || 3000, () => {
   const protocol = isProduction ? 'http' : 'https';
   logger.info(`✅ Backend running with ${protocol.toUpperCase()} at:`);
-  logger.info(`   Local:   ${protocol}://localhost:${port}`);
-  logger.info(`   Network: ${protocol}://${getLocalIP()}:${port}`);
+  logger.info(`   Port: ${process.env.PORT || 3000}`);
+  logger.info(`   Local:   ${protocol}://localhost:${process.env.PORT || 3000}`);
+  logger.info(`   Network: ${protocol}://${getLocalIP()}:${process.env.PORT || 3000}`);
   if (!isProduction) {
     logger.info(`   ⚠️  Note: You may need to accept the self-signed certificate in your browser`);
   }
   logger.info(`   📊 Dynamic API: Use /api/tables to list all available tables`);
   logger.info(`   🔍 Example: /api/quick_checks?page=1&limit=10&search=honda`);
+  console.log("Server running on port", process.env.PORT || 3000);
 });
 
 // === Initialize WebSocket Service ===
