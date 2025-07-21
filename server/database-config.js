@@ -1,58 +1,25 @@
+// 🧠 Cursor: I'm now using PostgreSQL only (no SQLite) and deploying this backend to Render.
+// Simplified database config to PostgreSQL only - removed all SQLite logic
+
 const path = require('path');
 
 class DatabaseConfig {
   constructor() {
     this.isProduction = process.env.NODE_ENV === 'production';
-    // Force PostgreSQL in production, SQLite only in development
-    this.databaseType = this.isProduction ? 'postgresql' : (process.env.DATABASE_TYPE || 'sqlite');
-    this.databaseUrl = process.env.DATABASE_URL || './database.sqlite';
+    // PostgreSQL only - no more SQLite support
+    this.databaseType = 'postgresql';
+    this.databaseUrl = process.env.DATABASE_URL || 'postgresql://localhost:5432/inspectionapp';
     
     // Log the database configuration
     console.log(`Database Config: Environment=${process.env.NODE_ENV}, Type=${this.databaseType}, Production=${this.isProduction}`);
+    console.log(`Database URL: ${this.databaseUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')}`); // Hide credentials in logs
   }
 
-  getConnection() {
-    if (this.databaseType === 'sqlite') {
-      return this.getSQLiteConnection();
-    } else if (this.databaseType === 'postgresql') {
-      return this.getPostgreSQLConnection();
-    }
-    throw new Error(`Unsupported database type: ${this.databaseType}`);
-  }
-
-  getSQLiteConnection() {
-    // In production, never load SQLite3 - force PostgreSQL
-    if (this.isProduction) {
-      console.log('Production environment detected - using PostgreSQL only');
-      this.databaseType = 'postgresql';
-      return this.getPostgreSQLConnection();
-    }
-    
-    // Only attempt to load SQLite3 in development
-    try {
-      console.log('Development environment - attempting to load SQLite3');
-      const sqlite3 = require('sqlite3').verbose();
-      const dbPath = path.resolve(this.databaseUrl);
-      return new sqlite3.Database(dbPath, (err) => {
-        if (err) {
-          console.error('Error opening SQLite database:', err.message);
-          console.log('Falling back to PostgreSQL');
-          this.databaseType = 'postgresql';
-          return this.getPostgreSQLConnection();
-        } else {
-          console.log('Connected to SQLite database');
-        }
-      });
-    } catch (error) {
-      console.error('SQLite3 package not available in development. Using PostgreSQL instead.');
-      this.databaseType = 'postgresql';
-      return this.getPostgreSQLConnection();
-    }
+  async getConnection() {
+    return this.getPostgreSQLConnection();
   }
 
   async getPostgreSQLConnection() {
-    // For PostgreSQL, you'll need to install 'pg' package
-    // npm install pg
     try {
       const { Pool } = require('pg');
       
@@ -69,79 +36,29 @@ class DatabaseConfig {
       // Test the connection with a simple query to verify it works
       try {
         const testResult = await pool.query('SELECT NOW() as current_time');
-        console.log('PostgreSQL connection test successful:', testResult.rows[0]);
+        console.log('✅ PostgreSQL connection test successful:', testResult.rows[0]);
       } catch (testError) {
-        console.error('PostgreSQL connection test failed:', testError);
+        console.error('❌ PostgreSQL connection test failed:', testError);
         throw testError;
       }
 
-      console.log('Connected to PostgreSQL database');
-      console.log('Pool query method available:', typeof pool.query);
-      console.log('Pool query returns Promise:', pool.query('SELECT 1') instanceof Promise);
-      
+      console.log('✅ Connected to PostgreSQL database');
       return pool;
     } catch (error) {
-      console.error('PostgreSQL connection failed:', error);
+      console.error('❌ PostgreSQL connection failed:', error);
       throw error;
     }
   }
 
-  // Utility method to execute queries with proper syntax for each database type
-  executeQuery(db, query, params = []) {
-    return new Promise((resolve, reject) => {
-      if (this.databaseType === 'sqlite') {
-        if (query.includes('SELECT')) {
-          db.all(query, params, (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows);
-          });
-        } else {
-          db.run(query, params, function(err) {
-            if (err) reject(err);
-            else resolve({ lastID: this.lastID, changes: this.changes });
-          });
-        }
-      } else if (this.databaseType === 'postgresql') {
-        // Convert SQLite syntax to PostgreSQL syntax
-        const pgQuery = this.convertSQLiteToPostgreSQL(query);
-        db.query(pgQuery, params)
-          .then(result => resolve(result.rows || result))
-          .catch(reject);
-      }
-    });
-  }
-
-  // Convert SQLite-specific syntax to PostgreSQL
-  convertSQLiteToPostgreSQL(query) {
-    return query
-      .replace(/INTEGER PRIMARY KEY AUTOINCREMENT/g, 'SERIAL PRIMARY KEY')
-      .replace(/DATETIME DEFAULT CURRENT_TIMESTAMP/g, 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
-      .replace(/TEXT/g, 'VARCHAR')
-      .replace(/REAL/g, 'DECIMAL');
-  }
-
-  // Migration helper - exports SQLite data for PostgreSQL import
-  async exportSQLiteData() {
-    if (this.databaseType !== 'sqlite') {
-      throw new Error('Export only available for SQLite databases');
+  // Utility method to execute queries with PostgreSQL syntax
+  async executeQuery(db, query, params = []) {
+    try {
+      const result = await db.query(query, params);
+      return result.rows || result;
+    } catch (error) {
+      console.error('Database query error:', error);
+      throw error;
     }
-
-    const db = this.getSQLiteConnection();
-    const tables = ['users', 'quick_checks', 'cash_management', 'state_inspections', 'labels'];
-    const exportData = {};
-
-    for (const table of tables) {
-      try {
-        const data = await this.executeQuery(db, `SELECT * FROM ${table}`);
-        exportData[table] = data;
-      } catch (error) {
-        console.log(`Table ${table} does not exist, skipping...`);
-        exportData[table] = [];
-      }
-    }
-
-    db.close();
-    return exportData;
   }
 }
 

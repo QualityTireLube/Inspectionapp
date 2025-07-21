@@ -588,281 +588,40 @@ async function tryBasicVinParser(cleanVin) {
 }
 
 // === Database Setup ===
+// 🧠 Cursor: I'm now using PostgreSQL only (no SQLite) and deploying this backend to Render.
+// Simplified database setup to PostgreSQL exclusively - removed all SQLite logic
+
 const DatabaseConfig = require('./database-config');
 const DatabaseWrapper = require('./database-wrapper');
 
 let rawDb, dbConfig, db;
 
-if (isProduction) {
-  // In production, use database config (PostgreSQL)
-  dbConfig = new DatabaseConfig();
-  
-  // For production, ensure we await the async PostgreSQL connection
-  (async () => {
-    try {
-      rawDb = await dbConfig.getConnection();
-      db = new DatabaseWrapper(rawDb, dbConfig);
-      logger.info('✅ Connected to PostgreSQL database via config');
-      
-      // Initialize cash management routes after successful connection
-      const { setupCashManagementRoutes } = require('./cashManagementRoutes');
-      setupCashManagementRoutes(app, db, authenticateToken);
-      
-    } catch (error) {
-      logger.error('Failed to connect to PostgreSQL:', error);
-      process.exit(1);
-    }
-  })();
-} else {
-  // In development, use SQLite directly
-  const sqlite3 = require('sqlite3').verbose();
-  dbConfig = new DatabaseConfig(); // Still need this for wrapper
-  rawDb = new sqlite3.Database('./database.sqlite', (err) => {
-    if (err) {
-      logger.error('❌ DB error:', err);
-      return;
+// Always use PostgreSQL (both development and production)
+dbConfig = new DatabaseConfig();
+
+// Ensure we await the async PostgreSQL connection
+(async () => {
+  try {
+    rawDb = await dbConfig.getConnection();
+    db = new DatabaseWrapper(rawDb, dbConfig);
+    logger.info('✅ Connected to PostgreSQL database via config');
+    
+    // Initialize cash management routes after successful connection
+    const { setupCashManagementRoutes } = require('./cashManagementRoutes');
+    setupCashManagementRoutes(app, db, authenticateToken);
+    
+  } catch (error) {
+    logger.error('❌ Failed to connect to PostgreSQL:', error);
+    
+    // In development without PostgreSQL, show helpful message
+    if (!isProduction) {
+      logger.info('💡 For development, set DATABASE_URL to your PostgreSQL connection string');
+      logger.info('💡 Example: DATABASE_URL=postgresql://user:pass@localhost:5432/inspectionapp');
     }
     
-    logger.info('✅ Connected to SQLite');
-    // Create wrapper for consistent interface
-    db = new DatabaseWrapper(rawDb, dbConfig);
-    db.run(`
-      CREATE TABLE IF NOT EXISTS quick_checks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_email TEXT NOT NULL,
-        user_name TEXT NOT NULL,
-        title TEXT NOT NULL,
-        data TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        duration_seconds INTEGER DEFAULT 0,
-        archived_at DATETIME,
-        archived_by TEXT,
-        archived_by_name TEXT
-      )
-    `, (err) => {
-      if (err) {
-        logger.error('Error creating table:', err);
-      } else {
-        // Migration: Add archive columns if they don't exist
-        db.get("PRAGMA table_info(quick_checks)", (err, rows) => {
-          if (err) {
-            logger.error('Error checking table schema:', err);
-            return;
-          }
-          
-          // Check if archived_at column exists
-          db.get("SELECT name FROM pragma_table_info('quick_checks') WHERE name='archived_at'", (err, row) => {
-            if (err) {
-              logger.error('Error checking for archived_at column:', err);
-              return;
-            }
-            
-            if (!row) {
-              logger.info('Adding archive columns to quick_checks table...');
-              db.run('ALTER TABLE quick_checks ADD COLUMN archived_at DATETIME', (err) => {
-                if (err) {
-                  logger.error('Error adding archived_at column:', err);
-                } else {
-                  logger.info('✅ Added archived_at column');
-                }
-              });
-              
-              db.run('ALTER TABLE quick_checks ADD COLUMN archived_by TEXT', (err) => {
-                if (err) {
-                  logger.error('Error adding archived_by column:', err);
-                } else {
-                  logger.info('✅ Added archived_by column');
-                }
-              });
-              
-              db.run('ALTER TABLE quick_checks ADD COLUMN archived_by_name TEXT', (err) => {
-                if (err) {
-                  logger.error('Error adding archived_by_name column:', err);
-                } else {
-                  logger.info('✅ Added archived_by_name column');
-                }
-              });
-            } else {
-              logger.info('Archive columns already exist in quick_checks table');
-            }
-          });
-          
-          // Check if updated_at column exists
-          db.get("SELECT name FROM pragma_table_info('quick_checks') WHERE name='updated_at'", (err, row) => {
-            if (err) {
-              logger.error('Error checking for updated_at column:', err);
-              return;
-            }
-            
-            if (!row) {
-              logger.info('Adding updated_at column to quick_checks table...');
-              db.run('ALTER TABLE quick_checks ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP', (err) => {
-                if (err) {
-                  logger.error('Error adding updated_at column:', err);
-                } else {
-                  logger.info('✅ Added updated_at column');
-                }
-              });
-            } else {
-              logger.info('updated_at column already exists in quick_checks table');
-            }
-          });
-          
-          // Check if duration_seconds column exists
-          db.get("SELECT name FROM pragma_table_info('quick_checks') WHERE name='duration_seconds'", (err, row) => {
-            if (err) {
-              logger.error('Error checking for duration_seconds column:', err);
-              return;
-            }
-            
-            if (!row) {
-              logger.info('Adding duration_seconds column to quick_checks table...');
-              db.run('ALTER TABLE quick_checks ADD COLUMN duration_seconds INTEGER DEFAULT 0', (err) => {
-                if (err) {
-                  logger.error('Error adding duration_seconds column:', err);
-                } else {
-                  logger.info('✅ Added duration_seconds column');
-                }
-              });
-            } else {
-              logger.info('duration_seconds column already exists in quick_checks table');
-            }
-          });
-          
-          // Check if saved_at column exists
-          db.get("SELECT name FROM pragma_table_info('quick_checks') WHERE name='saved_at'", (err, row) => {
-            if (err) {
-              logger.error('Error checking for saved_at column:', err);
-              return;
-            }
-            
-            if (!row) {
-              logger.info('Adding saved_at column to quick_checks table...');
-              db.run('ALTER TABLE quick_checks ADD COLUMN saved_at DATETIME', (err) => {
-                if (err) {
-                  logger.error('Error adding saved_at column:', err);
-                } else {
-                  logger.info('✅ Added saved_at column');
-                  
-                  // Set saved_at for existing records to updated_at (since they were saved when created)
-                  db.run('UPDATE quick_checks SET saved_at = updated_at WHERE saved_at IS NULL', (err) => {
-                    if (err) {
-                      logger.error('Error setting saved_at for existing records:', err);
-                    } else {
-                      logger.info('✅ Set saved_at for existing records');
-                    }
-                  });
-                }
-              });
-            } else {
-              logger.info('saved_at column already exists in quick_checks table');
-              
-              // Check if there are any records with null saved_at and set them
-              db.run('UPDATE quick_checks SET saved_at = updated_at WHERE saved_at IS NULL', (err) => {
-                if (err) {
-                  logger.error('Error setting saved_at for existing records:', err);
-                } else {
-                  logger.info('✅ Updated saved_at for records that were missing it');
-                }
-              });
-            }
-          });
-          
-          // Check if tab timing columns exist
-          db.get("SELECT name FROM pragma_table_info('quick_checks') WHERE name='tab_info_start'", (err, row) => {
-            if (err) {
-              logger.error('Error checking for tab timing columns:', err);
-              return;
-            }
-            
-            if (!row) {
-              logger.info('Adding tab timing columns to quick_checks table...');
-              
-              // Add tab start times
-              db.run('ALTER TABLE quick_checks ADD COLUMN tab_info_start DATETIME', (err) => {
-                if (err) logger.error('Error adding tab_info_start column:', err);
-                else logger.info('✅ Added tab_info_start column');
-              });
-              
-              db.run('ALTER TABLE quick_checks ADD COLUMN tab_pulling_start DATETIME', (err) => {
-                if (err) logger.error('Error adding tab_pulling_start column:', err);
-                else logger.info('✅ Added tab_pulling_start column');
-              });
-              
-              db.run('ALTER TABLE quick_checks ADD COLUMN tab_underhood_start DATETIME', (err) => {
-                if (err) logger.error('Error adding tab_underhood_start column:', err);
-                else logger.info('✅ Added tab_underhood_start column');
-              });
-              
-              db.run('ALTER TABLE quick_checks ADD COLUMN tab_tires_start DATETIME', (err) => {
-                if (err) logger.error('Error adding tab_tires_start column:', err);
-                else logger.info('✅ Added tab_tires_start column');
-              });
-              
-              // Add tab end times
-              db.run('ALTER TABLE quick_checks ADD COLUMN tab_info_end DATETIME', (err) => {
-                if (err) logger.error('Error adding tab_info_end column:', err);
-                else logger.info('✅ Added tab_info_end column');
-              });
-              
-              db.run('ALTER TABLE quick_checks ADD COLUMN tab_pulling_end DATETIME', (err) => {
-                if (err) logger.error('Error adding tab_pulling_end column:', err);
-                else logger.info('✅ Added tab_pulling_end column');
-              });
-              
-              db.run('ALTER TABLE quick_checks ADD COLUMN tab_underhood_end DATETIME', (err) => {
-                if (err) logger.error('Error adding tab_underhood_end column:', err);
-                else logger.info('✅ Added tab_underhood_end column');
-              });
-              
-              db.run('ALTER TABLE quick_checks ADD COLUMN tab_tires_end DATETIME', (err) => {
-                if (err) logger.error('Error adding tab_tires_end column:', err);
-                else logger.info('✅ Added tab_tires_end column');
-              });
-              
-              // Add tab durations
-              db.run('ALTER TABLE quick_checks ADD COLUMN tab_info_duration INTEGER DEFAULT 0', (err) => {
-                if (err) logger.error('Error adding tab_info_duration column:', err);
-                else logger.info('✅ Added tab_info_duration column');
-              });
-              
-              db.run('ALTER TABLE quick_checks ADD COLUMN tab_pulling_duration INTEGER DEFAULT 0', (err) => {
-                if (err) logger.error('Error adding tab_pulling_duration column:', err);
-                else logger.info('✅ Added tab_pulling_duration column');
-              });
-              
-              db.run('ALTER TABLE quick_checks ADD COLUMN tab_underhood_duration INTEGER DEFAULT 0', (err) => {
-                if (err) logger.error('Error adding tab_underhood_duration column:', err);
-                else logger.info('✅ Added tab_underhood_duration column');
-              });
-              
-              db.run('ALTER TABLE quick_checks ADD COLUMN tab_tires_duration INTEGER DEFAULT 0', (err) => {
-                if (err) logger.error('Error adding tab_tires_duration column:', err);
-                else logger.info('✅ Added tab_tires_duration column');
-              });
-              
-              // Add submission to archive duration
-              db.run('ALTER TABLE quick_checks ADD COLUMN submitted_to_archived_duration INTEGER DEFAULT 0', (err) => {
-                if (err) logger.error('Error adding submitted_to_archived_duration column:', err);
-                else logger.info('✅ Added submitted_to_archived_duration column');
-              });
-              
-              // Add created to archived duration
-              db.run('ALTER TABLE quick_checks ADD COLUMN created_to_archived_duration INTEGER DEFAULT 0', (err) => {
-                if (err) logger.error('Error adding created_to_archived_duration column:', err);
-                else logger.info('✅ Added created_to_archived_duration column');
-              });
-              
-            } else {
-              logger.info('Tab timing columns already exist in quick_checks table');
-            }
-          });
-        });
-      }
-    });
-  });
-}
+    process.exit(1);
+  }
+})();
 
 // === Multer file upload ===
 const storage = multer.diskStorage({

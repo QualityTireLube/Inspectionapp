@@ -571,7 +571,7 @@ const setupCashManagementRoutes = (app, db, authenticateToken) => {
       showDetailedCalculations ? 1 : 0
     ], function(err) {
       if (err) {
-        if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+        if (err.code === '23505') { // PostgreSQL unique constraint violation (was SQLITE_CONSTRAINT_UNIQUE)
           return res.status(400).json({ error: 'Drawer name already exists' });
         }
         logger.error('Error creating drawer settings:', err);
@@ -620,7 +620,7 @@ const setupCashManagementRoutes = (app, db, authenticateToken) => {
       id
     ], function(err) {
       if (err) {
-        if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+        if (err.code === '23505') { // PostgreSQL unique constraint violation (was SQLITE_CONSTRAINT_UNIQUE)
           return res.status(400).json({ error: 'Drawer name already exists' });
         }
         logger.error('Error updating drawer settings:', err);

@@ -1,6 +1,5 @@
-// 🧠 Cursor: I'm deploying this backend to Render using PostgreSQL, not SQLite.
-// Removed hardcoded sqlite3 references and using database abstraction instead
-// This now supports both SQLite (dev) and PostgreSQL (production) via database-config.js
+// 🧠 Cursor: I'm now using PostgreSQL only (no SQLite) and deploying this backend to Render.
+// Simplified dynamic API to use PostgreSQL exclusively - removed all SQLite logic
 
 const logger = require('./logger');
 const DatabaseConfig = require('./database-config');
@@ -8,8 +7,6 @@ const DatabaseConfig = require('./database-config');
 class DynamicApiRoutes {
   constructor() {
     this.dbConfig = new DatabaseConfig();
-    this.isProduction = process.env.NODE_ENV === 'production';
-    this.isPostgreSQL = this.dbConfig.databaseType === 'postgresql';
     
     // Cache table schemas for better performance
     this.tableSchemas = new Map();
@@ -29,13 +26,8 @@ class DynamicApiRoutes {
 
   async initializeDatabase() {
     try {
-      if (this.isPostgreSQL) {
-        this.db = await this.dbConfig.getPostgreSQLConnection();
-        logger.info('✅ Dynamic API connected to PostgreSQL');
-      } else {
-        this.db = this.dbConfig.getSQLiteConnection();
-        logger.info('✅ Dynamic API connected to SQLite');
-      }
+      this.db = await this.dbConfig.getPostgreSQLConnection();
+      logger.info('✅ Dynamic API connected to PostgreSQL');
     } catch (error) {
       logger.error('❌ Dynamic API DB connection failed:', error);
       throw error;
@@ -43,31 +35,12 @@ class DynamicApiRoutes {
   }
 
   /**
-   * Execute database query with proper syntax for SQLite/PostgreSQL
+   * Execute PostgreSQL database query
    */
   async executeQuery(query, params = []) {
     try {
-      if (this.isPostgreSQL) {
-        // PostgreSQL - convert SQLite syntax and use async/await
-        const pgQuery = this.convertSQLiteToPostgreSQL(query);
-        const result = await this.db.query(pgQuery, params);
-        return result.rows || result;
-      } else {
-        // SQLite - use promise wrapper
-        return new Promise((resolve, reject) => {
-          if (query.trim().toLowerCase().startsWith('select')) {
-            this.db.all(query, params, (err, rows) => {
-              if (err) reject(err);
-              else resolve(rows);
-            });
-          } else {
-            this.db.run(query, params, function(err) {
-              if (err) reject(err);
-              else resolve({ lastID: this.lastID, changes: this.changes });
-            });
-          }
-        });
-      }
+      const result = await this.db.query(query, params);
+      return result.rows || result;
     } catch (error) {
       logger.error('Database query error:', error);
       throw error;
@@ -75,54 +48,19 @@ class DynamicApiRoutes {
   }
 
   /**
-   * Convert SQLite syntax to PostgreSQL
-   */
-  convertSQLiteToPostgreSQL(query) {
-    return query
-      // Convert SQLite system tables to PostgreSQL information_schema
-      .replace(/sqlite_master/g, 'information_schema.tables')
-      .replace(/name FROM information_schema\.tables WHERE type='table'/g, 'table_name FROM information_schema.tables WHERE table_schema = \'public\'')
-      .replace(/AND name NOT LIKE 'sqlite_%'/g, 'AND table_name NOT LIKE \'pg_%\' AND table_name NOT LIKE \'information_schema%\'')
-      // Convert PRAGMA table_info to PostgreSQL equivalent
-      .replace(/PRAGMA table_info\(([^)]+)\)/g, 
-        `SELECT column_name as name, data_type as type, 
-         CASE WHEN is_nullable = 'NO' THEN 1 ELSE 0 END as notnull,
-         CASE WHEN column_default LIKE 'nextval%' THEN 1 ELSE 0 END as pk
-         FROM information_schema.columns WHERE table_name = $1`)
-      // Convert LIMIT/OFFSET syntax (PostgreSQL supports this but let's be explicit)
-      .replace(/LIMIT (\?) OFFSET (\?)/g, 'LIMIT $1 OFFSET $2')
-      // Convert parameter placeholders from ? to $1, $2, etc.
-      .replace(/\?/g, (match, offset, string) => {
-        const questionMarks = string.substring(0, offset).match(/\?/g) || [];
-        return `$${questionMarks.length + 1}`;
-      });
-  }
-
-  /**
-   * Load and cache all table schemas from the database
+   * Load and cache all table schemas from PostgreSQL
    */
   async loadTableSchemas() {
     try {
-      let tables;
-      
-      if (this.isPostgreSQL) {
-        // PostgreSQL: Get tables from information_schema
-        const result = await this.executeQuery(`
-          SELECT table_name as name FROM information_schema.tables 
-          WHERE table_schema = 'public'
-          AND table_name NOT LIKE 'pg_%' 
-          AND table_name NOT LIKE 'information_schema%'
-        `);
-        tables = result;
-      } else {
-        // SQLite: Get tables from sqlite_master
-        tables = await this.executeQuery(`
-          SELECT name FROM sqlite_master 
-          WHERE type='table' AND name NOT LIKE 'sqlite_%'
-        `);
-      }
+      // PostgreSQL: Get tables from information_schema
+      const tables = await this.executeQuery(`
+        SELECT table_name as name FROM information_schema.tables 
+        WHERE table_schema = 'public'
+        AND table_name NOT LIKE 'pg_%' 
+        AND table_name NOT LIKE 'information_schema%'
+      `);
 
-      const promises = tables.map(table => this.getTableSchema(table.name || table.table_name));
+      const promises = tables.map(table => this.getTableSchema(table.name));
       await Promise.all(promises);
       
       logger.info(`✅ Loaded schemas for ${this.tableSchemas.size} tables`);
@@ -132,28 +70,21 @@ class DynamicApiRoutes {
   }
 
   /**
-   * Get schema information for a specific table
+   * Get schema information for a PostgreSQL table
    */
   async getTableSchema(tableName) {
     try {
-      let columns;
-      
-      if (this.isPostgreSQL) {
-        // PostgreSQL: Get column information from information_schema
-        columns = await this.executeQuery(`
-          SELECT 
-            column_name as name,
-            data_type as type,
-            CASE WHEN is_nullable = 'NO' THEN 1 ELSE 0 END as notnull,
-            CASE WHEN column_default LIKE 'nextval%' THEN 1 ELSE 0 END as pk
-          FROM information_schema.columns 
-          WHERE table_name = $1
-          ORDER BY ordinal_position
-        `, [tableName]);
-      } else {
-        // SQLite: Use PRAGMA table_info
-        columns = await this.executeQuery(`PRAGMA table_info(${tableName})`);
-      }
+      // PostgreSQL: Get column information from information_schema
+      const columns = await this.executeQuery(`
+        SELECT 
+          column_name as name,
+          data_type as type,
+          CASE WHEN is_nullable = 'NO' THEN 1 ELSE 0 END as notnull,
+          CASE WHEN column_default LIKE 'nextval%' THEN 1 ELSE 0 END as pk
+        FROM information_schema.columns 
+        WHERE table_name = $1
+        ORDER BY ordinal_position
+      `, [tableName]);
 
       const schema = {
         columns: columns.map(col => ({
@@ -196,31 +127,18 @@ class DynamicApiRoutes {
   }
 
   /**
-   * Get list of all available tables
+   * Get list of all available PostgreSQL tables
    */
   async getAllTables() {
     try {
-      let tables;
-      
-      if (this.isPostgreSQL) {
-        const result = await this.executeQuery(`
-          SELECT table_name as name FROM information_schema.tables 
-          WHERE table_schema = 'public'
-          AND table_name NOT LIKE 'pg_%' 
-          AND table_name NOT LIKE 'information_schema%'
-          ORDER BY table_name
-        `);
-        tables = result.map(t => t.name);
-      } else {
-        const result = await this.executeQuery(`
-          SELECT name FROM sqlite_master 
-          WHERE type='table' AND name NOT LIKE 'sqlite_%'
-          ORDER BY name
-        `);
-        tables = result.map(t => t.name);
-      }
-      
-      return tables;
+      const result = await this.executeQuery(`
+        SELECT table_name as name FROM information_schema.tables 
+        WHERE table_schema = 'public'
+        AND table_name NOT LIKE 'pg_%' 
+        AND table_name NOT LIKE 'information_schema%'
+        ORDER BY table_name
+      `);
+      return result.map(t => t.name);
     } catch (error) {
       logger.error('Error getting tables:', error);
       throw error;
@@ -269,74 +187,37 @@ class DynamicApiRoutes {
     if (search && schema.searchableColumns.length > 0) {
       const searchTerms = search.split(' ').filter(term => term.trim());
       if (searchTerms.length > 0) {
-        if (this.isPostgreSQL) {
-          // PostgreSQL: Use ILIKE and proper parameter numbering
-          const conditions = schema.searchableColumns.map((col, colIndex) => 
-            searchTerms.map((term, termIndex) => {
-              const paramIndex = searchParams.length + 1;
-              searchParams.push(`%${term}%`);
-              return `${col} ILIKE $${paramIndex}`;
-            }).join(' AND ')
-          ).join(' OR ');
-          searchCondition = `WHERE (${conditions})`;
-        } else {
-          // SQLite: Use LIKE
-          const conditions = schema.searchableColumns.map(col => 
-            searchTerms.map(() => `${col} LIKE ?`).join(' AND ')
-          ).join(' OR ');
-          searchCondition = `WHERE (${conditions})`;
-          
-          // Add search parameters for each term and each searchable column
-          schema.searchableColumns.forEach(() => {
-            searchTerms.forEach(term => {
-              searchParams.push(`%${term}%`);
-            });
-          });
-        }
+        // PostgreSQL: Use ILIKE and proper parameter numbering
+        const conditions = schema.searchableColumns.map((col, colIndex) => 
+          searchTerms.map((term, termIndex) => {
+            const paramIndex = searchParams.length + 1;
+            searchParams.push(`%${term}%`);
+            return `${col} ILIKE $${paramIndex}`;
+          }).join(' AND ')
+        ).join(' OR ');
+        searchCondition = `WHERE (${conditions})`;
       }
     }
 
     try {
-      // Build queries with proper parameter syntax
-      let mainQuery, countQuery;
-      let mainParams, countParams;
+      // Build PostgreSQL queries with proper parameter syntax
+      const limitParam = searchParams.length + 1;
+      const offsetParam = searchParams.length + 2;
       
-      if (this.isPostgreSQL) {
-        // PostgreSQL parameter syntax
-        const limitParam = searchParams.length + 1;
-        const offsetParam = searchParams.length + 2;
-        
-        mainQuery = `
-          SELECT * FROM ${tableName}
-          ${searchCondition}
-          ORDER BY ${sortColumn} ${sortOrder}
-          LIMIT $${limitParam} OFFSET $${offsetParam}
-        `;
-        
-        countQuery = `
-          SELECT COUNT(*) as total FROM ${tableName}
-          ${searchCondition}
-        `;
-        
-        mainParams = [...searchParams, limit, offset];
-        countParams = [...searchParams];
-      } else {
-        // SQLite parameter syntax
-        mainQuery = `
-          SELECT * FROM ${tableName}
-          ${searchCondition}
-          ORDER BY ${sortColumn} ${sortOrder}
-          LIMIT ? OFFSET ?
-        `;
-        
-        countQuery = `
-          SELECT COUNT(*) as total FROM ${tableName}
-          ${searchCondition}
-        `;
-        
-        mainParams = [...searchParams, limit, offset];
-        countParams = [...searchParams];
-      }
+      const mainQuery = `
+        SELECT * FROM ${tableName}
+        ${searchCondition}
+        ORDER BY ${sortColumn} ${sortOrder}
+        LIMIT $${limitParam} OFFSET $${offsetParam}
+      `;
+      
+      const countQuery = `
+        SELECT COUNT(*) as total FROM ${tableName}
+        ${searchCondition}
+      `;
+      
+      const mainParams = [...searchParams, limit, offset];
+      const countParams = [...searchParams];
 
       // Execute both queries
       const [data, countResult] = await Promise.all([
@@ -387,30 +268,16 @@ class DynamicApiRoutes {
     const columns = Object.keys(data);
     const values = Object.values(data);
     
-    let query;
-    if (this.isPostgreSQL) {
-      const placeholders = columns.map((_, index) => `$${index + 1}`).join(', ');
-      query = `
-        INSERT INTO ${tableName} (${columns.join(', ')})
-        VALUES (${placeholders})
-        RETURNING id
-      `;
-    } else {
-      const placeholders = columns.map(() => '?').join(', ');
-      query = `
-        INSERT INTO ${tableName} (${columns.join(', ')})
-        VALUES (${placeholders})
-      `;
-    }
+    const placeholders = columns.map((_, index) => `$${index + 1}`).join(', ');
+    const query = `
+      INSERT INTO ${tableName} (${columns.join(', ')})
+      VALUES (${placeholders})
+      RETURNING id
+    `;
 
     try {
       const result = await this.executeQuery(query, values);
-      
-      if (this.isPostgreSQL) {
-        return { id: result[0].id, changes: 1 };
-      } else {
-        return { id: result.lastID, changes: result.changes };
-      }
+      return { id: result[0].id, changes: 1 };
     } catch (error) {
       logger.error(`Error creating record in ${tableName}:`, error);
       throw error;
@@ -429,23 +296,12 @@ class DynamicApiRoutes {
     const columns = Object.keys(data);
     const values = Object.values(data);
     
-    let query;
-    if (this.isPostgreSQL) {
-      const updates = columns.map((key, index) => `${key} = $${index + 1}`).join(', ');
-      query = `UPDATE ${tableName} SET ${updates} WHERE id = $${columns.length + 1}`;
-    } else {
-      const updates = columns.map(key => `${key} = ?`).join(', ');
-      query = `UPDATE ${tableName} SET ${updates} WHERE id = ?`;
-    }
+    const updates = columns.map((key, index) => `${key} = $${index + 1}`).join(', ');
+    const query = `UPDATE ${tableName} SET ${updates} WHERE id = $${columns.length + 1}`;
 
     try {
       const result = await this.executeQuery(query, [...values, id]);
-      
-      if (this.isPostgreSQL) {
-        return { changes: result.rowCount || 0 };
-      } else {
-        return { changes: result.changes };
-      }
+      return { changes: result.rowCount || 0 };
     } catch (error) {
       logger.error(`Error updating record in ${tableName}:`, error);
       throw error;
@@ -461,18 +317,11 @@ class DynamicApiRoutes {
       throw new Error(`Table ${tableName} not found`);
     }
 
-    const query = this.isPostgreSQL 
-      ? `DELETE FROM ${tableName} WHERE id = $1`
-      : `DELETE FROM ${tableName} WHERE id = ?`;
+    const query = `DELETE FROM ${tableName} WHERE id = $1`;
 
     try {
       const result = await this.executeQuery(query, [id]);
-      
-      if (this.isPostgreSQL) {
-        return { changes: result.rowCount || 0 };
-      } else {
-        return { changes: result.changes };
-      }
+      return { changes: result.rowCount || 0 };
     } catch (error) {
       logger.error(`Error deleting record from ${tableName}:`, error);
       throw error;
@@ -488,9 +337,7 @@ class DynamicApiRoutes {
       throw new Error(`Table ${tableName} not found`);
     }
 
-    const query = this.isPostgreSQL
-      ? `SELECT * FROM ${tableName} WHERE id = $1`
-      : `SELECT * FROM ${tableName} WHERE id = ?`;
+    const query = `SELECT * FROM ${tableName} WHERE id = $1`;
 
     try {
       const result = await this.executeQuery(query, [id]);
@@ -514,7 +361,7 @@ class DynamicApiRoutes {
         res.json({
           tables,
           count: tables.length,
-          database: this.isPostgreSQL ? 'PostgreSQL' : 'SQLite'
+          database: 'PostgreSQL'
         });
       } catch (error) {
         logger.error('Error getting tables:', error);
@@ -534,7 +381,7 @@ class DynamicApiRoutes {
 
         res.json({
           ...schema,
-          database: this.isPostgreSQL ? 'PostgreSQL' : 'SQLite'
+          database: 'PostgreSQL'
         });
       } catch (error) {
         logger.error('Error getting table schema:', error);
