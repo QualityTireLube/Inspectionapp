@@ -43,7 +43,11 @@ class DatabaseWrapper {
         if (!queryResult || typeof queryResult.then !== 'function') {
           logger.error('Database query did not return a Promise');
           logger.error('Query result type:', typeof queryResult);
-          logger.error('Query result:', queryResult);
+          logger.error('Query result value:', queryResult);
+          logger.error('Database object type:', typeof this.db);
+          logger.error('Query method type:', typeof this.db.query);
+          
+          // Try to handle synchronous results gracefully
           const error = new Error('Database query failed - no Promise returned');
           callback(error);
           return;
@@ -94,6 +98,10 @@ class DatabaseWrapper {
         
         if (!queryResult || typeof queryResult.then !== 'function') {
           logger.error('Database query did not return a Promise in all() method');
+          logger.error('Query result type:', typeof queryResult);
+          logger.error('Query result value:', queryResult);
+          logger.error('Database object type:', typeof this.db);
+          logger.error('Query method type:', typeof this.db.query);
           callback(new Error('Database query failed'), []);
           return;
         }
@@ -138,6 +146,10 @@ class DatabaseWrapper {
         
         if (!queryResult || typeof queryResult.then !== 'function') {
           logger.error('Database query did not return a Promise in get() method');
+          logger.error('Query result type:', typeof queryResult);
+          logger.error('Query result value:', queryResult);
+          logger.error('Database object type:', typeof this.db);
+          logger.error('Query method type:', typeof this.db.query);
           callback(new Error('Database query failed'), null);
           return;
         }
