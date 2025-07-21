@@ -48,6 +48,7 @@ class WebSocketService {
           
           // Allow localhost and any IP address on both ports 3000 and 5001
           const allowedOrigins = [
+            // Development patterns
             /^https:\/\/localhost:3000$/,
             /^https:\/\/127\.0\.0\.1:3000$/,
             /^https:\/\/localhost:5001$/,
@@ -60,6 +61,10 @@ class WebSocketService {
             /^http:\/\/127\.0\.0\.1:5001$/,
             /^http:\/\/(\d{1,3}\.){3}\d{1,3}:3000$/,
             /^http:\/\/(\d{1,3}\.){3}\d{1,3}:5001$/,
+            // Production patterns
+            /^https:\/\/.*\.onrender\.com$/,
+            /^https:\/\/inspectionapp-backend\.onrender\.com$/,
+            /^https:\/\/.*\.vercel\.app$/,
           ];
           
           const isAllowed = allowedOrigins.some(pattern => pattern.test(origin));

@@ -161,7 +161,15 @@ class DatabaseWrapper {
       
       // Handle some SQLite functions that need PostgreSQL equivalents
       .replace(/datetime\(/g, 'to_timestamp(')
-      .replace(/\bDATETIME\b/g, 'TIMESTAMP');
+      .replace(/\bDATETIME\b/g, 'TIMESTAMP')
+      
+      // Handle SQLite datetime functions for PostgreSQL
+      .replace(/datetime\('now'\)/g, 'NOW()')
+      .replace(/datetime\('now', 'localtime'\)/g, 'NOW()');
+
+    // Convert SQLite parameter placeholders (?) to PostgreSQL ($1, $2, etc.)
+    let paramIndex = 1;
+    pgQuery = pgQuery.replace(/\?/g, () => `$${paramIndex++}`);
 
     // Special handling for ALTER TABLE ADD COLUMN (PostgreSQL doesn't support IF NOT EXISTS)
     if (pgQuery.includes('ALTER TABLE') && pgQuery.includes('ADD COLUMN')) {

@@ -608,6 +608,18 @@ dbConfig = new DatabaseConfig();
     db = new DatabaseWrapper(rawDb, dbConfig);
     logger.info('✅ Connected to PostgreSQL database via config');
     
+    // Create essential tables in production if they don't exist
+    if (isProduction) {
+      try {
+        const { createProductionTables } = require('./create-production-tables');
+        await createProductionTables();
+        logger.info('✅ Production table initialization completed');
+      } catch (tableError) {
+        logger.error('❌ Error creating production tables:', tableError);
+        // Continue running even if table creation fails
+      }
+    }
+    
     // Initialize cash management routes after successful connection
     const { setupCashManagementRoutes } = require('./cashManagementRoutes');
     setupCashManagementRoutes(app, db, authenticateToken);
