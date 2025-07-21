@@ -614,14 +614,17 @@ dbConfig = new DatabaseConfig();
     
   } catch (error) {
     logger.error('❌ Failed to connect to PostgreSQL:', error);
+    logger.warn('⚠️  Running in limited mode - some features disabled');
+    
+    // Don't exit - continue without PostgreSQL features
+    db = null;
+    rawDb = null;
     
     // In development without PostgreSQL, show helpful message
     if (!isProduction) {
       logger.info('💡 For development, set DATABASE_URL to your PostgreSQL connection string');
       logger.info('💡 Example: DATABASE_URL=postgresql://user:pass@localhost:5432/inspectionapp');
     }
-    
-    process.exit(1);
   }
 })();
 
@@ -1606,6 +1609,12 @@ app.get('/api/quick-checks', authenticateToken, (req, res) => {
 
 // Get in-progress quick checks
 app.get('/api/quick-checks/in-progress', authenticateToken, (req, res) => {
+  // Check if database is available
+  if (!db) {
+    logger.warn('Database not available, returning empty in-progress quick checks');
+    return res.json([]);
+  }
+
   db.all('SELECT * FROM quick_checks WHERE status = ? ORDER BY created_at DESC', ['pending'], (err, rows) => {
     if (err) {
       logger.error('Error fetching in-progress quick checks:', err);
@@ -1620,6 +1629,12 @@ app.get('/api/quick-checks/in-progress', authenticateToken, (req, res) => {
 
 // Get submitted (non-archived) quick checks
 app.get('/api/quick-checks/submitted', authenticateToken, (req, res) => {
+  // Check if database is available
+  if (!db) {
+    logger.warn('Database not available, returning empty submitted quick checks');
+    return res.json([]);
+  }
+
   db.all('SELECT * FROM quick_checks WHERE status = ? ORDER BY created_at DESC', ['submitted'], (err, rows) => {
     if (err) {
       logger.error('Error fetching submitted quick checks:', err);
@@ -3432,6 +3447,12 @@ app.use('/api/labels', authenticateToken, labelRoutes);
 
 // Get all conversations for the current user
 app.get('/api/chat/conversations', authenticateToken, (req, res) => {
+  // Check if database is available
+  if (!db) {
+    logger.warn('Database not available, returning empty conversations');
+    return res.json([]);
+  }
+
   try {
     const userEmail = req.user.email;
     const userRole = req.user.role;
