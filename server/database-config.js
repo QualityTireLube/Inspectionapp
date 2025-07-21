@@ -21,29 +21,36 @@ class DatabaseConfig {
   }
 
   getSQLiteConnection() {
-    // In production, don't even try to load SQLite
+    // In production, never load SQLite3 - force PostgreSQL
     if (this.isProduction) {
-      throw new Error('SQLite is not available in production. Use PostgreSQL instead.');
+      console.log('Production environment detected - using PostgreSQL only');
+      this.databaseType = 'postgresql';
+      return this.getPostgreSQLConnection();
     }
     
+    // Only attempt to load SQLite3 in development
     try {
+      console.log('Development environment - attempting to load SQLite3');
       const sqlite3 = require('sqlite3').verbose();
       const dbPath = path.resolve(this.databaseUrl);
       return new sqlite3.Database(dbPath, (err) => {
         if (err) {
           console.error('Error opening SQLite database:', err.message);
+          console.log('Falling back to PostgreSQL');
+          this.databaseType = 'postgresql';
+          return this.getPostgreSQLConnection();
         } else {
           console.log('Connected to SQLite database');
         }
       });
     } catch (error) {
-      console.error('SQLite3 package not available. Using PostgreSQL instead.');
+      console.error('SQLite3 package not available in development. Using PostgreSQL instead.');
       this.databaseType = 'postgresql';
       return this.getPostgreSQLConnection();
     }
   }
 
-  getPostgreSQLConnection() {
+  async getPostgreSQLConnection() {
     // For PostgreSQL, you'll need to install 'pg' package
     // npm install pg
     try {
@@ -59,13 +66,22 @@ class DatabaseConfig {
         console.error('PostgreSQL pool error:', err);
       });
 
-      // Test connection synchronously to verify it works
+      // Test the connection with a simple query to verify it works
+      try {
+        const testResult = await pool.query('SELECT NOW() as current_time');
+        console.log('PostgreSQL connection test successful:', testResult.rows[0]);
+      } catch (testError) {
+        console.error('PostgreSQL connection test failed:', testError);
+        throw testError;
+      }
+
       console.log('Connected to PostgreSQL database');
       console.log('Pool query method available:', typeof pool.query);
+      console.log('Pool query returns Promise:', pool.query('SELECT 1') instanceof Promise);
       
       return pool;
     } catch (error) {
-      console.error('PostgreSQL package not installed. Run: npm install pg');
+      console.error('PostgreSQL connection failed:', error);
       throw error;
     }
   }

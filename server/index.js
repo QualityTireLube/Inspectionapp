@@ -594,9 +594,23 @@ let rawDb, dbConfig, db;
 if (isProduction) {
   // In production, use database config (PostgreSQL)
   dbConfig = new DatabaseConfig();
-  rawDb = dbConfig.getConnection();
-  db = new DatabaseWrapper(rawDb, dbConfig);
-  logger.info('✅ Connected to PostgreSQL database via config');
+  
+  // For production, ensure we await the async PostgreSQL connection
+  (async () => {
+    try {
+      rawDb = await dbConfig.getConnection();
+      db = new DatabaseWrapper(rawDb, dbConfig);
+      logger.info('✅ Connected to PostgreSQL database via config');
+      
+      // Initialize cash management routes after successful connection
+      const { setupCashManagementRoutes } = require('./cashManagementRoutes');
+      setupCashManagementRoutes(app, db, authenticateToken);
+      
+    } catch (error) {
+      logger.error('Failed to connect to PostgreSQL:', error);
+      process.exit(1);
+    }
+  })();
 } else {
   // In development, use SQLite directly
   const sqlite3 = require('sqlite3').verbose();
@@ -3648,8 +3662,8 @@ const labelRoutes = require('./labelRoutes');
 app.use('/api/labels', authenticateToken, labelRoutes);
 
 // === CASH MANAGEMENT ROUTES ===
-const { setupCashManagementRoutes } = require('./cashManagementRoutes');
-setupCashManagementRoutes(app, db, authenticateToken);
+// Note: Cash management routes are now initialized in the database connection section above
+// to ensure proper async connection handling in production
 
 // === Chat API Endpoints ===
 
