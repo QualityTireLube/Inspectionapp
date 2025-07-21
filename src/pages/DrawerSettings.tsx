@@ -74,6 +74,7 @@ const DrawerSettings: React.FC = () => {
       fives: 10,
       tens: 5,
       twenties: 3,
+      fifties: 1,
       hundreds: 0,
     } as DenominationCount,
   });

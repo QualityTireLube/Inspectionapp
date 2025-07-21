@@ -8,12 +8,12 @@ import {
   Typography,
   Button,
   Alert,
-  CircularProgress,
+  CircularProgress
 } from '@mui/material';
 import {
   Close as CloseIcon,
   PhotoCamera as PhotoCameraIcon,
-  CameraAlt as CameraAltIcon,
+  CameraAlt as CameraAltIcon
 } from '@mui/icons-material';
 import { extractVinFromImage } from '../services/api';
 
@@ -41,7 +41,7 @@ const AiVinScanner: React.FC<AiVinScannerProps> = ({
     }
   };
 
-  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -87,7 +87,7 @@ const AiVinScanner: React.FC<AiVinScannerProps> = ({
         fileInputRef.current.value = '';
       }
     }
-  }, [onVinExtracted, onClose]);
+  };
 
   const handleClose = () => {
     setCapturedImage(null);

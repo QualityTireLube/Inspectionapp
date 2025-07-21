@@ -4,6 +4,9 @@ import TireTreadSideView from './TireTreadSideView';
 import CloseIcon from '@mui/icons-material/Close';
 import { TireTread as TireTreadData } from '../types/quickCheck';
 
+// Export TireTreadData for backward compatibility
+export type { TireTreadData };
+
 interface TireTreadSectionProps {
   label: string;
   fieldPrefix?: string; // Optional prop for field naming to enable focus logic
