@@ -15,7 +15,7 @@ services:
       - key: PORT
         value: 10000
       - key: FRONTEND_URL
-        value: https://your-vercel-app.vercel.app
+        value: https://inspectionapp-backend.onrender.com
       - key: DATABASE_TYPE
         value: postgresql
       - key: DATABASE_URL
