@@ -55,7 +55,7 @@ const initializeCashManagementTables = (db) => {
       db.get(`
         SELECT column_name FROM information_schema.columns 
         WHERE table_name = 'drawer_counts' AND column_name = 'count_type'
-      `, (err, row) => {
+      `, [], (err, row) => {
         if (err) {
           logger.error('Error checking for count_type column:', err);
           return;
@@ -80,7 +80,7 @@ const initializeCashManagementTables = (db) => {
       db.get(`
         SELECT column_name FROM information_schema.columns 
         WHERE table_name = 'drawer_counts' AND column_name = 'sms_cash'
-      `, (err, row) => {
+      `, [], (err, row) => {
         if (err) {
           logger.error('Error checking for sms_cash column:', err);
           return;
@@ -125,7 +125,7 @@ const initializeCashManagementTables = (db) => {
       db.get(`
         SELECT column_name FROM information_schema.columns 
         WHERE table_name = 'drawer_settings' AND column_name = 'show_detailed_calculations'
-      `, (err, row) => {
+      `, [], (err, row) => {
         if (err) {
           logger.error('Error checking for show_detailed_calculations column:', err);
           return;
