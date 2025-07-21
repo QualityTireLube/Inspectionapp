@@ -1094,7 +1094,9 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     protocol: req.protocol,
     secure: req.secure,
-    hostname: req.hostname
+    hostname: req.hostname,
+    databaseStatus: db ? 'connected' : 'disconnected',
+    version: 'v2.0-fallback-mode'
   });
 });
 
@@ -4888,6 +4890,15 @@ app.get('/api', (req, res) => {
       }
     },
     documentation: 'Use /api/tables to see all available database tables'
+  });
+});
+
+// === Simple test endpoint to verify deployment ===
+app.get('/api/test-deployment', (req, res) => {
+  res.json({
+    message: 'Deployment v2.0-fallback working!',
+    timestamp: new Date().toISOString(),
+    databaseAvailable: !!db
   });
 });
 
