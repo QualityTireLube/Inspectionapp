@@ -1096,7 +1096,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // === Database debug endpoint (no auth required for debugging) ===
-app.get('/api/debug/database', (req, res) => {
+app.get('/debug/database', (req, res) => {
   const databaseUrl = process.env.DATABASE_URL;
   const databaseType = process.env.DATABASE_TYPE;
   const nodeEnv = process.env.NODE_ENV;
