@@ -9,11 +9,11 @@ export interface TireTreadData {
   center_depth: string;
   outer_depth: string;
   outer_edge_depth: string;
-  inner_edge_condition: 'green' | 'yellow' | 'red';
-  inner_condition: 'green' | 'yellow' | 'red';
-  center_condition: 'green' | 'yellow' | 'red';
-  outer_condition: 'green' | 'yellow' | 'red';
-  outer_edge_condition: 'green' | 'yellow' | 'red';
+  inner_edge_condition: '' | 'green' | 'yellow' | 'red';
+  inner_condition: '' | 'green' | 'yellow' | 'red';
+  center_condition: '' | 'green' | 'yellow' | 'red';
+  outer_condition: '' | 'green' | 'yellow' | 'red';
+  outer_edge_condition: '' | 'green' | 'yellow' | 'red';
 }
 
 interface TireTreadSectionProps {
@@ -21,7 +21,7 @@ interface TireTreadSectionProps {
   fieldPrefix?: string; // Optional prop for field naming to enable focus logic
   value: TireTreadData;
   onChange: (field: keyof TireTreadData, newValue: string) => void;
-  onConditionChange: (field: keyof TireTreadData, condition: 'green' | 'yellow' | 'red') => void;
+  onConditionChange: (field: keyof TireTreadData, condition: '' | 'green' | 'yellow' | 'red') => void;
   onPhotoClick: () => void;
   onDeletePhoto: (index: number) => void;
   tireDate: string;

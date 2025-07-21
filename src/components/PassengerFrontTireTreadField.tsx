@@ -16,7 +16,7 @@ interface PassengerFrontTireTreadFieldProps {
   tireDate: string;
   tireComments: string[];
   onChange: (field: keyof TireTreadData, newValue: string) => void;
-  onConditionChange: (field: keyof TireTreadData, condition: 'green' | 'yellow' | 'red') => void;
+  onConditionChange: (field: keyof TireTreadData, condition: '' | 'green' | 'yellow' | 'red') => void;
   onPhotoClick: () => void;
   onAddPhoto: () => void;
   onDeletePhoto: (index: number) => void;

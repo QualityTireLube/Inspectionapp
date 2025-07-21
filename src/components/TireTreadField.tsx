@@ -17,11 +17,11 @@ export interface TireTreadData {
   center_depth: string;
   outer_depth: string;
   outer_edge_depth: string;
-  inner_edge_condition: 'green' | 'yellow' | 'red';
-  inner_condition: 'green' | 'yellow' | 'red';
-  center_condition: 'green' | 'yellow' | 'red';
-  outer_condition: 'green' | 'yellow' | 'red';
-  outer_edge_condition: 'green' | 'yellow' | 'red';
+  inner_edge_condition: '' | 'green' | 'yellow' | 'red';
+  inner_condition: '' | 'green' | 'yellow' | 'red';
+  center_condition: '' | 'green' | 'yellow' | 'red';
+  outer_condition: '' | 'green' | 'yellow' | 'red';
+  outer_edge_condition: '' | 'green' | 'yellow' | 'red';
 }
 
 type TirePosition = 'passenger_front' | 'driver_front' | 'driver_rear' | 'passenger_rear' | 'spare';
@@ -34,7 +34,7 @@ interface TireTreadFieldProps {
   tireDate: string;
   tireComments: string[];
   onChange: (field: keyof TireTreadData, newValue: string) => void;
-  onConditionChange: (field: keyof TireTreadData, condition: 'green' | 'yellow' | 'red') => void;
+  onConditionChange: (field: keyof TireTreadData, condition: '' | 'green' | 'yellow' | 'red') => void;
   onPhotoClick: () => void;
   onAddPhoto: () => void;
   onDeletePhoto: (index: number) => void;

@@ -166,7 +166,7 @@ const LabelSettingsContent: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* Default Settings */}
-        <Grid xs={12} md={6}>
+        <Grid item xs={12} md={6}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Default Settings
@@ -215,7 +215,7 @@ const LabelSettingsContent: React.FC = () => {
         </Grid>
 
         {/* Statistics */}
-        <Grid xs={12} md={6}>
+        <Grid item xs={12} md={6}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Template Statistics
@@ -265,7 +265,7 @@ const LabelSettingsContent: React.FC = () => {
         </Grid>
 
         {/* Recent Templates */}
-        <Grid xs={12}>
+        <Grid item xs={12}>
           <Paper sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">

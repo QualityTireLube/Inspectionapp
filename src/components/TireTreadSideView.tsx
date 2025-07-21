@@ -2,11 +2,11 @@ import React from 'react';
 import { Box } from '@mui/material';
 
 interface TireTreadSideViewProps {
-  innerEdgeCondition: 'green' | 'yellow' | 'red';
-  innerCondition: 'green' | 'yellow' | 'red';
-  centerCondition: 'green' | 'yellow' | 'red';
-  outerCondition: 'green' | 'yellow' | 'red';
-  outerEdgeCondition: 'green' | 'yellow' | 'red';
+  innerEdgeCondition: '' | 'green' | 'yellow' | 'red';
+  innerCondition: '' | 'green' | 'yellow' | 'red';
+  centerCondition: '' | 'green' | 'yellow' | 'red';
+  outerCondition: '' | 'green' | 'yellow' | 'red';
+  outerEdgeCondition: '' | 'green' | 'yellow' | 'red';
   innerEdgeDepth: number;
   innerDepth: number;
   centerDepth: number;

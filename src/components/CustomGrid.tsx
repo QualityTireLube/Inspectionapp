@@ -1,13 +1,15 @@
 import React from 'react';
 import { Grid as MuiGrid, GridProps } from '@mui/material';
 
-interface CustomGridProps extends Omit<GridProps, 'item'> {
+interface CustomGridProps extends GridProps {
+  // Explicitly include all the props we need
   item?: boolean;
-  xs?: number;
-  sm?: number;
-  md?: number;
-  lg?: number;
-  xl?: number;
+  container?: boolean;
+  xs?: number | boolean;
+  sm?: number | boolean;
+  md?: number | boolean;
+  lg?: number | boolean;
+  xl?: number | boolean;
 }
 
 const Grid: React.FC<CustomGridProps> = (props) => {
