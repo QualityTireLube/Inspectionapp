@@ -1095,45 +1095,6 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// === Database debug endpoint (no auth required for debugging) ===
-app.get('/debug/database', (req, res) => {
-  const databaseUrl = process.env.DATABASE_URL;
-  const databaseType = process.env.DATABASE_TYPE;
-  const nodeEnv = process.env.NODE_ENV;
-  
-  // Parse URL safely for debugging (hide password)
-  let parsedUrl = 'Not set';
-  if (databaseUrl) {
-    try {
-      const url = new URL(databaseUrl);
-      parsedUrl = {
-        protocol: url.protocol,
-        hostname: url.hostname,
-        port: url.port,
-        pathname: url.pathname,
-        username: url.username,
-        password: url.password ? '***HIDDEN***' : 'Not set'
-      };
-    } catch (error) {
-      parsedUrl = `Parse error: ${error.message}`;
-    }
-  }
-  
-  res.json({
-    status: 'debug',
-    database: {
-      url_set: !!databaseUrl,
-      url_length: databaseUrl ? databaseUrl.length : 0,
-      parsed_url: parsedUrl,
-      type: databaseType,
-      environment: nodeEnv,
-      db_connection_status: db ? 'Database wrapper exists' : 'No database wrapper',
-      raw_db_status: rawDb ? 'Raw DB exists' : 'No raw DB connection'
-    },
-    timestamp: new Date().toISOString()
-  });
-});
-
 // === Root endpoint for certificate testing ===
 app.get('/', (req, res) => {
   res.json({ 
@@ -4906,6 +4867,45 @@ app.get('/api', (req, res) => {
       }
     },
     documentation: 'Use /api/tables to see all available database tables'
+  });
+});
+
+// === Database debug endpoint (must be before dynamic routes) ===
+app.get('/api/_debug_database', (req, res) => {
+  const databaseUrl = process.env.DATABASE_URL;
+  const databaseType = process.env.DATABASE_TYPE;
+  const nodeEnv = process.env.NODE_ENV;
+  
+  // Parse URL safely for debugging (hide password)
+  let parsedUrl = 'Not set';
+  if (databaseUrl) {
+    try {
+      const url = new URL(databaseUrl);
+      parsedUrl = {
+        protocol: url.protocol,
+        hostname: url.hostname,
+        port: url.port,
+        pathname: url.pathname,
+        username: url.username,
+        password: url.password ? '***HIDDEN***' : 'Not set'
+      };
+    } catch (error) {
+      parsedUrl = `Parse error: ${error.message}`;
+    }
+  }
+  
+  res.json({
+    status: 'debug',
+    database: {
+      url_set: !!databaseUrl,
+      url_length: databaseUrl ? databaseUrl.length : 0,
+      parsed_url: parsedUrl,
+      type: databaseType,
+      environment: nodeEnv,
+      db_connection_status: db ? 'Database wrapper exists' : 'No database wrapper',
+      raw_db_status: rawDb ? 'Raw DB exists' : 'No raw DB connection'
+    },
+    timestamp: new Date().toISOString()
   });
 });
 
