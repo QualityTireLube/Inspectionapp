@@ -9,6 +9,8 @@ export interface TireTreadData {
   center_depth: string;
   outer_depth: string;
   outer_edge_depth: string;
+  // 🧠 Cursor: TreadCondition allows empty string '' for initial values before measurement
+  // This is intentional for the blank slate approach - users must make conscious choices
   inner_edge_condition: '' | 'green' | 'yellow' | 'red';
   inner_condition: '' | 'green' | 'yellow' | 'red';
   center_condition: '' | 'green' | 'yellow' | 'red';
