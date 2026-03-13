@@ -14,7 +14,6 @@ export interface DebugSettings {
   
   // Communication & Integration
   shopMonkey: boolean;      // ShopMonkey integration
-  chat: boolean;            // Chat system and messaging
   notifications: boolean;  // Push notifications and alerts
   
   // Business Modules & Inspections
@@ -100,7 +99,6 @@ class DebugManager {
       
       // Communication & Integration
       shopMonkey: false,
-      chat: false,
       notifications: false,
       
       // Business Modules & Inspections
@@ -318,7 +316,6 @@ class DebugManager {
       
       // Communication & Integration
       shopMonkey: '🐒',
-      chat: '💬',
       notifications: '🔔',
       
       // Business Modules & Inspections
@@ -436,7 +433,6 @@ class DebugManager {
       
       // Communication & Integration
       shopMonkey: 'ShopMonkey integration and order synchronization',
-      chat: 'Chat system, messaging, and conversations',
       notifications: 'Push notifications, alerts, and user notifications',
       
       // Business Modules & Inspections

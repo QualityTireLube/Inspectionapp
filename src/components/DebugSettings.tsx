@@ -83,7 +83,7 @@ const DebugSettings: React.FC = () => {
     communication: {
       title: 'Communication & Integration',
       description: 'External services and communication systems',
-      categories: ['shopMonkey', 'chat', 'notifications'] as DebugCategory[],
+      categories: ['shopMonkey', 'notifications'] as DebugCategory[],
     },
     businessModules: {
       title: 'Business Modules & Inspections',
