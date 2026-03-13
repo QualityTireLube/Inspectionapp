@@ -13,26 +13,18 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Fab
 } from '@mui/material';
 import { login } from '../services/api';
-import SafariCompatibilityWarning from '../components/SafariCompatibilityWarning';
-import { setAuthToken, setToken, startExpiryWatcher, clearAllAuthStorage, debugAuthStorage, getToken } from '../auth';
-import { logLoginAttempt, showSafariAlert, detectBrowser, testStorage } from '../services/safariDebug';
-import { runQuickSafariDebug } from '../services/simpleSafariDebug';
-import MobileDebugger from '../components/MobileDebugger';
+import { setAuthToken, startExpiryWatcher, clearAllAuthStorage, getToken } from '../auth';
+import { showSafariAlert, detectBrowser, testStorage } from '../services/safariDebug';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<string>('');
-  const [showMobileDebugger, setShowMobileDebugger] = useState(false);
-  const [lastError, setLastError] = useState<any>(null);
   const [certificateDialogOpen, setCertificateDialogOpen] = useState(false);
   const [certificateUrl, setCertificateUrl] = useState('');
-  const [debugMode, setDebugMode] = useState(false);
   const [expiredMessage, setExpiredMessage] = useState('');
   const [storageClearedBanner, setStorageClearedBanner] = useState(false);
   const [isCertificateApprovalFlow, setIsCertificateApprovalFlow] = useState(false);
@@ -76,23 +68,10 @@ const Login: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [storageClearedBanner]);
 
-  // Safari debugging on component mount
+  // Clear stale auth state on mount to avoid stale expired tokens on Safari/iOS
   useEffect(() => {
-    // Always start from a clean auth state to avoid stale expired tokens on Safari/iOS
     try { clearAllAuthStorage(); } catch {}
-
-    const browser = detectBrowser();
-    const storage = testStorage();
-    
-    console.log('🔍 Login Component Loaded');
-    console.log('Browser:', browser);
-    console.log('Storage Status:', storage);
-    
-    if (debugMode && browser.includes('Safari')) {
-      console.log('🦄 Safari detected - Enhanced debugging enabled');
-      showSafariAlert(`Safari detected! Debug mode active.<br>Storage: ${storage.localStorage ? 'localStorage ✅' : storage.sessionStorage ? 'sessionStorage ⚠️' : 'blocked ❌'}`);
-    }
-  }, [debugMode]);
+  }, []);
 
   // Safari-compatible localStorage with extensive logging
   const safariSetItem = (key: string, value: string) => {
@@ -118,38 +97,10 @@ const Login: React.FC = () => {
     setError('');
     setLoading(true);
 
-    // Clear previous debug info
-    setDebugInfo('');
-
     try {
-      console.log('🚀 Login attempt starting...');
-      console.log('Original email:', `"${email}"`);
-      
-      // Normalize email for Safari compatibility
       const normalizedEmail = email.toLowerCase().trim();
-      console.log('Normalized email:', `"${normalizedEmail}"`);
-      
-      // Log the attempt for debugging
-      const debugLog = logLoginAttempt(email);
-      console.log('Debug log created:', debugLog);
-      
-      // Show debug info in UI for Safari users - only if debug mode is active
-      if (debugMode && detectBrowser().includes('Safari')) {
-        setDebugInfo(`Attempting login with: "${normalizedEmail}"`);
-      }
-      
-      console.log('📡 Calling login API...');
       const { token, email: responseEmail, name, role, userId, expiresIn } = await login(normalizedEmail, password);
       
-      console.log('✅ Login API response received');
-      console.log('Token present:', !!token);
-      console.log('Response email:', responseEmail);
-      console.log('User name:', name);
-      console.log('User ID:', userId);
-      
-      // Use Safari-compatible storage
-      console.log('💾 Storing authentication data...');
-      // Prefer storing token with explicit expiry if provided
       setAuthToken(token, expiresIn);
       startExpiryWatcher();
       safariSetItem('userName', name);
@@ -157,33 +108,12 @@ const Login: React.FC = () => {
       safariSetItem('userRole', role);
       safariSetItem('userId', userId);
       
-      console.log('🎯 Login successful, navigating...');
-      if (debugMode) {
-        showSafariAlert('✅ Login successful!');
-      }
-      // Reset certificate approval flow on successful login
       setIsCertificateApprovalFlow(false);
       navigate(from, { replace: true });
       
     } catch (err: any) {
-      console.error('❌ Login failed - Full error details:', err);
-      
-      // Enhanced error logging for Safari debugging
-      const errorDetails = {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status,
-        code: err.code,
-        stack: err.stack
-      };
-      
-      logLoginAttempt(email, errorDetails);
-      setLastError(errorDetails);
-      
-      // Clear any bad token that might remain
       clearAllAuthStorage();
-       
-       // Enhanced error handling for Safari
+
       let errorMessage = 'Invalid email or password';
       
       if (err.response?.data?.error) {
@@ -213,20 +143,6 @@ const Login: React.FC = () => {
       }
       
       setError(errorMessage);
-      
-             // Show detailed error for Safari debugging - only if debug mode is active
-       if (debugMode && detectBrowser().includes('Safari')) {
-         const failedEmail = email.toLowerCase().trim();
-         const debugDetails = `
-❌ Login Failed in Safari
-Email: "${email}" → "${failedEmail}"
-Error: ${errorMessage}
-Status: ${err.response?.status || 'No response'}
-Code: ${err.code || 'Unknown'}
-         `;
-         setDebugInfo(debugDetails);
-         showSafariAlert(`❌ Login failed: ${errorMessage}<br>Check console for details.`);
-       }
       
     } finally {
       setLoading(false);
@@ -286,14 +202,6 @@ Code: ${err.code || 'Unknown'}
       } else {
         alert(`❌ HTTPS API Connection: ERROR\n${error.message}\n\nCheck:\n- Server running on HTTPS?\n- Same network?\n- Certificate valid?`);
       }
-    }
-  };
-
-  const toggleDebugMode = () => {
-    setDebugMode(!debugMode);
-    // Clear debug info when turning off debug mode
-    if (debugMode) {
-      setDebugInfo('');
     }
   };
 
@@ -381,22 +289,6 @@ Code: ${err.code || 'Unknown'}
             </Alert>
           )}
 
-          {/* Debug Information - Only show when debug mode is active */}
-          {debugMode && (
-            <>
-              <SafariCompatibilityWarning />
-              
-              {/* Safari Debug Info Display */}
-              {debugInfo && detectBrowser().includes('Safari') && (
-                <Alert severity="info" sx={{ mb: 2, fontSize: '0.8rem' }}>
-                  <Typography variant="caption" component="pre" sx={{ whiteSpace: 'pre-wrap' }}>
-                    {debugInfo}
-                  </Typography>
-                </Alert>
-              )}
-            </>
-          )}
-
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
@@ -459,55 +351,6 @@ Code: ${err.code || 'Unknown'}
               {loading ? <CircularProgress size={24} /> : 'Sign In'}
             </Button>
 
-            {/* Debug Buttons */}
-            {debugMode && (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => setShowMobileDebugger(true)}
-                  sx={{ fontSize: '0.7rem' }}
-                >
-                  🔍 Open Safari Debugger
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => runQuickSafariDebug(email, password)}
-                  sx={{ fontSize: '0.7rem' }}
-                >
-                  ⚡ Quick Debug Test
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={testApiOnly}
-                  sx={{ fontSize: '0.7rem' }}
-                >
-                  🔗 Test API Only
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={debugAuthStorage}
-                  sx={{ fontSize: '0.7rem' }}
-                >
-                  🔍 Debug Storage
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => {
-                    clearAllAuthStorage();
-                    console.log('🧹 Manually cleared all auth storage');
-                  }}
-                  sx={{ fontSize: '0.7rem' }}
-                >
-                  🧹 Clear Storage
-                </Button>
-              </Box>
-            )}
-
             <Box sx={{ textAlign: 'center', mt: 2 }}>
               <Typography variant="body2">
                 Don't have an account?{' '}
@@ -532,14 +375,6 @@ Code: ${err.code || 'Unknown'}
         </Paper>
       </Box>
       
-      {/* Mobile Safari Debugger */}
-      <MobileDebugger
-        open={showMobileDebugger}
-        onClose={() => setShowMobileDebugger(false)}
-        lastError={lastError}
-        lastEmailInput={email}
-      />
-
       {/* Certificate Dialog */}
       <Dialog
         open={certificateDialogOpen}
@@ -608,28 +443,6 @@ Code: ${err.code || 'Unknown'}
         </DialogActions>
       </Dialog>
 
-        {/* Debug Toggle Circle */}
-        <Fab
-          size="small"
-          onClick={toggleDebugMode}
-          sx={{
-            position: 'fixed',
-            bottom: 20,
-            right: 20,
-            backgroundColor: debugMode ? '#4caf50' : '#c0c0c0',
-            color: debugMode ? 'white' : '#666',
-            width: 40,
-            height: 40,
-            minHeight: 40,
-            '&:hover': {
-              backgroundColor: debugMode ? '#45a049' : '#b0b0b0'
-            },
-            fontSize: '0.8rem',
-            zIndex: 1000
-          }}
-        >
-          🔍
-        </Fab>
       </Container>
     );
   };
