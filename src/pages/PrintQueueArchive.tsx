@@ -398,7 +398,7 @@ const PrintQueueArchive: React.FC = () => {
         {/* Stats Cards */}
         {stats && (
           <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <Card>
                 <CardContent>
                   <Typography color="text.secondary" gutterBottom>Total Jobs</Typography>
@@ -406,7 +406,7 @@ const PrintQueueArchive: React.FC = () => {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <Card sx={{ borderLeft: '4px solid', borderLeftColor: 'success.main' }}>
                 <CardContent>
                   <Typography color="text.secondary" gutterBottom>Completed</Typography>
@@ -414,7 +414,7 @@ const PrintQueueArchive: React.FC = () => {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <Card sx={{ borderLeft: '4px solid', borderLeftColor: 'error.main' }}>
                 <CardContent>
                   <Typography color="text.secondary" gutterBottom>Failed</Typography>
@@ -422,7 +422,7 @@ const PrintQueueArchive: React.FC = () => {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <Card>
                 <CardContent>
                   <Typography color="text.secondary" gutterBottom>Success Rate</Typography>
@@ -472,7 +472,7 @@ const PrintQueueArchive: React.FC = () => {
           
           <Collapse in={showFilters}>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6} md={2}>
+              <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Status</InputLabel>
                   <Select
@@ -487,7 +487,7 @@ const PrintQueueArchive: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6} md={2}>
+              <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Type</InputLabel>
                   <Select
@@ -501,7 +501,7 @@ const PrintQueueArchive: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6} md={2}>
+              <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Printer</InputLabel>
                   <Select
@@ -516,7 +516,7 @@ const PrintQueueArchive: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6} md={2}>
+              <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                 <TextField
                   label="Start Date"
                   type="date"
@@ -527,7 +527,7 @@ const PrintQueueArchive: React.FC = () => {
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6} md={2}>
+              <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                 <TextField
                   label="End Date"
                   type="date"
@@ -538,7 +538,7 @@ const PrintQueueArchive: React.FC = () => {
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6} md={2}>
+              <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Group By</InputLabel>
                   <Select
@@ -555,7 +555,7 @@ const PrintQueueArchive: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Button variant="outlined" onClick={handleClearFilters} size="small">
                   Clear Filters
                 </Button>
@@ -655,7 +655,7 @@ const PrintQueueArchive: React.FC = () => {
                   component="div"
                   count={totalJobs}
                   page={page}
-                  onPageChange={(e, newPage) => setPage(newPage)}
+                  onPageChange={(_e, newPage) => setPage(newPage)}
                   rowsPerPage={rowsPerPage}
                   onRowsPerPageChange={(e) => {
                     setRowsPerPage(parseInt(e.target.value, 10));
@@ -730,24 +730,24 @@ const PrintQueueArchive: React.FC = () => {
                 <Paper sx={{ p: 2, mb: 2, bgcolor: 'grey.50' }}>
                   <Typography variant="subtitle2" gutterBottom>Original Job Details</Typography>
                   <Grid container spacing={1}>
-                    <Grid item xs={6}>
+                    <Grid size={6}>
                       <Typography variant="caption" color="text.secondary">Type</Typography>
                       <Typography variant="body2">{getFormNameDisplay(selectedJob.formName)}</Typography>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={6}>
                       <Typography variant="caption" color="text.secondary">Status</Typography>
                       <Box>{getStatusChip(selectedJob.status)}</Box>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={6}>
                       <Typography variant="caption" color="text.secondary">Original Printer</Typography>
                       <Typography variant="body2">{selectedJob.printerName || 'Unknown'}</Typography>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={6}>
                       <Typography variant="caption" color="text.secondary">Original Client</Typography>
                       <Typography variant="body2">{selectedJob.printClientName || 'Unknown'}</Typography>
                     </Grid>
                     {selectedJob.errorMessage && (
-                      <Grid item xs={12}>
+                      <Grid size={12}>
                         <Typography variant="caption" color="text.secondary">Error</Typography>
                         <Alert severity="error" sx={{ mt: 0.5, py: 0 }}>
                           <Typography variant="body2">{selectedJob.errorMessage}</Typography>
@@ -845,45 +845,45 @@ const PrintQueueArchive: React.FC = () => {
             {detailsJob && (
               <Box sx={{ pt: 1 }}>
                 <Grid container spacing={2}>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <Typography variant="caption" color="text.secondary">Job ID</Typography>
                     <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>{detailsJob.id}</Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <Typography variant="caption" color="text.secondary">Status</Typography>
                     <Box>{getStatusChip(detailsJob.status)}</Box>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <Typography variant="caption" color="text.secondary">Type</Typography>
                     <Typography variant="body2">{getFormNameDisplay(detailsJob.formName)}</Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <Typography variant="caption" color="text.secondary">Priority</Typography>
                     <Typography variant="body2">{detailsJob.priority}</Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <Typography variant="caption" color="text.secondary">Printer</Typography>
                     <Typography variant="body2">{detailsJob.printerName || '-'}</Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <Typography variant="caption" color="text.secondary">Print Client</Typography>
                     <Typography variant="body2">{detailsJob.printClientName || '-'}</Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <Typography variant="caption" color="text.secondary">Created</Typography>
                     <Typography variant="body2">{formatDate(detailsJob.createdAt)}</Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <Typography variant="caption" color="text.secondary">Completed</Typography>
                     <Typography variant="body2">{formatDate(detailsJob.completedAt)}</Typography>
                   </Grid>
                   {detailsJob.errorMessage && (
-                    <Grid item xs={12}>
+                    <Grid size={12}>
                       <Typography variant="caption" color="text.secondary">Error Message</Typography>
                       <Alert severity="error" sx={{ mt: 0.5 }}>{detailsJob.errorMessage}</Alert>
                     </Grid>
                   )}
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Typography variant="caption" color="text.secondary">Job Data</Typography>
                     <Paper sx={{ p: 1, mt: 0.5, bgcolor: 'grey.50', maxHeight: 200, overflow: 'auto' }}>
                       <pre style={{ margin: 0, fontSize: '0.75rem', whiteSpace: 'pre-wrap' }}>
