@@ -73,6 +73,7 @@
     "@types/node": "^22.15.29",
     "@vitejs/plugin-react": "^4.0.0",
     "concurrently": "^9.1.2",
+    "firebase-tools": "^15.10.0",
     "typescript": "^5.8.3",
     "vite": "^4.5.0",
     "vite-plugin-pwa": "^0.16.7"
