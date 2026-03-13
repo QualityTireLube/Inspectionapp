@@ -1,0 +1,69 @@
+2026-03-13T22:18:45.133Z [INFO]: # Build environment configured with Standard build compute type: 8GiB Memory, 4vCPUs, 128GB Disk Space
+2026-03-13T22:18:45.558Z [INFO]: # Cloning repository: git@github.com:QualityTireLube/Inspectionapp.git
+2026-03-13T22:18:46.207Z [INFO]: 
+2026-03-13T22:18:46.208Z [INFO]: Cloning into 'Inspectionapp'...
+2026-03-13T22:18:46.209Z [INFO]: # Switching to commit: 072cc402e8e59dc1db9918bd685250f68e0c9fe5
+2026-03-13T22:18:46.246Z [INFO]: Note: switching to '072cc402e8e59dc1db9918bd685250f68e0c9fe5'.
+                                 You are in 'detached HEAD' state. You can look around, make experimental
+                                 changes and commit them, and you can discard any commits you make in this
+                                 state without impacting any branches by switching back to a branch.
+                                 If you want to create a new branch to retain commits you create, you may
+                                 do so (now or later) by using -c with the switch command. Example:
+                                 git switch -c <new-branch-name>
+                                 Or undo this operation with:
+                                 git switch -
+                                 Turn off this advice by setting config variable advice.detachedHead to false
+                                 HEAD is now at 072cc40 update
+2026-03-13T22:18:46.281Z [INFO]: Successfully cleaned up Git credentials
+2026-03-13T22:18:46.281Z [INFO]: # Checking for Git submodules at: /codebuild/output/src1363136664/src/Inspectionapp/.gitmodules
+2026-03-13T22:18:46.286Z [INFO]: # Retrieving environment cache...
+2026-03-13T22:18:46.318Z [WARNING]: ! Unable to write cache: {"code":"ERR_BAD_REQUEST","message":"Request failed with status code 404"})}
+2026-03-13T22:18:46.318Z [INFO]: ---- Setting Up SSM Secrets ----
+2026-03-13T22:18:46.318Z [INFO]: SSM params {"Path":"/amplify/d1jdc96l1z02o7/main/","WithDecryption":true}
+2026-03-13T22:18:46.357Z [WARNING]: !Failed to set up process.env.secrets
+2026-03-13T22:18:47.249Z [INFO]: # No package override configuration found.
+2026-03-13T22:18:47.252Z [INFO]: # Retrieving cache...
+2026-03-13T22:18:47.289Z [INFO]: # Retrieved cache
+2026-03-13T22:18:52.075Z [INFO]: ## Starting Backend Build
+                                 ## Checking for associated backend environment...
+                                 ## No backend environment association found, continuing...
+                                 ## Completed Backend Build
+2026-03-13T22:18:52.081Z [INFO]: {"backendDuration": 0}
+                                 ## Starting Frontend Build
+                                 # Starting phase: preBuild
+                                 # Executing command: npm install
+2026-03-13T22:19:35.453Z [WARNING]: npm warn deprecated har-validator@5.1.5: this library is no longer supported
+2026-03-13T22:19:35.650Z [WARNING]: npm warn deprecated sourcemap-codec@1.4.8: Please use @jridgewell/sourcemap-codec instead
+2026-03-13T22:19:36.001Z [WARNING]: npm warn deprecated uuid@3.4.0: Please upgrade  to version 7 or higher.  Older versions may use Math.random() in certain circumstances, which is known to be problematic.  See https://v8.dev/blog/math-random for details.
+2026-03-13T22:19:36.377Z [WARNING]: npm warn deprecated request@2.88.2: request has been deprecated, see https://github.com/request/request/issues/3142
+2026-03-13T22:19:36.782Z [WARNING]: npm warn deprecated source-map@0.8.0-beta.0: The work that was done in this beta branch won't be included in future versions
+2026-03-13T22:19:37.124Z [WARNING]: npm warn deprecated glob@11.1.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+2026-03-13T22:20:44.208Z [INFO]: added 697 packages, and audited 698 packages in 2m
+2026-03-13T22:20:44.213Z [INFO]: 129 packages are looking for funding
+                                 run `npm fund` for details
+2026-03-13T22:20:44.809Z [INFO]: 23 vulnerabilities (15 moderate, 4 high, 4 critical)
+                                 To address issues that do not require attention, run:
+                                 npm audit fix
+                                 To address all issues (including breaking changes), run:
+                                 npm audit fix --force
+                                 Run `npm audit` for details.
+2026-03-13T22:20:44.846Z [INFO]: # Completed phase: preBuild
+                                 # Starting phase: build
+                                 # Executing command: npm run build
+2026-03-13T22:20:44.925Z [INFO]: > quickcheck-firebase-app@1.0.0 build
+                                 > vite build
+2026-03-13T22:20:45.658Z [INFO]: vite v4.5.14 building for production...
+2026-03-13T22:20:45.683Z [INFO]: transforming...
+2026-03-13T22:20:46.243Z [INFO]: ✓ 55 modules transformed.
+2026-03-13T22:20:46.244Z [WARNING]: [vite-plugin-pwa:build] Could not resolve "./Inspections" from "src/pages/Settings.tsx"
+                                    file: /codebuild/output/src1363136664/src/Inspectionapp/src/pages/Settings.tsx
+2026-03-13T22:20:46.247Z [WARNING]: error during build:
+                                    RollupError: Could not resolve "./Inspections" from "src/pages/Settings.tsx"
+                                    at error (file:///codebuild/output/src1363136664/src/Inspectionapp/node_modules/rollup/dist/es/shared/node-entry.js:2287:30)
+                                    at ModuleLoader.handleInvalidResolvedId (file:///codebuild/output/src1363136664/src/Inspectionapp/node_modules/rollup/dist/es/shared/node-entry.js:24889:24)
+                                    at file:///codebuild/output/src1363136664/src/Inspectionapp/node_modules/rollup/dist/es/shared/node-entry.js:24851:26
+2026-03-13T22:20:46.263Z [ERROR]: !!! Build failed
+2026-03-13T22:20:46.263Z [ERROR]: !!! Error: Command failed with exit code 1
+2026-03-13T22:20:46.263Z [INFO]: # Starting environment caching...
+2026-03-13T22:20:46.263Z [INFO]: # Environment caching completed
+

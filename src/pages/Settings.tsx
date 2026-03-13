@@ -28,7 +28,6 @@ import {
   LocationOn as LocationIcon,
   BugReport as DebugIcon,
   Build as PartsIcon,
-  FactCheck as InspectionsIcon,
 } from '@mui/icons-material';
 
 // Import the individual components
@@ -41,11 +40,10 @@ import LocationAwareStickerSettings from '../components/LocationAwareStickerSett
 
 import LocationAwarePrinterSettings from '../components/LocationAwarePrinterSettings';
 import RolesSettings from '../components/RolesSettings';
-import InspectionsPage from './Inspections';
 import DebugSettings from '../components/DebugSettings';
 // Removed Parts Tech and NexPart settings
 
-type SettingsSection = 'general' | 'users' | 'stickers' | 'locations' | 'printers' | 'tokens' | 'roles' | 'inspections' | 'debug';
+type SettingsSection = 'general' | 'users' | 'stickers' | 'locations' | 'printers' | 'tokens' | 'roles' | 'debug';
 
 const DRAWER_WIDTH = 280;
 const SETTINGS_SECTION_STORAGE_KEY = 'settings.selectedSection';
@@ -116,11 +114,6 @@ const Settings: React.FC = () => {
       id: 'tokens' as SettingsSection,
       label: 'Token Generator',
       icon: <TokenIcon />,
-    },
-    {
-      id: 'inspections' as SettingsSection,
-      label: 'Inspections',
-      icon: <InspectionsIcon />,
     },
     // Removed Parts Tech and NexPart settings
     // Admin-only debug settings
@@ -226,8 +219,6 @@ const Settings: React.FC = () => {
         return <TokenGenerator />;
       case 'roles':
         return <RolesSettings />;
-      case 'inspections':
-        return <InspectionsPage />;
       // Removed Parts Tech and NexPart content
       case 'debug':
         return <DebugSettings />;
