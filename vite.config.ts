@@ -57,10 +57,14 @@ export default defineConfig(({ mode }) => ({
     host: '0.0.0.0',
     port: 3000,
     strictPort: true,
-    https: {
-      key: fs.readFileSync(path.resolve(__dirname, '.cert/key.pem')),
-      cert: fs.readFileSync(path.resolve(__dirname, '.cert/cert.pem')),
-    },
+    https: (() => {
+      const keyPath = path.resolve(__dirname, '.cert/key.pem');
+      const certPath = path.resolve(__dirname, '.cert/cert.pem');
+      if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+        return { key: fs.readFileSync(keyPath), cert: fs.readFileSync(certPath) };
+      }
+      return undefined;
+    })(),
     hmr: false // Disable HMR to avoid WebSocket conflicts with our app
   },
   build: {
