@@ -62,10 +62,7 @@ export const ExistingDesignShowcase: React.FC = () => {
     dashImages: [],
     tpmsImages: [],
     notes: {},
-    condition: '',
-    stateInspection: '',
     batteryCondition: false,
-    userName: '',
     mileage: '',
     tireTread: {
       inner_edge_depth: '8',

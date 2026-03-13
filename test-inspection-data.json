@@ -1,0 +1,32 @@
+{
+  "quick_check_full": {
+    "inspection_type": "quick_check",
+    "vehicle": { "vin": "" },
+    "tabs": []
+  },
+  "quick_check_minimal": {
+    "inspection_type": "quick_check",
+    "vehicle": { "vin": "" },
+    "tabs": []
+  },
+  "no_check_full": {
+    "inspection_type": "no_check",
+    "vehicle": { "vin": "" },
+    "tabs": []
+  },
+  "no_check_minimal": {
+    "inspection_type": "no_check",
+    "vehicle": { "vin": "" },
+    "tabs": []
+  },
+  "vsi_full": {
+    "inspection_type": "vsi",
+    "vehicle": { "vin": "" },
+    "tabs": []
+  },
+  "vsi_minimal": {
+    "inspection_type": "vsi",
+    "vehicle": { "vin": "" },
+    "tabs": []
+  }
+}

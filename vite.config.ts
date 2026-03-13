@@ -19,9 +19,12 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     VitePWA({
-      disable: mode === 'development', // Disable PWA in development to avoid SSL issues
+      disable: mode === 'development',
       registerType: 'autoUpdate',
-      injectRegister: mode === 'production' ? 'auto' : false, // Don't inject SW register in dev
+      injectRegister: mode === 'production' ? 'auto' : false,
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       manifest: mode === 'production' ? {
         name: 'Curser Inspection App',
         short_name: 'Inspection',
@@ -43,12 +46,13 @@ export default defineConfig(({ mode }) => ({
             purpose: 'any maskable'
           }
         ]
-      } : false, // Disable manifest in development
-      workbox: mode === 'production' ? {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
-      } : undefined,
+      } : false,
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024
+      },
       devOptions: {
-        enabled: false, // Explicitly disable in development
+        enabled: false,
         type: 'module'
       }
     })
@@ -76,7 +80,11 @@ export default defineConfig(({ mode }) => ({
         manualChunks: {
           vendor: ['react', 'react-dom'],
           mui: ['@mui/material', '@mui/icons-material'],
-          router: ['react-router-dom']
+          router: ['react-router-dom'],
+          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
+          charts: ['recharts'],
+          pdf: ['jspdf', 'pdf-lib'],
+          dnd: ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities']
         }
       }
     }
