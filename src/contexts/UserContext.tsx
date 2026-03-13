@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { getUserProfile } from '../services/api';
 import { LocationService } from '../services/locationService';
 import { Location } from '../types/locations';
+import { onAuthChange } from '../services/firebase/auth';
+import { User } from 'firebase/auth';
 
 export interface UserProfile {
   name: string;
@@ -29,70 +31,65 @@ interface UserProviderProps {
 
 export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [userLocation, setUserLocation] = useState<Location | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadUserProfile = useCallback(async () => {
+  // Track Firebase auth state
+  useEffect(() => {
+    const unsubscribe = onAuthChange((fbUser) => {
+      setFirebaseUser(fbUser);
+    });
+    return unsubscribe;
+  }, []);
+
+  const loadUserProfile = useCallback(async (fbUser: User | null) => {
+    if (!fbUser) {
+      setUser(null);
+      setUserLocation(null);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
 
-      // Check if user is authenticated
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setUser(null);
-        setUserLocation(null);
-        setLoading(false);
-        return;
-      }
+      // Try to load profile from the backend API
+      try {
+        const profile = await getUserProfile();
+        setUser(profile);
 
-      // Load user profile
-      const profile = await getUserProfile();
-      setUser(profile);
-
-      // Load user location if specified
-      if (profile.location) {
-        // First try to find by location name (legacy)
-        const locations = LocationService.getLocations();
-        let location = locations.find(loc => loc.name === profile.location);
-        
-        // If not found by name, try by ID
-        if (!location) {
-          location = LocationService.getLocationById(profile.location);
+        if (profile.location) {
+          const locations = LocationService.getLocations();
+          let location = locations.find(loc => loc.name === profile.location);
+          if (!location) location = LocationService.getLocationById(profile.location);
+          setUserLocation(location || null);
+        } else {
+          setUserLocation(null);
         }
-        
-        setUserLocation(location || null);
-      } else {
+      } catch {
+        // Backend unavailable — fall back to Firebase user data
+        setUser({
+          name: fbUser.displayName || fbUser.email || 'User',
+          email: fbUser.email || '',
+          role: localStorage.getItem('userRole') || 'user',
+        });
         setUserLocation(null);
       }
-    } catch (err: any) {
-      console.error('Failed to load user profile:', err);
-      setError(err.message || 'Failed to load user profile');
-      setUser(null);
-      setUserLocation(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
   const refreshUser = useCallback(async () => {
-    await loadUserProfile();
-  }, [loadUserProfile]);
+    await loadUserProfile(firebaseUser);
+  }, [loadUserProfile, firebaseUser]);
 
   useEffect(() => {
-    loadUserProfile();
-
-    // Listen for storage changes (e.g., token updates)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'token') {
-        loadUserProfile();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+    loadUserProfile(firebaseUser);
+  }, [firebaseUser]);
 
   const value: UserContextType = useMemo(() => ({
     user,
@@ -100,9 +97,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     loading,
     error,
     refreshUser,
-    isAuthenticated: !!user && !!localStorage.getItem('token'),
+    isAuthenticated: !!firebaseUser,
     roleHomePageId: undefined,
-  }), [user, userLocation, loading, error, refreshUser]);
+  }), [user, userLocation, loading, error, refreshUser, firebaseUser]);
 
   return (
     <UserContext.Provider value={value}>
