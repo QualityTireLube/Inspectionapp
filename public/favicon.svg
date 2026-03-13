@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Car body -->
+  <path d="M24 20H8C6.89543 20 6 19.1046 6 18V14C6 12.8954 6.89543 12 8 12H24C25.1046 12 26 12.8954 26 14V18C26 19.1046 25.1046 20 24 20Z" fill="#1976d2"/>
+  
+  <!-- Car top -->
+  <path d="M22 12H10C8.89543 12 8 11.1046 8 10V8C8 6.89543 8.89543 6 10 6H22C23.1046 6 24 6.89543 24 8V10C24 11.1046 23.1046 12 22 12Z" fill="#1976d2"/>
+  
+  <!-- Wheels -->
+  <circle cx="10" cy="20" r="3" fill="#424242"/>
+  <circle cx="22" cy="20" r="3" fill="#424242"/>
+  
+  <!-- Inspection checkmark -->
+  <path d="M14 16L16 18L20 14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg> 

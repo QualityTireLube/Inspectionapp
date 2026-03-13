@@ -1,0 +1,73 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Inspections collection
+    match /inspections/{inspectionId} {
+      // Users can read their own inspections
+      allow read: if isSignedIn() && isOwner(resource.data.userId);
+      
+      // Users can create inspections
+      allow create: if isSignedIn() && isOwner(request.resource.data.userId);
+      
+      // Users can update their own inspections
+      allow update: if isSignedIn() && isOwner(resource.data.userId);
+      
+      // Users can delete their own inspections
+      allow delete: if isSignedIn() && isOwner(resource.data.userId);
+    }
+    
+    // Drafts collection
+    match /drafts/{draftId} {
+      // Draft ID format: {userId}-{inspectionType}
+      // Users can read their own drafts
+      allow read: if isSignedIn() && draftId.matches(request.auth.uid + '.*');
+      
+      // Users can create/update their own drafts
+      allow create, update: if isSignedIn() && isOwner(request.resource.data.userId);
+      
+      // Users can delete their own drafts
+      allow delete: if isSignedIn() && draftId.matches(request.auth.uid + '.*');
+    }
+    
+    // Inspection schemas (read-only for users, write for admins)
+    match /inspection_schemas/{schemaId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Only admins through Firebase Console
+    }
+    
+    // Field registry (read-only for users, write for admins)
+    match /field_registry/{fieldId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Only admins through Firebase Console
+    }
+    
+    // Users collection (users can read/update their own profile)
+    match /users/{userId} {
+      allow read: if isSignedIn() && isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if false; // Prevent user deletion
+    }
+    
+    // Locations collection (read-only for users)
+    match /locations/{locationId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Only admins through Firebase Console
+    }
+    
+    // Default deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

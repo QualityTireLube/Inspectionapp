@@ -1,0 +1,21 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Metal TPMS Sensor - Metallic tire valve stem -->
+  
+  <!-- Main valve stem body (metallic silver) -->
+  <rect x="14" y="4" width="4" height="20" rx="2" fill="#C0C0C0" stroke="#808080" stroke-width="1"/>
+  
+  <!-- Valve cap (brighter silver) -->
+  <rect x="13" y="2" width="6" height="4" rx="2" fill="#E0E0E0" stroke="#A0A0A0" stroke-width="1"/>
+  
+  <!-- Rubber seal at bottom (black) -->
+  <rect x="12" y="22" width="8" height="3" rx="1.5" fill="#2C2C2C" stroke="#1A1A1A" stroke-width="1"/>
+  
+  <!-- Valve core (darker metal) -->
+  <circle cx="16" cy="8" r="1" fill="#606060"/>
+  
+  <!-- Sensor housing (metallic) -->
+  <rect x="11" y="12" width="10" height="6" rx="2" fill="#B0B0B0" stroke="#707070" stroke-width="1"/>
+  
+  <!-- Sensor indicator light -->
+  <circle cx="16" cy="15" r="1.5" fill="#4CAF50"/>
+</svg> 

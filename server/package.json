@@ -1,0 +1,19 @@
+{
+  "name": "quickcheck-firebase-server",
+  "version": "1.0.0",
+  "description": "Minimal Express server for VIN decoding",
+  "main": "minimal-index.js",
+  "scripts": {
+    "start": "node minimal-index.js",
+    "dev": "nodemon minimal-index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "axios": "^1.6.0",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

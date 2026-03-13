@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Icon Generator</title>
+</head>
+<body>
+    <canvas id="canvas" style="display: none;"></canvas>
+    <script>
+        const iconSizes = [72, 96, 128, 144, 152, 167, 180, 192, 256, 512];
+        const icons = {};
+        
+        function createIconSVG(size) {
+            return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background circle -->
+    <circle cx="NaN" cy="NaN" r="NaN" fill="#1976d2"/>
+    
+    <!-- Main icon content -->
+    <g transform="translate(NaN, NaN)">
+      <!-- Car silhouette -->
+      <rect x="NaN" y="NaN" width="NaN" height="NaN" rx="NaN" fill="white"/>
+      
+      <!-- Wheels -->
+      <circle cx="NaN" cy="NaN" r="NaN" fill="white"/>
+      <circle cx="NaN" cy="NaN" r="NaN" fill="white"/>
+      
+      <!-- Windshield -->
+      <rect x="NaN" y="NaN" width="NaN" height="NaN" rx="NaN" fill="white" opacity="0.8"/>
+      
+      <!-- Tool/wrench icon -->
+      <rect x="NaN" y="NaN" width="NaN" height="NaN" rx="NaN" fill="white" transform="rotate(15 NaN NaN)"/>
+      <circle cx="NaN" cy="NaN" r="NaN" fill="none" stroke="white" stroke-width="NaN"/>
+    </g>
+    
+    <!-- Text indicator -->
+    <text x="NaN" y="NaN" font-family="Arial, sans-serif" font-size="NaN" fill="white" text-anchor="middle" font-weight="bold">VI</text>
+  </svg>`;
+        }
+        
+        function convertSVGToPNG(svgString, size) {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = size;
+            canvas.height = size;
+            
+            const img = new Image();
+            const svgBlob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
+            const url = URL.createObjectURL(svgBlob);
+            
+            return new Promise((resolve) => {
+                img.onload = function() {
+                    ctx.clearRect(0, 0, size, size);
+                    ctx.drawImage(img, 0, 0, size, size);
+                    const pngDataUrl = canvas.toDataURL('image/png');
+                    URL.revokeObjectURL(url);
+                    resolve(pngDataUrl);
+                };
+                img.src = url;
+            });
+        }
+        
+        async function generateIcons() {
+            console.log('Generating icons...');
+            for (const size of iconSizes) {
+                const svg = createIconSVG(size);
+                const png = await convertSVGToPNG(svg, size);
+                icons[size] = png;
+                console.log(`Generated icon-${size}.png`);
+            }
+            
+            // You would save these to files here in a real implementation
+            console.log('Icons generated. In a real app, save these to PNG files.');
+            console.log('Icons object:', Object.keys(icons));
+        }
+        
+        generateIcons();
+    </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<svg width="72" height="72" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background circle -->
+    <circle cx="36" cy="36" r="36" fill="#1976d2"/>
+    
+    <!-- Main icon content -->
+    <g transform="translate(14.4, 14.4)">
+      <!-- Car silhouette -->
+      <rect x="7.2" y="18" width="28.8" height="10.799999999999999" rx="1.44" fill="white"/>
+      
+      <!-- Wheels -->
+      <circle cx="10.799999999999999" cy="32.4" r="3.6" fill="white"/>
+      <circle cx="25.2" cy="32.4" r="3.6" fill="white"/>
+      
+      <!-- Windshield -->
+      <rect x="9" y="10.799999999999999" width="25.2" height="7.2" rx="1.44" fill="white" opacity="0.8"/>
+      
+      <!-- Tool/wrench icon -->
+      <rect x="3.6" y="3.6" width="2.16" height="14.4" rx="0.72" fill="white" transform="rotate(15 4.68 10.799999999999999)"/>
+      <circle cx="4.68" cy="5.76" r="1.8" fill="none" stroke="white" stroke-width="0.5760000000000001"/>
+    </g>
+    
+    <!-- Text indicator -->
+    <text x="36" y="61.199999999999996" font-family="Arial, sans-serif" font-size="5.76" fill="white" text-anchor="middle" font-weight="bold">VI</text>
+  </svg>

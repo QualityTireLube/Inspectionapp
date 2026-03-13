@@ -1,0 +1,52 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    function isSizeValid() {
+      // Max 10MB per image
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+    
+    // Inspection uploads
+    match /uploads/{inspectionType}/{inspectionId}/{imageType}/{fileName} {
+      // Allow authenticated users to read any inspection images
+      allow read: if isSignedIn();
+      
+      // Allow users to upload images (with validation)
+      allow create: if isSignedIn() && isImage() && isSizeValid();
+      
+      // Allow users to delete their own images
+      allow delete: if isSignedIn();
+    }
+    
+    // Draft uploads (temporary storage)
+    match /drafts/{userId}/{inspectionType}/{imageType}/{fileName} {
+      // Users can read their own draft images
+      allow read: if isSignedIn() && isOwner(userId);
+      
+      // Users can upload their own draft images
+      allow create: if isSignedIn() && isOwner(userId) && isImage() && isSizeValid();
+      
+      // Users can delete their own draft images
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+    
+    // Default deny all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
