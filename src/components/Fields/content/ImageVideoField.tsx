@@ -149,7 +149,7 @@ export const ImageVideoField: React.FC<ImageVideoFieldProps> = ({
         const fileUrl = URL.createObjectURL(file);
         
         return (
-          <Grid item xs={6} sm={4} md={3} key={index}>
+          <Grid size={{ xs: 6, sm: 4, md: 3 }} key={index}>
             <Card sx={{ position: 'relative' }}>
               {isVideo(file) ? (
                 <Box

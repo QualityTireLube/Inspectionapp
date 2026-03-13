@@ -345,7 +345,7 @@ export const VinField: React.FC<VinFieldProps> = ({
         <DialogTitle>VIN Decoded Information</DialogTitle>
         <DialogContent>
           <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Chip
                 label={`VIN: ${formatVin(vin)}`}
                 color="primary"
@@ -356,7 +356,7 @@ export const VinField: React.FC<VinFieldProps> = ({
             
             {decodedData && Object.entries(decodedData).map(([key, value]) => (
               value && (
-                <Grid item xs={6} sm={4} key={key}>
+                <Grid size={{ xs: 6, sm: 4 }} key={key}>
                   <Card variant="outlined">
                     <CardContent sx={{ pb: '16px !important' }}>
                       <Typography variant="caption" color="textSecondary">

@@ -166,7 +166,7 @@ const InspectionTestDataButtons: React.FC = () => {
     const photoCount = stats?.photoCount || 0;
 
     return (
-      <Grid item xs={12} sm={6} md={4} key={dataset.key}>
+      <Grid size={{ xs: 12, sm: 6, md: 4 }} key={dataset.key}>
         <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
           <CardContent sx={{ flexGrow: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>

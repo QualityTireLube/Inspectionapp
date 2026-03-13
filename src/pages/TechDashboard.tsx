@@ -111,7 +111,7 @@ const TechDashboard: React.FC = () => {
           ) : (
             <Grid container spacing={2}>
               {/* In Progress */}
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <PlayArrowIcon color="warning" /> In Progress ({inProgressChecks.length})
                 </Typography>
@@ -236,7 +236,7 @@ const TechDashboard: React.FC = () => {
               </Grid>
 
               {/* Submitted */}
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Chip label="Submitted" color="primary" size="small" /> Completed ({submittedChecks.length})
                 </Typography>
@@ -340,7 +340,7 @@ const TechDashboard: React.FC = () => {
           ) : (
             <Grid container spacing={2}>
               {activeLabels.slice(0, 6).map((label) => (
-                <Grid item xs={12} sm={6} md={4} key={label.id}>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={label.id}>
                   <Card variant="outlined">
                     <CardContent>
                       <Typography variant="subtitle1" noWrap sx={{ mb: 0.5 }}>{label.templateName}</Typography>

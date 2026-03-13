@@ -197,13 +197,13 @@ export const TireField: React.FC<TireFieldProps> = ({
           <Grid container spacing={2} alignItems="center">
             {/* SVG Visualization */}
             {enableSvgVisualization && (
-              <Grid item xs={12} sm={4} sx={{ textAlign: 'center' }}>
+              <Grid size={{ xs: 12, sm: 4 }} sx={{ textAlign: 'center' }}>
                 {generateTireSvg(tireData)}
               </Grid>
             )}
             
             {/* Tire Information */}
-            <Grid item xs={12} sm={8}>
+            <Grid size={{ xs: 12, sm: 8 }}>
               <Box>
                 {/* Condition Chip */}
                 <Box sx={{ mb: 1 }}>
@@ -270,10 +270,10 @@ export const TireField: React.FC<TireFieldProps> = ({
         <DialogContent>
           <Grid container spacing={3}>
             {/* Tread Depth Measurements */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="h6" gutterBottom>Tread Depth Measurements</Typography>
               <Grid container spacing={2}>
-                <Grid item xs={4}>
+                <Grid size={4}>
                   <Typography gutterBottom>Outer Edge</Typography>
                   <Slider
                     value={tireData.treadDepth.outer}
@@ -288,7 +288,7 @@ export const TireField: React.FC<TireFieldProps> = ({
                     valueLabelFormat={(value) => `${value}/32"`}
                   />
                 </Grid>
-                <Grid item xs={4}>
+                <Grid size={4}>
                   <Typography gutterBottom>Center</Typography>
                   <Slider
                     value={tireData.treadDepth.center}
@@ -303,7 +303,7 @@ export const TireField: React.FC<TireFieldProps> = ({
                     valueLabelFormat={(value) => `${value}/32"`}
                   />
                 </Grid>
-                <Grid item xs={4}>
+                <Grid size={4}>
                   <Typography gutterBottom>Inner Edge</Typography>
                   <Slider
                     value={tireData.treadDepth.inner}
@@ -324,7 +324,7 @@ export const TireField: React.FC<TireFieldProps> = ({
             <Divider />
 
             {/* Condition Selection */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Overall Condition</InputLabel>
                 <Select
@@ -341,7 +341,7 @@ export const TireField: React.FC<TireFieldProps> = ({
 
             {/* Pressure */}
             {showPressure && (
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <Typography gutterBottom>Tire Pressure (PSI)</Typography>
                 <Slider
                   value={tireData.pressure || 32}

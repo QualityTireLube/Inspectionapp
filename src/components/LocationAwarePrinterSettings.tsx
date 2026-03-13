@@ -238,7 +238,7 @@ const LocationAwarePrinterSettings: React.FC<LocationAwarePrinterSettingsProps> 
 
         <Grid container spacing={3}>
           {/* General Print Settings */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardHeader 
                 title="General Print Settings" 
@@ -311,12 +311,12 @@ const LocationAwarePrinterSettings: React.FC<LocationAwarePrinterSettingsProps> 
           </Grid>
 
           {/* Margin Settings */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardHeader title="Page Margins (mm)" />
               <CardContent>
                 <Grid container spacing={2}>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <TextField
                       fullWidth
                       label="Top"
@@ -326,7 +326,7 @@ const LocationAwarePrinterSettings: React.FC<LocationAwarePrinterSettingsProps> 
                       inputProps={{ min: 0, step: 0.5 }}
                     />
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <TextField
                       fullWidth
                       label="Bottom"
@@ -336,7 +336,7 @@ const LocationAwarePrinterSettings: React.FC<LocationAwarePrinterSettingsProps> 
                       inputProps={{ min: 0, step: 0.5 }}
                     />
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <TextField
                       fullWidth
                       label="Left"
@@ -346,7 +346,7 @@ const LocationAwarePrinterSettings: React.FC<LocationAwarePrinterSettingsProps> 
                       inputProps={{ min: 0, step: 0.5 }}
                     />
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <TextField
                       fullWidth
                       label="Right"
@@ -362,7 +362,7 @@ const LocationAwarePrinterSettings: React.FC<LocationAwarePrinterSettingsProps> 
           </Grid>
 
           {/* Printer Information */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Card>
               <CardHeader title="Printer Information" />
               <CardContent>

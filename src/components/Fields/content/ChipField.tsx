@@ -146,7 +146,7 @@ export const ChipField: React.FC<ChipFieldProps> = ({
             const selected = isSelected(option.value);
             
             return (
-              <Grid item key={option.value}>
+              <Grid key={option.value}>
                 <Chip
                   label={getOptionLabel(option)}
                   onClick={() => handleChipClick(option.value)}
@@ -169,7 +169,7 @@ export const ChipField: React.FC<ChipFieldProps> = ({
 
           {/* Add Custom Chip */}
           {enableAddCustom && canAddMore && (
-            <Grid item>
+            <Grid>
               <Chip
                 label="Add Custom"
                 icon={<AddIcon />}

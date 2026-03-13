@@ -104,10 +104,10 @@ const ElementEditor: React.FC<ElementEditorProps> = ({ element, onChange, allEle
       <AccordionDetails sx={{ pt: 2 }}>
         <Grid container spacing={3}>
           {/* Left side - Controls */}
-          <Grid item xs={12} md={8}>
+          <Grid size={{ xs: 12, md: 8 }}>
             <Grid container spacing={2}>
               {/* Content Preview */}
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Box sx={{ 
                   mb: 2, 
                   p: 2, 
@@ -133,7 +133,7 @@ const ElementEditor: React.FC<ElementEditorProps> = ({ element, onChange, allEle
               </Grid>
 
               {/* Content */}
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   label="Content"
@@ -147,7 +147,7 @@ const ElementEditor: React.FC<ElementEditorProps> = ({ element, onChange, allEle
               </Grid>
 
               {/* Visibility */}
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -161,7 +161,7 @@ const ElementEditor: React.FC<ElementEditorProps> = ({ element, onChange, allEle
               </Grid>
 
               {/* Position */}
-              <Grid item xs={6}>
+              <Grid size={6}>
                 <Typography gutterBottom sx={{ fontWeight: 'medium' }}>
                   X Position ({element.position.x}%)
                 </Typography>
@@ -192,7 +192,7 @@ const ElementEditor: React.FC<ElementEditorProps> = ({ element, onChange, allEle
                 />
               </Grid>
 
-              <Grid item xs={6}>
+              <Grid size={6}>
                 <Typography gutterBottom sx={{ fontWeight: 'medium' }}>
                   Y Position ({element.position.y}%)
                 </Typography>
@@ -224,7 +224,7 @@ const ElementEditor: React.FC<ElementEditorProps> = ({ element, onChange, allEle
               </Grid>
 
               {/* Font Size */}
-              <Grid item xs={6}>
+              <Grid size={6}>
                 <Typography gutterBottom sx={{ fontWeight: 'medium' }}>
                   Font Size ({element.fontSize}×)
                 </Typography>
@@ -258,7 +258,7 @@ const ElementEditor: React.FC<ElementEditorProps> = ({ element, onChange, allEle
               </Grid>
 
               {/* Font Weight */}
-              <Grid item xs={6}>
+              <Grid size={6}>
                 <FormControl fullWidth disabled={!element.visible}>
                   <InputLabel>Font Weight</InputLabel>
                   <Select
@@ -273,7 +273,7 @@ const ElementEditor: React.FC<ElementEditorProps> = ({ element, onChange, allEle
               </Grid>
 
               {/* Text Align */}
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <FormControl fullWidth disabled={!element.visible}>
                   <InputLabel>Text Alignment</InputLabel>
                   <Select
@@ -291,7 +291,7 @@ const ElementEditor: React.FC<ElementEditorProps> = ({ element, onChange, allEle
           </Grid>
 
           {/* Right side - Live Element Preview with Context */}
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Box sx={{ position: 'sticky', top: 20 }}>
               <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
                 Element in Context

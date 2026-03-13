@@ -284,12 +284,12 @@ export const BrakeField: React.FC<BrakeFieldProps> = ({
         <CardContent>
           <Grid container spacing={2} alignItems="center">
             {/* SVG Visualization */}
-            <Grid item xs={12} sm={4} sx={{ textAlign: 'center' }}>
+            <Grid size={{ xs: 12, sm: 4 }} sx={{ textAlign: 'center' }}>
               {generateBrakeSvg(brakeData)}
             </Grid>
             
             {/* Brake Information */}
-            <Grid item xs={12} sm={8}>
+            <Grid size={{ xs: 12, sm: 8 }}>
               <Box>
                 {/* Type and Condition */}
                 <Box sx={{ mb: 1, display: 'flex', gap: 1 }}>
@@ -370,7 +370,7 @@ export const BrakeField: React.FC<BrakeFieldProps> = ({
         <DialogContent>
           <Grid container spacing={3}>
             {/* Brake Type */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Brake Type</InputLabel>
                 <Select
@@ -385,7 +385,7 @@ export const BrakeField: React.FC<BrakeFieldProps> = ({
 
             {/* Fluid Level */}
             {showFluidLevel && (
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth>
                   <InputLabel>Brake Fluid Level</InputLabel>
                   <Select
@@ -401,12 +401,12 @@ export const BrakeField: React.FC<BrakeFieldProps> = ({
             )}
 
             {/* Pad Thickness Measurements */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="h6" gutterBottom>
                 {brakeData.type === 'disc' ? 'Pad' : 'Shoe'} Thickness (mm)
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography gutterBottom>Outer {brakeData.type === 'disc' ? 'Pad' : 'Shoe'}</Typography>
                   <Slider
                     value={brakeData.padThickness.outer}
@@ -421,7 +421,7 @@ export const BrakeField: React.FC<BrakeFieldProps> = ({
                     valueLabelFormat={(value) => `${value}mm`}
                   />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography gutterBottom>Inner {brakeData.type === 'disc' ? 'Pad' : 'Shoe'}</Typography>
                   <Slider
                     value={brakeData.padThickness.inner}
@@ -442,7 +442,7 @@ export const BrakeField: React.FC<BrakeFieldProps> = ({
             <Divider />
 
             {/* Rotor/Drum Condition */}
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>{brakeData.type === 'disc' ? 'Rotor' : 'Drum'} Condition</InputLabel>
                 <Select
@@ -458,7 +458,7 @@ export const BrakeField: React.FC<BrakeFieldProps> = ({
 
             {/* Rotor Thickness */}
             {showRotorMeasurement && brakeData.type === 'disc' && (
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <Typography gutterBottom>Rotor Thickness (mm)</Typography>
                 <Slider
                   value={brakeData.rotorThickness || 12}
@@ -477,7 +477,7 @@ export const BrakeField: React.FC<BrakeFieldProps> = ({
             )}
 
             {/* Wear Indicator */}
-            <Grid item xs={12}>
+            <Grid size={12}>
               <FormControlLabel
                 control={
                   <Switch

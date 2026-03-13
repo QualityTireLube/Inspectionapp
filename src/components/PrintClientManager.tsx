@@ -540,7 +540,7 @@ const PrintClientManager: React.FC<PrintClientManagerProps> = ({
           {unregisteredClients.length > 0 && (
             <Grid container spacing={2}>
               {unregisteredClients.map((client) => (
-                <Grid item xs={12} sm={6} md={4} key={client.clientId}>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={client.clientId}>
                   <Card variant="outlined" sx={{ 
                     borderColor: client.online ? 'success.main' : 'grey.300',
                     bgcolor: client.online ? 'success.50' : 'background.paper'

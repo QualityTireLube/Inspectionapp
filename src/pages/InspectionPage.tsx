@@ -72,7 +72,7 @@ const DynamicTabContent: React.FC<DynamicTabContentProps> = ({
         
         if (!fieldDef) {
           return (
-            <Grid item xs={12} key={fieldId}>
+            <Grid size={12} key={fieldId}>
               <Alert severity="warning">
                 Field "{fieldId}" not found in field registry
               </Alert>
@@ -84,7 +84,7 @@ const DynamicTabContent: React.FC<DynamicTabContentProps> = ({
         const gridSize = fieldDef.type === 'section_header' ? 12 : 6;
 
         return (
-          <Grid item xs={12} md={gridSize} key={fieldId}>
+          <Grid size={12} md={gridSize} key={fieldId}>
             <SafeFieldRenderer
               fieldId={fieldId}
               field={fieldDef}

@@ -326,7 +326,7 @@ const StickerSettingsContent: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* Main Content - All Settings */}
-        <Grid item xs={12}>
+        <Grid size={12}>
           {/* Oil Types Management */}
           <Card sx={{ mb: 3 }}>
             <CardContent>
@@ -393,7 +393,7 @@ const StickerSettingsContent: React.FC = () => {
                 Paper Size
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <FormControl fullWidth sx={{ mb: 2 }}>
                     <InputLabel>Paper Size</InputLabel>
                     <Select
@@ -415,7 +415,7 @@ const StickerSettingsContent: React.FC = () => {
 
                 {editedSettings.paperSize.name === 'Custom' && (
                   <>
-                    <Grid item xs={6} md={3}>
+                    <Grid size={{ xs: 6, md: 3 }}>
                       <TextField
                         fullWidth
                         label="Width (mm)"
@@ -427,7 +427,7 @@ const StickerSettingsContent: React.FC = () => {
                         })}
                       />
                     </Grid>
-                    <Grid item xs={6} md={3}>
+                    <Grid size={{ xs: 6, md: 3 }}>
                       <TextField
                         fullWidth
                         label="Height (mm)"
@@ -452,7 +452,7 @@ const StickerSettingsContent: React.FC = () => {
                 Basic Settings
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={6} md={4}>
+                <Grid size={{ xs: 6, md: 4 }}>
                   <TextField
                     fullWidth
                     label="Base Font Size (px)"
@@ -461,7 +461,7 @@ const StickerSettingsContent: React.FC = () => {
                     onChange={(e) => handleLayoutChange('fontSize', parseInt(e.target.value) || 12)}
                   />
                 </Grid>
-                <Grid item xs={6} md={4}>
+                <Grid size={{ xs: 6, md: 4 }}>
                   <FormControl fullWidth>
                     <InputLabel>Font Family</InputLabel>
                     <Select
@@ -477,7 +477,7 @@ const StickerSettingsContent: React.FC = () => {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                   <TextField
                     fullWidth
                     label="QR Code Size (mm)"
@@ -497,7 +497,7 @@ const StickerSettingsContent: React.FC = () => {
                 Margins (mm)
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={6} md={3}>
+                <Grid size={{ xs: 6, md: 3 }}>
                   <TextField
                     fullWidth
                     label="Top"
@@ -506,7 +506,7 @@ const StickerSettingsContent: React.FC = () => {
                     onChange={(e) => handleMarginChange('top', parseInt(e.target.value) || 0)}
                   />
                 </Grid>
-                <Grid item xs={6} md={3}>
+                <Grid size={{ xs: 6, md: 3 }}>
                   <TextField
                     fullWidth
                     label="Bottom"
@@ -515,7 +515,7 @@ const StickerSettingsContent: React.FC = () => {
                     onChange={(e) => handleMarginChange('bottom', parseInt(e.target.value) || 0)}
                   />
                 </Grid>
-                <Grid item xs={6} md={3}>
+                <Grid size={{ xs: 6, md: 3 }}>
                   <TextField
                     fullWidth
                     label="Left"
@@ -524,7 +524,7 @@ const StickerSettingsContent: React.FC = () => {
                     onChange={(e) => handleMarginChange('left', parseInt(e.target.value) || 0)}
                   />
                 </Grid>
-                <Grid item xs={6} md={3}>
+                <Grid size={{ xs: 6, md: 3 }}>
                   <TextField
                     fullWidth
                     label="Right"
@@ -544,7 +544,7 @@ const StickerSettingsContent: React.FC = () => {
                 QR Code Position
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography gutterBottom>X Position (%)</Typography>
                   <Slider
                     value={editedSettings.layout.qrCodePosition.x}
@@ -563,7 +563,7 @@ const StickerSettingsContent: React.FC = () => {
                     sx={{ mt: 1, width: '100px' }}
                   />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <Typography gutterBottom>Y Position (%)</Typography>
                   <Slider
                     value={editedSettings.layout.qrCodePosition.y}

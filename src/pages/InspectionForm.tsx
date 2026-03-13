@@ -175,7 +175,7 @@ const InspectionForm: React.FC = () => {
         <Paper sx={{ p: 3 }}>
           <form onSubmit={handleSubmit}>
             <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="VIN"
@@ -193,7 +193,7 @@ const InspectionForm: React.FC = () => {
                   }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Date"
@@ -205,7 +205,7 @@ const InspectionForm: React.FC = () => {
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Inspector"
@@ -215,7 +215,7 @@ const InspectionForm: React.FC = () => {
                   required
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Mileage"
@@ -231,13 +231,13 @@ const InspectionForm: React.FC = () => {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Typography variant="h6" gutterBottom>
                   Exterior Inspection
                 </Typography>
                 <Grid container spacing={2}>
                   {Object.entries(formData.exterior).map(([key, value]) => (
-                    <Grid item xs={6} sm={3} key={key}>
+                    <Grid size={{ xs: 6, sm: 3 }} key={key}>
                       <FormControlLabel
                         control={
                           <Checkbox
@@ -253,13 +253,13 @@ const InspectionForm: React.FC = () => {
                 </Grid>
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Typography variant="h6" gutterBottom>
                   Interior Inspection
                 </Typography>
                 <Grid container spacing={2}>
                   {Object.entries(formData.interior).map(([key, value]) => (
-                    <Grid item xs={6} sm={3} key={key}>
+                    <Grid size={{ xs: 6, sm: 3 }} key={key}>
                       <FormControlLabel
                         control={
                           <Checkbox
@@ -275,13 +275,13 @@ const InspectionForm: React.FC = () => {
                 </Grid>
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Typography variant="h6" gutterBottom>
                   Mechanical Inspection
                 </Typography>
                 <Grid container spacing={2}>
                   {Object.entries(formData.mechanical).map(([key, value]) => (
-                    <Grid item xs={6} sm={3} key={key}>
+                    <Grid size={{ xs: 6, sm: 3 }} key={key}>
                       <FormControlLabel
                         control={
                           <Checkbox
@@ -297,7 +297,7 @@ const InspectionForm: React.FC = () => {
                 </Grid>
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   label="Notes"
@@ -309,7 +309,7 @@ const InspectionForm: React.FC = () => {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <Button
                     type="submit"

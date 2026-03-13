@@ -220,7 +220,7 @@ const LocationSettings: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* Left Panel - Location List */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Paper sx={{ height: 'fit-content' }}>
             <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
               <Typography variant="h6">Locations ({locations.length})</Typography>
@@ -287,7 +287,7 @@ const LocationSettings: React.FC = () => {
         </Grid>
 
         {/* Right Panel - Location Details */}
-        <Grid item xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           {selectedLocation ? (
             <Paper>
               <Box sx={{ p: 3 }}>

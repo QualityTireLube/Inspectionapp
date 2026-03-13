@@ -3885,7 +3885,7 @@ const Home: React.FC = () => {
           )}
           <Box sx={{ pt: 2 }}>
             <Grid container spacing={3}>
-              <Grid item xs={12} md={4}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <TextField
                   fullWidth
                   label="VIN Number"
@@ -3903,7 +3903,7 @@ const Home: React.FC = () => {
                 )}
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <TextField
                   fullWidth
                   label="Current Mileage"
@@ -3923,7 +3923,7 @@ const Home: React.FC = () => {
                 />
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <FormControl fullWidth>
                   <Typography variant="subtitle2" sx={{ mb: 1 }}>
                     Oil Type {selectedSticker && <span style={{ color: '#f57c00' }}>(Required)</span>}
@@ -3957,7 +3957,7 @@ const Home: React.FC = () => {
               </Grid>
 
               {stickerFormData.oilTypeId && (
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
                     fullWidth
                     label="Next Service Date"
@@ -3972,7 +3972,7 @@ const Home: React.FC = () => {
               )}
 
               {decodedVin && decodedVin.Results && (
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Paper sx={{ p: 2, bgcolor: 'success.light', color: 'success.contrastText' }}>
                     <Typography variant="subtitle2" gutterBottom>
                       ✅ VIN Successfully Decoded
@@ -4215,7 +4215,7 @@ const Home: React.FC = () => {
               {/* Tab Timings */}
               <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>Tab Timings</Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Paper sx={{ p: 2, border: timingData.tabTimings?.info?.isActive ? 2 : 1, borderColor: timingData.tabTimings?.info?.isActive ? 'success.main' : 'divider' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                       <Typography variant="subtitle2" color="primary">Info Tab</Typography>
@@ -4236,7 +4236,7 @@ const Home: React.FC = () => {
                     )}
                   </Paper>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Paper sx={{ p: 2, border: timingData.tabTimings?.pulling?.isActive ? 2 : 1, borderColor: timingData.tabTimings?.pulling?.isActive ? 'success.main' : 'divider' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                       <Typography variant="subtitle2" color="primary">Pulling Into Bay</Typography>
@@ -4257,7 +4257,7 @@ const Home: React.FC = () => {
                     )}
                   </Paper>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Paper sx={{ p: 2, border: timingData.tabTimings?.underhood?.isActive ? 2 : 1, borderColor: timingData.tabTimings?.underhood?.isActive ? 'success.main' : 'divider' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                       <Typography variant="subtitle2" color="primary">Underhood</Typography>
@@ -4278,7 +4278,7 @@ const Home: React.FC = () => {
                     )}
                   </Paper>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <Paper sx={{ p: 2, border: timingData.tabTimings?.tires?.isActive ? 2 : 1, borderColor: timingData.tabTimings?.tires?.isActive ? 'success.main' : 'divider' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                       <Typography variant="subtitle2" color="primary">Tires & Brakes</Typography>
@@ -4304,7 +4304,7 @@ const Home: React.FC = () => {
               {/* Overall Durations */}
               <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>Overall Durations</Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={4}>
+                <Grid size={{ xs: 12, sm: 4 }}>
                   <Paper sx={{ p: 2, bgcolor: 'success.light' }}>
                     <Typography variant="subtitle2" color="white">Created to Submitted</Typography>
                     <Typography variant="h6" color="white">
@@ -4314,7 +4314,7 @@ const Home: React.FC = () => {
                 </Grid>
                 {timingData.status === 'archived' && (
                   <>
-                    <Grid item xs={12} sm={4}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                       <Paper sx={{ p: 2, bgcolor: 'warning.light' }}>
                         <Typography variant="subtitle2" color="white">Submitted to Archived</Typography>
                         <Typography variant="h6" color="white">
@@ -4322,7 +4322,7 @@ const Home: React.FC = () => {
                         </Typography>
                       </Paper>
                     </Grid>
-                    <Grid item xs={12} sm={4}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                       <Paper sx={{ p: 2, bgcolor: 'error.light' }}>
                         <Typography variant="subtitle2" color="white">Created to Archived</Typography>
                         <Typography variant="h6" color="white">
@@ -4337,20 +4337,20 @@ const Home: React.FC = () => {
               {/* Timestamps */}
               <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>Timestamps</Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={4}>
+                <Grid size={{ xs: 12, sm: 4 }}>
                   <Typography variant="body2">
                     <strong>Created:</strong><br />
                     {new Date(timingData.timestamps?.created).toLocaleString()}
                   </Typography>
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid size={{ xs: 12, sm: 4 }}>
                   <Typography variant="body2">
                     <strong>Last Updated:</strong><br />
                     {new Date(timingData.timestamps?.updated).toLocaleString()}
                   </Typography>
                 </Grid>
                 {timingData.timestamps?.archived && (
-                  <Grid item xs={12} sm={4}>
+                  <Grid size={{ xs: 12, sm: 4 }}>
                     <Typography variant="body2">
                       <strong>Archived:</strong><br />
                       {new Date(timingData.timestamps.archived).toLocaleString()}
@@ -4620,7 +4620,7 @@ const Home: React.FC = () => {
           {selectedItem && (
             <Grid container spacing={3}>
               {/* Details Section */}
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Typography variant="h6" gutterBottom>
                   Details
                 </Typography>
@@ -4794,7 +4794,7 @@ const Home: React.FC = () => {
               </Grid>
 
               {/* PDF Preview Section */}
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Box sx={{ 
                   display: 'flex', 
                   justifyContent: 'space-between', 

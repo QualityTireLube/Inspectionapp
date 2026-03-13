@@ -381,7 +381,7 @@ const Users: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 label="Full Name"
@@ -391,7 +391,7 @@ const Users: React.FC = () => {
               />
             </Grid>
             
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 label="Email"
@@ -402,7 +402,7 @@ const Users: React.FC = () => {
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Role</InputLabel>
                 <Select
@@ -417,7 +417,7 @@ const Users: React.FC = () => {
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Location</InputLabel>
                 <Select
@@ -433,7 +433,7 @@ const Users: React.FC = () => {
               </FormControl>
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 label="4-Digit PIN"
@@ -453,11 +453,11 @@ const Users: React.FC = () => {
               />
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Divider />
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Typography variant="body2" color="text.secondary">
                 Current Status: {editingUser?.enabled ? 'Active' : 'Inactive'}
               </Typography>

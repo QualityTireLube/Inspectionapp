@@ -1264,7 +1264,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
 
         {/* Form Selection */}
         <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <FormControl fullWidth>
               <InputLabel>Form/Table</InputLabel>
               <Select
@@ -1282,7 +1282,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, height: '100%' }}>
               <Button
                 variant="contained"
@@ -1403,7 +1403,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
 
               {/* Debug Stats Grid */}
               <Grid container spacing={2}>
-                <Grid item xs={6} md={3}>
+                <Grid size={{ xs: 6, md: 3 }}>
                   <Paper sx={{ p: 2, textAlign: 'center' }}>
                     <Stack spacing={1}>
                       <Typography variant="h4" color="primary">
@@ -1422,7 +1422,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
                   </Paper>
                 </Grid>
 
-                <Grid item xs={6} md={3}>
+                <Grid size={{ xs: 6, md: 3 }}>
                   <Paper sx={{ p: 2, textAlign: 'center' }}>
                     <Stack spacing={1}>
                       <Typography variant="h4" color="success.main">
@@ -1441,7 +1441,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
                   </Paper>
                 </Grid>
 
-                <Grid item xs={6} md={3}>
+                <Grid size={{ xs: 6, md: 3 }}>
                   <Paper sx={{ p: 2, textAlign: 'center' }}>
                     <Stack spacing={1}>
                       <Typography variant="h4" color="info.main">
@@ -1460,7 +1460,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
                   </Paper>
                 </Grid>
 
-                <Grid item xs={6} md={3}>
+                <Grid size={{ xs: 6, md: 3 }}>
                   <Paper sx={{ p: 2, textAlign: 'center' }}>
                     <Stack spacing={1}>
                       <Typography variant="h4" color="warning.main">
@@ -1487,7 +1487,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
                     API Performance
                   </Typography>
                   <Grid container spacing={2}>
-                    <Grid item xs={4}>
+                    <Grid size={4}>
                       <Typography variant="body2" color="text.secondary">
                         API Calls
                       </Typography>
@@ -1495,7 +1495,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
                         {debugInfo.apiCallCount}
                       </Typography>
                     </Grid>
-                    <Grid item xs={4}>
+                    <Grid size={4}>
                       <Typography variant="body2" color="text.secondary">
                         Avg Response Time
                       </Typography>
@@ -1503,7 +1503,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
                         {debugInfo.averageResponseTime}ms
                       </Typography>
                     </Grid>
-                    <Grid item xs={4}>
+                    <Grid size={4}>
                       <Typography variant="body2" color="text.secondary">
                         Error Count
                       </Typography>
@@ -1878,7 +1878,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
                   📄 Test Print Options
                 </Typography>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} md={4}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <Typography variant="body2" color="primary" fontWeight="medium">
                       🔧 Diagnostic Page
                     </Typography>
@@ -1886,7 +1886,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
                       Standard test with printer info, connectivity status, and basic patterns
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} md={4}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <Typography variant="body2" color="primary" fontWeight="medium">
                       📐 Alignment Test
                     </Typography>
@@ -1894,7 +1894,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
                       Print head alignment patterns to check registration and positioning
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} md={4}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <Typography variant="body2" color="primary" fontWeight="medium">
                       🎨 Color Test
                     </Typography>
@@ -1924,22 +1924,22 @@ const PrintManager: React.FC<PrintManagerProps> = ({
                 
                 return (
                   <Grid container spacing={2}>
-                    <Grid item xs={6}>
+                    <Grid size={6}>
                       <Typography variant="body2" color="textSecondary">
                         Printer: {printer?.name || 'Unknown'}
                       </Typography>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={6}>
                       <Typography variant="body2" color="textSecondary">
                         Paper: {config?.paperSize} ({config?.orientation})
                       </Typography>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={6}>
                       <Typography variant="body2" color="textSecondary">
                         Quality: {config?.quality}
                       </Typography>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={6}>
                       <Typography variant="body2" color="textSecondary">
                         Copies: {config?.copies}
                       </Typography>
@@ -1964,7 +1964,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
             </Typography>
           </Alert>
           <Grid container spacing={3} sx={{ mt: 1 }}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Form/Table to Configure</InputLabel>
                 <Select
@@ -1999,7 +1999,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Printer</InputLabel>
                 <Select
@@ -2030,7 +2030,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
                   </Typography>
                   
                   <Grid container spacing={1}>
-                    <Grid item xs={12} sm={4}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                       <Button
                         fullWidth
                         variant="outlined"
@@ -2051,7 +2051,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
                       </Typography>
                     </Grid>
                     
-                    <Grid item xs={12} sm={4}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                       <Button
                         fullWidth
                         variant="outlined"
@@ -2072,7 +2072,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
                       </Typography>
                     </Grid>
                     
-                    <Grid item xs={12} sm={4}>
+                    <Grid size={{ xs: 12, sm: 4 }}>
                       <Button
                         fullWidth
                         variant="outlined"
@@ -2110,7 +2110,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
               )}
             </Grid>
 
-            <Grid item xs={6}>
+            <Grid size={6}>
               <FormControl fullWidth>
                 <InputLabel>Paper Size</InputLabel>
                 <Select
@@ -2127,7 +2127,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
               </FormControl>
             </Grid>
 
-            <Grid item xs={6}>
+            <Grid size={6}>
               <FormControl fullWidth>
                 <InputLabel>Orientation</InputLabel>
                 <Select
@@ -2141,7 +2141,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
               </FormControl>
             </Grid>
 
-            <Grid item xs={4}>
+            <Grid size={4}>
               <TextField
                 fullWidth
                 label="Copies"
@@ -2152,7 +2152,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
               />
             </Grid>
 
-            <Grid item xs={4}>
+            <Grid size={4}>
               <FormControl fullWidth>
                 <InputLabel>Quality</InputLabel>
                 <Select
@@ -2167,7 +2167,7 @@ const PrintManager: React.FC<PrintManagerProps> = ({
               </FormControl>
             </Grid>
 
-            <Grid item xs={4}>
+            <Grid size={4}>
               <FormControl fullWidth>
                 <InputLabel>Color Mode</InputLabel>
                 <Select

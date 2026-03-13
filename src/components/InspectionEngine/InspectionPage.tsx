@@ -291,7 +291,7 @@ export const SchemaInspectionPage: React.FC<SchemaInspectionPageProps> = ({ sche
     const error = fieldErrors[fieldId];
 
     return (
-      <Grid item xs={12} md={colSpan ? 12 / colSpan : 6} key={fieldId}>
+      <Grid size={12} md={colSpan ? 12 / colSpan : 6} key={fieldId}>
         <SafeFieldRenderer
           fieldId={fieldId}
           field={fieldDef}

@@ -173,7 +173,7 @@ const DebugSettings: React.FC = () => {
             <Box sx={{ mt: 2 }}>
               <Grid container spacing={1}>
                 {group.categories.map((category) => (
-                  <Grid item xs={12} sm={6} md={4} key={category}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={category}>
                     <Box 
                       sx={{ 
                         p: 1, 

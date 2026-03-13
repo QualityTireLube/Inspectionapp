@@ -332,7 +332,7 @@ const ActiveStickers: React.FC = () => {
         ) : (
           <Grid container spacing={3}>
             {activeStickers.map((sticker) => (
-              <Grid item xs={12} sm={6} md={4} key={sticker.id}>
+              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={sticker.id}>
                 <Card>
                   <CardContent>
                     <Typography variant="h6" gutterBottom>
@@ -417,7 +417,7 @@ const ActiveStickers: React.FC = () => {
             <Box sx={{ mt: 1 }}>
               {/* Form Inputs - Vertical Layout */}
               <Grid container spacing={2}>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <TextField
                     fullWidth
                     label="VIN"
@@ -450,7 +450,7 @@ const ActiveStickers: React.FC = () => {
                   if (!label) return null;
                   
                   return (
-                    <Grid item xs={12}>
+                    <Grid size={12}>
                       <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                         <Chip
                           label={label}
@@ -486,7 +486,7 @@ const ActiveStickers: React.FC = () => {
                   );
                 })()}
 
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Box>
                     <Typography variant="body1" gutterBottom sx={{ fontWeight: 'medium', mb: 2 }}>
                       Select Oil Type
@@ -526,7 +526,7 @@ const ActiveStickers: React.FC = () => {
                   </Box>
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <TextField
                     fullWidth
                     label="Current Mileage"
@@ -540,7 +540,7 @@ const ActiveStickers: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <TextField
                     fullWidth
                     label="Next Service Date (Override)"
@@ -553,7 +553,7 @@ const ActiveStickers: React.FC = () => {
                 </Grid>
 
                 {/* Preview Section - Bottom */}
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Box sx={{ mt: 3, mb: 2 }}>
                     <Typography variant="h6" gutterBottom sx={{ textAlign: 'center', color: 'primary.main' }}>
                       Sticker Preview
@@ -691,32 +691,32 @@ const ActiveStickers: React.FC = () => {
 
               return (
                 <Grid container spacing={2} sx={{ mt: 1 }}>
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Typography variant="h6" gutterBottom color="primary">
                       Vehicle Information
                     </Typography>
                   </Grid>
                   
                   {/* Basic Vehicle Info */}
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
                       <Typography variant="caption" color="textSecondary">Year</Typography>
                       <Typography variant="body1" fontWeight="medium">{getValue('Model Year') || 'N/A'}</Typography>
                     </Paper>
                   </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
                       <Typography variant="caption" color="textSecondary">Make</Typography>
                       <Typography variant="body1" fontWeight="medium">{getValue('Make') || 'N/A'}</Typography>
                     </Paper>
                   </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
                       <Typography variant="caption" color="textSecondary">Model</Typography>
                       <Typography variant="body1" fontWeight="medium">{getValue('Model') || 'N/A'}</Typography>
                     </Paper>
                   </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
                       <Typography variant="caption" color="textSecondary">Body Class</Typography>
                       <Typography variant="body1" fontWeight="medium">{getValue('Body Class') || 'N/A'}</Typography>
@@ -724,24 +724,24 @@ const ActiveStickers: React.FC = () => {
                   </Grid>
 
                   {/* Engine Info */}
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Typography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>
                       Engine Specifications
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
                       <Typography variant="caption" color="textSecondary">Engine Size</Typography>
                       <Typography variant="body1" fontWeight="medium">{getValue('Displacement (L)') ? getValue('Displacement (L)') + ' L' : 'N/A'}</Typography>
                     </Paper>
                   </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
                       <Typography variant="caption" color="textSecondary">Cylinders</Typography>
                       <Typography variant="body1" fontWeight="medium">{getValue('Engine Number of Cylinders') ? getValue('Engine Number of Cylinders') + ' cyl' : 'N/A'}</Typography>
                     </Paper>
                   </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
                       <Typography variant="caption" color="textSecondary">Fuel Type</Typography>
                       <Typography variant="body1" fontWeight="medium">{getValue('Fuel Type - Primary') || 'N/A'}</Typography>
@@ -749,18 +749,18 @@ const ActiveStickers: React.FC = () => {
                   </Grid>
 
                   {/* Additional Details */}
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Typography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>
                       Additional Details
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
                       <Typography variant="caption" color="textSecondary">Manufacturer</Typography>
                       <Typography variant="body1" fontWeight="medium">{getValue('Manufacturer Name') || 'N/A'}</Typography>
                     </Paper>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
                       <Typography variant="caption" color="textSecondary">Plant</Typography>
                       <Typography variant="body1" fontWeight="medium">{getValue('Plant Company Name') || 'N/A'}</Typography>
@@ -768,7 +768,7 @@ const ActiveStickers: React.FC = () => {
                   </Grid>
 
                   {/* All Fields */}
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Typography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>
                       All Decoded Fields
                     </Typography>
@@ -783,7 +783,7 @@ const ActiveStickers: React.FC = () => {
                   </Grid>
 
                   {/* Raw Data Section */}
-                  <Grid item xs={12}>
+                  <Grid size={12}>
                     <Typography variant="h6" gutterBottom color="primary" sx={{ mt: 2 }}>
                       Raw NHTSA Response
                     </Typography>

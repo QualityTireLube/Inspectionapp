@@ -909,7 +909,7 @@ const LabelCreator: React.FC<LabelCreatorProps> = ({ open, onClose, onLabelCreat
           {step === 'fill' && selectedTemplate && (
             <Grid container spacing={3}>
               {/* Form Section */}
-              <Grid item xs={12} md={7}>
+              <Grid size={{ xs: 12, md: 7 }}>
                 <Paper sx={{ p: 3 }}>
                   <Typography variant="h6" gutterBottom>
                   </Typography>
@@ -1049,7 +1049,7 @@ const LabelCreator: React.FC<LabelCreatorProps> = ({ open, onClose, onLabelCreat
               </Grid>
 
               {/* Preview Section */}
-              <Grid item xs={12} md={5}>
+              <Grid size={{ xs: 12, md: 5 }}>
                 <Paper sx={{ p: 3, textAlign: 'center' }}>
                   <Typography variant="h6" gutterBottom>
                     Label Preview

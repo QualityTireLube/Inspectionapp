@@ -327,7 +327,7 @@ const StickerSettingsPage: React.FC = () => {
 
         <Grid container spacing={3}>
           {/* Main Content - Settings on Left, Preview on Right */}
-          <Grid item xs={12} lg={8}>
+          <Grid size={{ xs: 12, lg: 8 }}>
             {/* Paper Size Settings */}
             <Card sx={{ mb: 3 }}>
               <CardContent>
@@ -335,7 +335,7 @@ const StickerSettingsPage: React.FC = () => {
                   Paper Size
                 </Typography>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <FormControl fullWidth sx={{ mb: 2 }}>
                       <InputLabel>Paper Size</InputLabel>
                       <Select
@@ -357,7 +357,7 @@ const StickerSettingsPage: React.FC = () => {
 
                   {editedSettings.paperSize.name === 'Custom' && (
                     <>
-                      <Grid item xs={6} md={3}>
+                      <Grid size={{ xs: 6, md: 3 }}>
                         <TextField
                           fullWidth
                           label="Width (mm)"
@@ -369,7 +369,7 @@ const StickerSettingsPage: React.FC = () => {
                           })}
                         />
                       </Grid>
-                      <Grid item xs={6} md={3}>
+                      <Grid size={{ xs: 6, md: 3 }}>
                         <TextField
                           fullWidth
                           label="Height (mm)"
@@ -394,7 +394,7 @@ const StickerSettingsPage: React.FC = () => {
                   Basic Settings
                 </Typography>
                 <Grid container spacing={2}>
-                  <Grid item xs={6} md={4}>
+                  <Grid size={{ xs: 6, md: 4 }}>
                     <TextField
                       fullWidth
                       label="Base Font Size (px)"
@@ -403,7 +403,7 @@ const StickerSettingsPage: React.FC = () => {
                       onChange={(e) => handleLayoutChange('fontSize', parseInt(e.target.value) || 12)}
                     />
                   </Grid>
-                  <Grid item xs={6} md={4}>
+                  <Grid size={{ xs: 6, md: 4 }}>
                     <FormControl fullWidth>
                       <InputLabel>Font Family</InputLabel>
                       <Select
@@ -419,7 +419,7 @@ const StickerSettingsPage: React.FC = () => {
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={12} md={4}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <TextField
                       fullWidth
                       label="QR Code Size (mm)"
@@ -439,7 +439,7 @@ const StickerSettingsPage: React.FC = () => {
                   Margins (mm)
                 </Typography>
                 <Grid container spacing={2}>
-                  <Grid item xs={6} md={3}>
+                  <Grid size={{ xs: 6, md: 3 }}>
                     <TextField
                       fullWidth
                       label="Top"
@@ -448,7 +448,7 @@ const StickerSettingsPage: React.FC = () => {
                       onChange={(e) => handleMarginChange('top', parseInt(e.target.value) || 0)}
                     />
                   </Grid>
-                  <Grid item xs={6} md={3}>
+                  <Grid size={{ xs: 6, md: 3 }}>
                     <TextField
                       fullWidth
                       label="Bottom"
@@ -457,7 +457,7 @@ const StickerSettingsPage: React.FC = () => {
                       onChange={(e) => handleMarginChange('bottom', parseInt(e.target.value) || 0)}
                     />
                   </Grid>
-                  <Grid item xs={6} md={3}>
+                  <Grid size={{ xs: 6, md: 3 }}>
                     <TextField
                       fullWidth
                       label="Left"
@@ -466,7 +466,7 @@ const StickerSettingsPage: React.FC = () => {
                       onChange={(e) => handleMarginChange('left', parseInt(e.target.value) || 0)}
                     />
                   </Grid>
-                  <Grid item xs={6} md={3}>
+                  <Grid size={{ xs: 6, md: 3 }}>
                     <TextField
                       fullWidth
                       label="Right"
@@ -486,7 +486,7 @@ const StickerSettingsPage: React.FC = () => {
                   QR Code Position
                 </Typography>
                 <Grid container spacing={2}>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <Typography gutterBottom>X Position (%)</Typography>
                     <Slider
                       value={editedSettings.layout.qrCodePosition.x}
@@ -505,7 +505,7 @@ const StickerSettingsPage: React.FC = () => {
                       sx={{ mt: 1, width: '100px' }}
                     />
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={6}>
                     <Typography gutterBottom>Y Position (%)</Typography>
                     <Slider
                       value={editedSettings.layout.qrCodePosition.y}
@@ -631,7 +631,7 @@ const StickerSettingsPage: React.FC = () => {
           </Grid>
 
           {/* Fixed Preview Panel on Right */}
-          <Grid item xs={12} lg={4}>
+          <Grid size={{ xs: 12, lg: 4 }}>
             <Box
               sx={{
                 position: 'sticky',
@@ -721,7 +721,7 @@ const StickerSettingsPage: React.FC = () => {
           </DialogTitle>
           <DialogContent>
             <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   label="Oil Type Name"
@@ -729,7 +729,7 @@ const StickerSettingsPage: React.FC = () => {
                   onChange={(e) => setOilTypeForm(prev => ({ ...prev, name: e.target.value }))}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Duration (Days)"
@@ -739,7 +739,7 @@ const StickerSettingsPage: React.FC = () => {
                   helperText="How many days until next oil change"
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="Mileage Interval"

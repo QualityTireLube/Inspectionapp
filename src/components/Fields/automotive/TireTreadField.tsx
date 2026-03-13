@@ -155,7 +155,7 @@ const TireTreadFieldCore: React.FC<TireTreadFieldProps> = ({
 
         <Grid container spacing={2}>
           {zones.map((zone) => (
-            <Grid item xs={12} sm={6} md={2.4} key={zone.key}>
+            <Grid size={{ xs: 12, sm: 6 }} md={2.4} key={zone.key}>
               <Box>
                 <Typography variant="body2" sx={{ mb: 1, fontSize: '0.75rem' }}>
                   {zone.label}

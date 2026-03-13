@@ -48,7 +48,7 @@ const ExampleUsage: React.FC = () => {
   ];
 
   return (
-    <Grid item xs={12} sm={6}>
+    <Grid size={{ xs: 12, sm: 6 }}>
       <ConditionalImageField
         label="Engine Air Filter"
         condition={form.engine_air_filter}

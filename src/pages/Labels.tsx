@@ -1349,7 +1349,7 @@ const Labels: React.FC = () => {
             Archived oil change stickers. Click on any card to view details and preview.
           </Typography>
           <Grid container spacing={1} alignItems="center" sx={{ mb: 1.5 }}> {/* Reduced spacing and margin */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 placeholder="Search stickers by VIN..."
@@ -1768,7 +1768,7 @@ const Labels: React.FC = () => {
           {selectedItem && (
             <Grid container spacing={3}>
               {/* Details Section */}
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Typography variant="h6" gutterBottom>
                   Details
                 </Typography>
@@ -1954,7 +1954,7 @@ const Labels: React.FC = () => {
               </Grid>
 
               {/* PDF Preview Section */}
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Typography variant="h6" gutterBottom>
                   PDF Preview
                 </Typography>

@@ -184,7 +184,7 @@ const Profile: React.FC = () => {
 
         <Grid container spacing={4}>
           {/* Profile Information */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper elevation={3} sx={{ p: 4 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <Avatar
@@ -261,7 +261,7 @@ const Profile: React.FC = () => {
           </Grid>
 
           {/* Password Update */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper elevation={3} sx={{ p: 4 }}>
               <Typography variant="h6" gutterBottom>
                 Change Password
@@ -329,7 +329,7 @@ const Profile: React.FC = () => {
           </Grid>
 
           {/* PIN Management */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Paper elevation={3} sx={{ p: 4 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <SecurityIcon sx={{ mr: 2, fontSize: '2rem', color: 'primary.main' }} />
@@ -352,7 +352,7 @@ const Profile: React.FC = () => {
 
               <form onSubmit={handlePinUpdate}>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       fullWidth
                       label="New 4-Digit PIN"
@@ -373,7 +373,7 @@ const Profile: React.FC = () => {
                     />
                   </Grid>
                   
-                  <Grid item xs={12} sm={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField
                       fullWidth
                       label="Confirm PIN"

@@ -6,7 +6,7 @@ import { QuickCheckImageManager, ImageUpload, ImageType } from './Image';
 
 // ===== BEFORE: Complex implementation (lines 1450-1650 in QuickCheck.tsx) =====
 /*
-<Grid item xs={12}>
+<Grid size={12}>
   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
     <Typography variant="body1" sx={{ flexGrow: 1 }}>
       Dash Lights

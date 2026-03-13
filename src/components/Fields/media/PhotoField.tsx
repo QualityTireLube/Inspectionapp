@@ -114,7 +114,7 @@ const PhotoFieldCore: React.FC<PhotoFieldProps> = ({
       {showPreview && value.length > 0 && (
         <Grid container spacing={1}>
           {value.map((photo) => (
-            <Grid item xs={6} sm={4} md={3} key={photo.id}>
+            <Grid size={{ xs: 6, sm: 4, md: 3 }} key={photo.id}>
               <Card 
                 variant="outlined" 
                 sx={{ 

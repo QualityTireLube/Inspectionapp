@@ -189,7 +189,7 @@ const PartsOrderingEnhanced: React.FC = () => {
           {/* Keyword Search Tab */}
           {searchTab === 0 && (
             <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={12} md={8}>
+              <Grid size={{ xs: 12, md: 8 }}>
                 <TextField
                   fullWidth
                   label="Search Parts by Keyword"
@@ -199,7 +199,7 @@ const PartsOrderingEnhanced: React.FC = () => {
                   onKeyPress={(e) => e.key === 'Enter' && searchPartsByKeyword()}
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <Button
                   fullWidth
                   variant="contained"
@@ -216,7 +216,7 @@ const PartsOrderingEnhanced: React.FC = () => {
           {/* VIN Search Tab */}
           {searchTab === 1 && (
             <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={12} md={8}>
+              <Grid size={{ xs: 12, md: 8 }}>
                 <TextField
                   fullWidth
                   label="Search Parts by VIN"
@@ -226,7 +226,7 @@ const PartsOrderingEnhanced: React.FC = () => {
                   onKeyPress={(e) => e.key === 'Enter' && searchPartsByVin()}
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <Button
                   fullWidth
                   variant="contained"

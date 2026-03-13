@@ -223,7 +223,7 @@ const LocationAwareStickerSettings: React.FC<LocationAwareStickerSettingsProps> 
 
       <Grid container spacing={3}>
         {/* Left Column - Settings */}
-        <Grid item xs={12} lg={6}>
+        <Grid size={{ xs: 12, lg: 6 }}>
           {/* Paper Size Settings */}
           <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
@@ -246,7 +246,7 @@ const LocationAwareStickerSettings: React.FC<LocationAwareStickerSettingsProps> 
             
             {editedSettings.paperSize.name === 'Custom' && (
               <Grid container spacing={2}>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <TextField
                     fullWidth
                     label="Width (mm)"
@@ -258,7 +258,7 @@ const LocationAwareStickerSettings: React.FC<LocationAwareStickerSettingsProps> 
                     })}
                   />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={6}>
                   <TextField
                     fullWidth
                     label="Height (mm)"
@@ -281,7 +281,7 @@ const LocationAwareStickerSettings: React.FC<LocationAwareStickerSettingsProps> 
             </Typography>
             
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid size={6}>
                 <TextField
                   fullWidth
                   label="Base Font Size"
@@ -291,7 +291,7 @@ const LocationAwareStickerSettings: React.FC<LocationAwareStickerSettingsProps> 
                   sx={{ mb: 2 }}
                 />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={6}>
                 <FormControl fullWidth sx={{ mb: 2 }}>
                   <InputLabel>Font Family</InputLabel>
                   <Select
@@ -335,7 +335,7 @@ const LocationAwareStickerSettings: React.FC<LocationAwareStickerSettingsProps> 
               Margins
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid size={6}>
                 <TextField
                   fullWidth
                   label="Top"
@@ -344,7 +344,7 @@ const LocationAwareStickerSettings: React.FC<LocationAwareStickerSettingsProps> 
                   onChange={(e) => handleMarginChange('top', parseFloat(e.target.value))}
                 />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={6}>
                 <TextField
                   fullWidth
                   label="Bottom"
@@ -353,7 +353,7 @@ const LocationAwareStickerSettings: React.FC<LocationAwareStickerSettingsProps> 
                   onChange={(e) => handleMarginChange('bottom', parseFloat(e.target.value))}
                 />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={6}>
                 <TextField
                   fullWidth
                   label="Left"
@@ -362,7 +362,7 @@ const LocationAwareStickerSettings: React.FC<LocationAwareStickerSettingsProps> 
                   onChange={(e) => handleMarginChange('left', parseFloat(e.target.value))}
                 />
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={6}>
                 <TextField
                   fullWidth
                   label="Right"
@@ -395,7 +395,7 @@ const LocationAwareStickerSettings: React.FC<LocationAwareStickerSettingsProps> 
         </Grid>
 
         {/* Right Column - Preview */}
-        <Grid item xs={12} lg={6}>
+        <Grid size={{ xs: 12, lg: 6 }}>
           <Paper sx={{ p: 3, position: 'sticky', top: 20 }}>
             <Typography variant="h6" gutterBottom>
               Live Preview - {locationName}
