@@ -1,14 +1,22 @@
 /**
  * stateInspectionApi.ts — re-exports from firebase/stateInspections.ts for backwards compatibility.
  */
-export {
+import {
   getStateInspections,
   getStateInspectionById,
   createStateInspection,
   updateStateInspection,
   deleteStateInspection,
 } from './firebase/stateInspections';
+
 export type { StateInspectionRecord } from './firebase/stateInspections';
+export {
+  getStateInspections,
+  getStateInspectionById,
+  createStateInspection,
+  updateStateInspection,
+  deleteStateInspection,
+};
 
 // Legacy type stubs for callers that import StateInspection types
 export type FleetAccount = {

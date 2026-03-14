@@ -52,6 +52,7 @@ const headers = {
 async function cfFetch(path: string, method = 'GET', body?: any) {
   const res = await fetch(`${PRINT_CF_BASE}${path}`, {
     method,
+    mode: 'cors',
     headers,
     body: body ? JSON.stringify(body) : undefined,
   });

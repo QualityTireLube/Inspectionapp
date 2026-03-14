@@ -49,6 +49,22 @@
         { "fieldPath": "userId",         "order": "ASCENDING"  },
         { "fieldPath": "updatedAt",      "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "inspections",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status",         "order": "ASCENDING"  },
+        { "fieldPath": "updatedAt",      "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "static_stickers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "archived",       "order": "ASCENDING"  },
+        { "fieldPath": "dateCreated",    "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

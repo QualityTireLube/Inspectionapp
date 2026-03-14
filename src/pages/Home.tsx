@@ -381,10 +381,8 @@ const Home: React.FC = () => {
   // Refs for auto-focus
   const mileageFieldRef = useRef<HTMLInputElement>(null);
 
-  // Handle real-time WebSocket updates
+  // Handle real-time WebSocket updates (subscribe is a no-op shim — Firestore onSnapshot drives data)
   useEffect(() => {
-    console.log('🔌 Setting up WebSocket subscription for quick_check_update');
-    
     const unsubscribe = subscribe('quick_check_update', (message) => {
       console.log('🔄 Real-time Quick Check update received:', message);
       console.log('📊 WebSocket connection status:', connectionStatus);
@@ -540,7 +538,6 @@ const Home: React.FC = () => {
 
   // Handle real-time static sticker updates
   useEffect(() => {
-    console.log('🔌 Setting up WebSocket subscription for static_sticker_update');
     
     const unsubscribe = subscribeToStaticStickerUpdates((update) => {
       console.log('🔄 Real-time static sticker update received:', update);
@@ -583,7 +580,6 @@ const Home: React.FC = () => {
 
   // Handle real-time generated label updates
   useEffect(() => {
-    console.log('🔌 Setting up WebSocket subscription for generated_label_update');
     
     const unsubscribe = subscribeToGeneratedLabelUpdates((update) => {
       console.log('🔄 Real-time generated label update received:', update);
@@ -632,7 +628,6 @@ const Home: React.FC = () => {
 
   // Handle real-time print job updates (completion/failure notifications)
   useEffect(() => {
-    console.log('🔌 Setting up WebSocket subscription for print_job_update');
     
     const unsubscribe = subscribe('print_job_update', (message: any) => {
       console.log('🖨️ Real-time print job update received:', message);
@@ -2225,26 +2220,6 @@ const Home: React.FC = () => {
     }
   }, [audioInitialized]);
 
-  // Debug WebSocket connection status
-  useEffect(() => {
-    console.log('🔌 WebSocket connection status changed:', {
-      isConnected,
-      connectionStatus,
-      authenticatedClients: connectionStatus.connectedClients
-    });
-  }, [isConnected, connectionStatus]);
-
-
-
-  // Debug draft submission flow
-  useEffect(() => {
-    console.log('📊 Home component state updated:', {
-      inProgressCount: inProgressChecks.length,
-      submittedCount: submittedChecks.length,
-      inProgressVins: inProgressChecks.map(check => check.data.vin),
-      submittedVins: submittedChecks.map(check => check.data.vin)
-    });
-  }, [inProgressChecks, submittedChecks]);
 
   // Export test function for debugging
   useEffect(() => {

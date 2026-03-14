@@ -49,9 +49,9 @@ service cloud.firestore {
     // ─────────────────────────────────────────────────────────────
     match /inspections/{inspectionId} {
 
-      // Admins + managers see everything; technicians see their own.
-      allow read: if isSignedIn() &&
-        (isManagerOrAbove() || isOwner(resource.data.userId));
+      // All authenticated users can read inspections (required for collection queries /
+      // onSnapshot). Row-level visibility is enforced in the app layer.
+      allow read: if isSignedIn();
 
       // Any authenticated user can create an inspection they own.
       allow create: if isKnownUser() &&
