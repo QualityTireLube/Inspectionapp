@@ -1,5 +1,18 @@
 # QuickCheck Firebase - Vehicle Inspection App
 
+> **ACTION REQUIRED — Project Owner**
+>
+> Firebase Storage has not been activated on this project yet. A project owner or admin with billing permissions must complete this one-time step:
+>
+> 1. Go to [Firebase Console → Storage](https://console.firebase.google.com/project/inspectionapp-b9a42/storage)
+> 2. Click **Get Started** and follow the prompts
+> 3. Once activated, run from the repo root:
+>    ```bash
+>    firebase deploy --only storage
+>    ```
+>
+> Image uploads (inspection photos, draft images) will not work until this is done.
+
 A modern, Firebase-based Progressive Web Application (PWA) for automotive service businesses. Provides complete inspection workflows with real-time sync, cloud storage, and minimal backend dependencies.
 
 ## 🏗️ Architecture

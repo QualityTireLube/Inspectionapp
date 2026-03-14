@@ -125,4 +125,4 @@ print-client/print_client_config.json
 .firebase/
 firebase-debug.log
 firestore-debug.log
-.firebaserc
+# .firebaserc is intentionally committed — it only contains the project ID

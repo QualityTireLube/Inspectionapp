@@ -1,17 +1,28 @@
 /**
  * One-time setup script — creates the admin user in Firebase Auth + Firestore.
- * Run with:  node scripts/setup-admin.mjs
+ *
+ * Usage:
+ *   ADMIN_EMAIL=you@example.com ADMIN_PASSWORD=strongPass123 node scripts/setup-admin.mjs
+ *
+ * Or copy .env.example → .env and fill in the values, then run:
+ *   node --env-file=.env scripts/setup-admin.mjs
  *
  * Prerequisites:
  *   1. Email/Password sign-in enabled in Firebase Console → Authentication → Sign-in method
  *   2. Firestore database created in Firebase Console → Firestore Database → Create database
  */
 
-const API_KEY       = 'AIzaSyBiDX4q8XSSUFVsCIgB9kfDH4aWN7ttdpU';
-const PROJECT_ID    = 'inspectionapp-b9a42';
-const ADMIN_EMAIL   = 'a@a.com';
-const ADMIN_PASSWORD = '123456';
-const ADMIN_NAME    = 'Admin';
+const API_KEY       = process.env.VITE_FIREBASE_API_KEY;
+const PROJECT_ID    = process.env.VITE_FIREBASE_PROJECT_ID || 'inspectionapp-b9a42';
+const ADMIN_EMAIL   = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const ADMIN_NAME    = process.env.ADMIN_NAME || 'Admin';
+
+if (!API_KEY || !ADMIN_EMAIL || !ADMIN_PASSWORD) {
+  console.error('❌  Missing required environment variables.');
+  console.error('    Set VITE_FIREBASE_API_KEY, ADMIN_EMAIL, and ADMIN_PASSWORD.');
+  process.exit(1);
+}
 
 const AUTH_BASE  = `https://identitytoolkit.googleapis.com/v1`;
 const FS_BASE    = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;

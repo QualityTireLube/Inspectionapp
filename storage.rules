@@ -1,50 +1,87 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    
+
+    // ─────────────────────────────────────────────────────────────
     // Helper functions
+    // ─────────────────────────────────────────────────────────────
+
     function isSignedIn() {
       return request.auth != null;
     }
-    
+
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
-    
+
+    // Read the caller's Firestore role document.
+    function userRole() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && userRole() in ['admin', 'Admin'];
+    }
+
+    function isManagerOrAbove() {
+      return isSignedIn() && userRole() in [
+        'admin', 'Admin',
+        'manager', 'Manager',
+        'service_advisor', 'Service advisor'
+      ];
+    }
+
     function isImage() {
       return request.resource.contentType.matches('image/.*');
     }
-    
+
+    // 10 MB per file
     function isSizeValid() {
-      // Max 10MB per image
       return request.resource.size < 10 * 1024 * 1024;
     }
-    
-    // Inspection uploads
+
+    // ─────────────────────────────────────────────────────────────
+    // Inspection images
+    // Path: uploads/{inspectionType}/{inspectionId}/{imageType}/{fileName}
+    // ─────────────────────────────────────────────────────────────
     match /uploads/{inspectionType}/{inspectionId}/{imageType}/{fileName} {
-      // Allow authenticated users to read any inspection images
+
+      // Admins + managers can read any inspection image.
+      // Technicians are limited to their own inspections
+      // (enforced by Firestore; storage allows all authenticated reads here
+      //  because inspectionId alone doesn't embed the owning userId).
       allow read: if isSignedIn();
-      
-      // Allow users to upload images (with validation)
+
+      // Any authenticated user can upload a valid image.
       allow create: if isSignedIn() && isImage() && isSizeValid();
-      
-      // Allow users to delete their own images
-      allow delete: if isSignedIn();
+
+      // Admins / managers can replace; others cannot overwrite uploaded images.
+      allow update: if isManagerOrAbove() && isImage() && isSizeValid();
+
+      // Admins can delete any image; managers/advisors can also delete inspection images.
+      allow delete: if isManagerOrAbove();
     }
-    
-    // Draft uploads (temporary storage)
+
+    // ─────────────────────────────────────────────────────────────
+    // Draft images (temporary, per-user)
+    // Path: drafts/{userId}/{inspectionType}/{imageType}/{fileName}
+    // ─────────────────────────────────────────────────────────────
     match /drafts/{userId}/{inspectionType}/{imageType}/{fileName} {
-      // Users can read their own draft images
-      allow read: if isSignedIn() && isOwner(userId);
-      
-      // Users can upload their own draft images
-      allow create: if isSignedIn() && isOwner(userId) && isImage() && isSizeValid();
-      
-      // Users can delete their own draft images
-      allow delete: if isSignedIn() && isOwner(userId);
+
+      allow read: if isSignedIn() && (isManagerOrAbove() || isOwner(userId));
+
+      allow create: if isSignedIn() &&
+        isOwner(userId) && isImage() && isSizeValid();
+
+      allow update: if isSignedIn() &&
+        isOwner(userId) && isImage() && isSizeValid();
+
+      allow delete: if isSignedIn() && (isAdmin() || isOwner(userId));
     }
-    
-    // Default deny all other paths
+
+    // ─────────────────────────────────────────────────────────────
+    // Deny everything else
+    // ─────────────────────────────────────────────────────────────
     match /{allPaths=**} {
       allow read, write: if false;
     }

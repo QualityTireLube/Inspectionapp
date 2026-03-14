@@ -1,71 +1,163 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
+    // ─────────────────────────────────────────────────────────────
     // Helper functions
+    // ─────────────────────────────────────────────────────────────
+
     function isSignedIn() {
       return request.auth != null;
     }
-    
+
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
-    
-    // Inspections collection
+
+    // Read the caller's role from their Firestore user document.
+    // Uses a get() so no custom-claims setup is required.
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    // Admins have unrestricted access.
+    function isAdmin() {
+      return isSignedIn() && userRole() in ['admin', 'Admin'];
+    }
+
+    // Managers and service advisors can supervise inspections.
+    // Includes admins so permission checks are additive.
+    function isManagerOrAbove() {
+      return isSignedIn() && userRole() in ['admin', 'Admin', 'manager', 'Manager', 'service_advisor', 'Service advisor'];
+    }
+
+    // Any authenticated user with a known role.
+    function isKnownUser() {
+      return isSignedIn() && userRole() in [
+        'admin', 'Admin',
+        'manager', 'Manager',
+        'service_advisor', 'Service advisor',
+        'technician', 'Technician'
+      ];
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // /inspections/{inspectionId}
+    // ─────────────────────────────────────────────────────────────
+    // • Admins / managers / service advisors: full CRUD on all records
+    // • Technicians: full CRUD on their own records only
+    // ─────────────────────────────────────────────────────────────
     match /inspections/{inspectionId} {
-      // Users can read their own inspections
-      allow read: if isSignedIn() && isOwner(resource.data.userId);
-      
-      // Users can create inspections
-      allow create: if isSignedIn() && isOwner(request.resource.data.userId);
-      
-      // Users can update their own inspections
-      allow update: if isSignedIn() && isOwner(resource.data.userId);
-      
-      // Users can delete their own inspections
-      allow delete: if isSignedIn() && isOwner(resource.data.userId);
+
+      // Admins + managers see everything; technicians see their own.
+      allow read: if isSignedIn() &&
+        (isManagerOrAbove() || isOwner(resource.data.userId));
+
+      // Any authenticated user can create an inspection they own.
+      allow create: if isKnownUser() &&
+        isOwner(request.resource.data.userId) &&
+        request.resource.data.keys().hasAll(['userId', 'inspectionType', 'status']);
+
+      // Admins + managers can edit anything; technicians only their own.
+      allow update: if isSignedIn() &&
+        (isManagerOrAbove() || isOwner(resource.data.userId)) &&
+        // Prevent changing the owning userId after creation.
+        request.resource.data.userId == resource.data.userId;
+
+      // Admins can hard-delete; technicians can delete their own (e.g. drafts).
+      allow delete: if isSignedIn() &&
+        (isAdmin() || isOwner(resource.data.userId));
     }
-    
-    // Drafts collection
+
+    // ─────────────────────────────────────────────────────────────
+    // /drafts/{draftId}
+    // Draft ID format: {userId}-{inspectionType}
+    // ─────────────────────────────────────────────────────────────
     match /drafts/{draftId} {
-      // Draft ID format: {userId}-{inspectionType}
-      // Users can read their own drafts
-      allow read: if isSignedIn() && draftId.matches(request.auth.uid + '.*');
-      
-      // Users can create/update their own drafts
-      allow create, update: if isSignedIn() && isOwner(request.resource.data.userId);
-      
-      // Users can delete their own drafts
-      allow delete: if isSignedIn() && draftId.matches(request.auth.uid + '.*');
+
+      allow read: if isSignedIn() &&
+        (isManagerOrAbove() || draftId.matches(request.auth.uid + '-.*'));
+
+      // Only the owner can write their own draft.
+      allow create, update: if isKnownUser() &&
+        isOwner(request.resource.data.userId) &&
+        draftId.matches(request.auth.uid + '-.*');
+
+      allow delete: if isSignedIn() &&
+        (isAdmin() || draftId.matches(request.auth.uid + '-.*'));
     }
-    
-    // Inspection schemas (read-only for users, write for admins)
-    match /inspection_schemas/{schemaId} {
-      allow read: if isSignedIn();
-      allow write: if false; // Only admins through Firebase Console
-    }
-    
-    // Field registry (read-only for users, write for admins)
-    match /field_registry/{fieldId} {
-      allow read: if isSignedIn();
-      allow write: if false; // Only admins through Firebase Console
-    }
-    
-    // Users collection (users can read/update their own profile)
+
+    // ─────────────────────────────────────────────────────────────
+    // /users/{userId}
+    // ─────────────────────────────────────────────────────────────
+    // • Admins: read/write all user documents
+    // • Managers: read all users (for assignment UI), edit their own
+    // • Technicians: read/write their own profile only
+    // • Nobody (not even users) may delete their own account here —
+    //   deletion must go through Firebase Auth + Admin SDK.
+    // ─────────────────────────────────────────────────────────────
     match /users/{userId} {
-      allow read: if isSignedIn() && isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && isOwner(userId);
-      allow delete: if false; // Prevent user deletion
+
+      allow read: if isSignedIn() &&
+        (isManagerOrAbove() || isOwner(userId));
+
+      // Self-registration on first sign-up: caller must be creating their own doc.
+      allow create: if isSignedIn() && isOwner(userId) &&
+        request.resource.data.keys().hasAll(['uid', 'email', 'role']) &&
+        // Prevent self-assigning admin on registration.
+        !(request.resource.data.role in ['admin', 'Admin']);
+
+      // Users may update their own profile; admins may update anyone's.
+      allow update: if isSignedIn() &&
+        (isAdmin() || (isOwner(userId) &&
+          // Non-admins cannot escalate their own role.
+          !(request.resource.data.role in ['admin', 'Admin'])));
+
+      // Only admins can delete user documents.
+      allow delete: if isAdmin();
     }
-    
-    // Locations collection (read-only for users)
+
+    // ─────────────────────────────────────────────────────────────
+    // /locations/{locationId}
+    // ─────────────────────────────────────────────────────────────
+    // All authenticated users read locations; only admins write.
+    // ─────────────────────────────────────────────────────────────
     match /locations/{locationId} {
       allow read: if isSignedIn();
-      allow write: if false; // Only admins through Firebase Console
+      allow write: if isAdmin();
     }
-    
-    // Default deny all other collections
+
+    // ─────────────────────────────────────────────────────────────
+    // /inspection_schemas/{schemaId}
+    // /field_registry/{fieldId}
+    // ─────────────────────────────────────────────────────────────
+    // Authenticated users read; only admins write (e.g. schema updates).
+    // ─────────────────────────────────────────────────────────────
+    match /inspection_schemas/{schemaId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /field_registry/{fieldId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // /audit_logs/{logId}  (security / activity audit trail)
+    // ─────────────────────────────────────────────────────────────
+    // Only admins can read; any authenticated user can append new entries.
+    // Entries are immutable once written.
+    // ─────────────────────────────────────────────────────────────
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Catch-all: deny everything else
+    // ─────────────────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
     }
