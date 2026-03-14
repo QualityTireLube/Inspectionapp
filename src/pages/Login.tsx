@@ -100,7 +100,6 @@ const Login: React.FC = () => {
       safariSetItem('userRole', 'user');
       safariSetItem('userId', firebaseUser.uid);
 
-      setIsCertificateApprovalFlow(false);
       navigate(from, { replace: true });
       
     } catch (err: any) {
