@@ -1,61 +1,60 @@
-import React, { useEffect } from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { Box, CircularProgress } from '@mui/material';
 import ProtectedRoute from './components/ProtectedRoute';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Home from './pages/Home';
-import { appPages } from './pages/pageRegistry';
-import { getRoles, UserRole } from './services/firebase/users';
-import TechDashboard from './pages/TechDashboard';
-import QuickCheck from './pages/QuickCheck';
-import NoCheck from './pages/NoCheck';
-import VSI from './pages/VSI';
-import QuickCheckRecords from './pages/QuickCheckRecords';
-import History from './pages/History';
 import Layout from './components/Layout';
-import QuickCheckDetail from './pages/QuickCheckDetail';
-import Profile from './pages/Profile';
-import Settings from './pages/Settings';
 import ErrorBoundary from './components/ErrorBoundary';
-import QuickCheckDrafts from './pages/QuickCheckDrafts';
-import ActiveStickers from './pages/ActiveStickers';
-import ArchivedStickers from './pages/ArchivedStickers';
-import LabelManager from './pages/LabelManager';
-import StateInspectionRecords from './pages/StateInspectionRecords';
-import Databases from './pages/Databases';
-import ImageUploadTest from './pages/ImageUploadTest';
-// Removed Parts Ordering feature
 import { WebSocketProvider } from './contexts/WebSocketProvider';
 import { UserProvider } from './contexts/UserContext';
-import { MigrationService } from './services/migrationService';
 import useAuthBoot from './hooks/useAuthBoot';
-import TokenExpirationTest from './components/TokenExpirationTest';
-import Labels from './pages/Labels';
-import PrintTokenManager from './pages/PrintTokenManager';
-import PrintQueueArchive from './pages/PrintQueueArchive';
-import { FieldShowcase } from './components/Fields';
-import ExistingDesignShowcase from './components/Fields/demo/ExistingDesignShowcase';
+
+// ── Eager (tiny, needed before auth resolves) ──────────────────────────────────
+import Login from './pages/Login';
+import Register from './pages/Register';
+
+// ── Lazy-loaded pages (split into separate JS chunks) ─────────────────────────
+const Home                   = React.lazy(() => import('./pages/Home'));
+const TechDashboard          = React.lazy(() => import('./pages/TechDashboard'));
+const QuickCheck             = React.lazy(() => import('./pages/QuickCheck'));
+const NoCheck                = React.lazy(() => import('./pages/NoCheck'));
+const VSI                    = React.lazy(() => import('./pages/VSI'));
+const History                = React.lazy(() => import('./pages/History'));
+const QuickCheckRecords      = React.lazy(() => import('./pages/QuickCheckRecords'));
+const QuickCheckDetail       = React.lazy(() => import('./pages/QuickCheckDetail'));
+const QuickCheckDrafts       = React.lazy(() => import('./pages/QuickCheckDrafts'));
+const Profile                = React.lazy(() => import('./pages/Profile'));
+const Settings               = React.lazy(() => import('./pages/Settings'));
+const ActiveStickers         = React.lazy(() => import('./pages/ActiveStickers'));
+const ArchivedStickers       = React.lazy(() => import('./pages/ArchivedStickers'));
+const LabelManager           = React.lazy(() => import('./pages/LabelManager'));
+const Labels                 = React.lazy(() => import('./pages/Labels'));
+const StateInspectionRecords = React.lazy(() => import('./pages/StateInspectionRecords'));
+const Databases              = React.lazy(() => import('./pages/Databases'));
+const ImageUploadTest        = React.lazy(() => import('./pages/ImageUploadTest'));
+const PrintTokenManager      = React.lazy(() => import('./pages/PrintTokenManager'));
+const PrintQueueArchive      = React.lazy(() => import('./pages/PrintQueueArchive'));
+const TokenExpirationTest    = React.lazy(() => import('./components/TokenExpirationTest'));
+const FieldShowcase          = React.lazy(() => import('./components/Fields').then(m => ({ default: m.FieldShowcase })));
+const ExistingDesignShowcase = React.lazy(() => import('./components/Fields/demo/ExistingDesignShowcase'));
 
 const theme = createTheme({
   palette: {
     mode: 'light',
-    primary: {
-      main: '#024FFF',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-    background: {
-      default: '#ffffff',
-      paper: '#ffffff',
-    },
+    primary: { main: '#024FFF' },
+    secondary: { main: '#dc004e' },
+    background: { default: '#ffffff', paper: '#ffffff' },
   },
 });
 
+const PageFallback = () => (
+  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+    <CircularProgress />
+  </Box>
+);
+
 function App() {
-  // Initialize authentication on app start
   useAuthBoot();
 
   return (
@@ -63,210 +62,48 @@ function App() {
       <CssBaseline />
       <UserProvider>
         <WebSocketProvider key="websocket-provider" autoConnect>
-          <Router future={{ 
-            v7_startTransition: true,
-            v7_relativeSplatPath: true 
-          }}>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            
-            {/* Protected routes */}
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Home />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/tech-dashboard" element={
-              <ProtectedRoute>
-                <Layout>
-                  <TechDashboard />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/quick-check" element={
-              <ProtectedRoute>
-                <QuickCheck />
-              </ProtectedRoute>
-            } />
-            <Route path="/no-check" element={
-              <ProtectedRoute>
-                <NoCheck />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/vsi" element={
-              <ProtectedRoute>
-                <VSI />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/history" element={
-              <ProtectedRoute>
-                <Layout>
-                  <ErrorBoundary>
-                    <History />
-                  </ErrorBoundary>
-                </Layout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/quick-check-records" element={
-              <ProtectedRoute>
-                <Layout>
-                  <QuickCheckRecords />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/quick-check/:id" element={
-              <ProtectedRoute>
-                <Layout>
-                  <QuickCheckDetail />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/profile" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Profile />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/settings" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Settings />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            
-            {/* Debug/Test routes */}
-            <Route path="/field-showcase" element={
-              <ProtectedRoute>
-                <Layout>
-                  <FieldShowcase />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/existing-design-showcase" element={
-              <ProtectedRoute>
-                <Layout>
-                  <ExistingDesignShowcase />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/image-upload-test" element={
-              <ProtectedRoute>
-                <Layout>
-                  <ImageUploadTest />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/token-expiration-test" element={
-              <ProtectedRoute>
-                <Layout>
-                  <TokenExpirationTest />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/quick-check-drafts" element={
-              <ProtectedRoute>
-                <Layout>
-                  <QuickCheckDrafts />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            
+          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <Suspense fallback={<PageFallback />}>
+              <Routes>
+                {/* Public */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
 
-            <Route path="/databases" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Databases />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            
-            {/* Removed Parts Ordering route */}
+                {/* Protected */}
+                <Route path="/" element={<ProtectedRoute><Layout><Home /></Layout></ProtectedRoute>} />
+                <Route path="/tech-dashboard" element={<ProtectedRoute><Layout><TechDashboard /></Layout></ProtectedRoute>} />
+                <Route path="/quick-check" element={<ProtectedRoute><QuickCheck /></ProtectedRoute>} />
+                <Route path="/no-check" element={<ProtectedRoute><NoCheck /></ProtectedRoute>} />
+                <Route path="/vsi" element={<ProtectedRoute><VSI /></ProtectedRoute>} />
+                <Route path="/history" element={<ProtectedRoute><Layout><ErrorBoundary><History /></ErrorBoundary></Layout></ProtectedRoute>} />
+                <Route path="/quick-check-records" element={<ProtectedRoute><Layout><QuickCheckRecords /></Layout></ProtectedRoute>} />
+                <Route path="/quick-check/:id" element={<ProtectedRoute><Layout><QuickCheckDetail /></Layout></ProtectedRoute>} />
+                <Route path="/quick-check-drafts" element={<ProtectedRoute><Layout><QuickCheckDrafts /></Layout></ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
+                <Route path="/oil-change-stickers" element={<ProtectedRoute><Layout><ActiveStickers /></Layout></ProtectedRoute>} />
+                <Route path="/oil-change-stickers/archived" element={<ProtectedRoute><Layout><ArchivedStickers /></Layout></ProtectedRoute>} />
+                <Route path="/label-manager" element={<ProtectedRoute><LabelManager /></ProtectedRoute>} />
+                <Route path="/labels" element={<ProtectedRoute><Layout><Labels /></Layout></ProtectedRoute>} />
+                <Route path="/state-inspection-records" element={<ProtectedRoute><Layout><StateInspectionRecords /></Layout></ProtectedRoute>} />
+                <Route path="/databases" element={<ProtectedRoute><Layout><Databases /></Layout></ProtectedRoute>} />
+                <Route path="/print-token-manager" element={<ProtectedRoute><Layout><PrintTokenManager /></Layout></ProtectedRoute>} />
+                <Route path="/print-queue-archive" element={<ProtectedRoute><Layout><PrintQueueArchive /></Layout></ProtectedRoute>} />
 
-            {/* Oil Change Sticker routes */}
-            <Route path="/oil-change-stickers" element={
-              <ProtectedRoute>
-                <Layout>
-                  <ActiveStickers />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/oil-change-stickers/archived" element={
-              <ProtectedRoute>
-                <Layout>
-                  <ArchivedStickers />
-                </Layout>
-              </ProtectedRoute>
-            } />
+                {/* Dev/debug */}
+                <Route path="/field-showcase" element={<ProtectedRoute><Layout><FieldShowcase /></Layout></ProtectedRoute>} />
+                <Route path="/existing-design-showcase" element={<ProtectedRoute><Layout><ExistingDesignShowcase /></Layout></ProtectedRoute>} />
+                <Route path="/image-upload-test" element={<ProtectedRoute><Layout><ImageUploadTest /></Layout></ProtectedRoute>} />
+                <Route path="/token-expiration-test" element={<ProtectedRoute><Layout><TokenExpirationTest /></Layout></ProtectedRoute>} />
 
-            {/* Label Manager route */}
-            <Route path="/label-manager" element={
-              <ProtectedRoute>
-                <LabelManager />
-              </ProtectedRoute>
-            } />
-
-            {/* Labels route */}
-            <Route path="/labels" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Labels />
-                </Layout>
-              </ProtectedRoute>
-            } />
-
-            {/* State Inspection Records route */}
-            <Route path="/state-inspection-records" element={
-              <ProtectedRoute>
-                <Layout>
-                  <StateInspectionRecords />
-                </Layout>
-              </ProtectedRoute>
-            } />
-
-
-            <Route path="/print-token-manager" element={
-              <ProtectedRoute>
-                <Layout>
-                  <PrintTokenManager />
-                </Layout>
-              </ProtectedRoute>
-            } />
-
-            <Route path="/print-queue-archive" element={
-              <ProtectedRoute>
-                <Layout>
-                  <PrintQueueArchive />
-                </Layout>
-              </ProtectedRoute>
-            } />
-
-
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Router>
-      </WebSocketProvider>
-    </UserProvider>
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </Router>
+        </WebSocketProvider>
+      </UserProvider>
     </ThemeProvider>
   );
 }
 
-export default App; 
+export default App;

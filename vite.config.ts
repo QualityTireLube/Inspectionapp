@@ -75,16 +75,23 @@ export default defineConfig(({ mode }) => ({
     outDir: 'dist',
     sourcemap: mode === 'development',
     minify: mode === 'production',
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom'],
-          mui: ['@mui/material', '@mui/icons-material'],
-          router: ['react-router-dom'],
+          // Core React runtime — loaded on every page
+          vendor:   ['react', 'react-dom'],
+          router:   ['react-router-dom'],
+          // UI library — large but shared across all pages
+          mui:      ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
+          // Firebase SDK — large, but tree-shakeable per service
           firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
-          charts: ['recharts'],
-          pdf: ['jspdf', 'pdf-lib'],
-          dnd: ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities']
+          // Heavy optional libraries — only needed on specific pages
+          charts:   ['recharts'],
+          pdf:      ['jspdf', 'pdf-lib'],
+          dnd:      ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+          // OCR — only loaded when the VIN scanner dialog opens
+          tesseract: ['tesseract.js'],
         }
       }
     }
