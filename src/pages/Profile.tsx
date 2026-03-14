@@ -16,7 +16,7 @@ import {
   Security as SecurityIcon,
   Person as PersonIcon
 } from '@mui/icons-material';
-import { updateProfile, updatePassword, getUserProfile } from '../services/api';
+import { updateProfile, updatePassword, getUserProfile } from '../services/firebase/users';
 
 interface UserData {
   name: string;

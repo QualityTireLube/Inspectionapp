@@ -33,7 +33,7 @@ import {
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon
 } from '@mui/icons-material';
-import { getUsers, deleteUser, enableUser, disableUser, updateUserRole, updateUserLocation, updateUserDetails, getRoles, UserRole } from '../services/api';
+import { getUsers, deleteUser, enableUser, disableUser, updateUserRole, updateUserLocation, updateUserDetails, getRoles, UserRole } from '../services/firebase/users';
 
 interface User {
   email: string;

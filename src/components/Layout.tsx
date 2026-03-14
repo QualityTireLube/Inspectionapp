@@ -56,10 +56,10 @@ import {
   Label as LabelIcon,
   CarRepair as CarRepairIcon
 } from '@mui/icons-material';
-import { logout, getRoles, UserRole } from '../services/api';
+import { logout } from '../services/api';
+import { getRoles, getUserSettings, UserRole } from '../services/firebase/users';
 import { appPages } from '../pages/pageRegistry';
 import { fetchSchemas } from '../services/inspectionSchemasApi';
-import { getUserSettings } from '../services/api';
 
 interface LayoutProps {
   children: React.ReactNode;

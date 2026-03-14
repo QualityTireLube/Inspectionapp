@@ -16,7 +16,7 @@ import {
 import Grid from './CustomGrid';
 import SaveIcon from '@mui/icons-material/Save';
 import RestoreIcon from '@mui/icons-material/Restore';
-import { getUserSettings, updateUserSettings } from '../services/api';
+import { getUserSettings, updateUserSettings } from '../services/firebase/users';
 
 interface SettingsData {
   autoSaveEnabled: boolean;

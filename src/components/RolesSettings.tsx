@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, List, ListItem, ListItemText, Paper, TextField, Typography, Checkbox, FormControlLabel, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
-import { createRole, deleteRole, getRolePages, getRoles, updateRole, UserRole } from '../services/api';
+import { getRoles, getRolePages, UserRole } from '../services/firebase/users';
+
+// Roles are now presets — create/update/delete not supported via Firebase
+const createRole = async (_r: any) => {};
+const updateRole = async (_id: string, _r: any) => {};
+const deleteRole = async (_id: string) => {};
 import { appPages } from '../pages/pageRegistry';
 
 const RolesSettings: React.FC = () => {

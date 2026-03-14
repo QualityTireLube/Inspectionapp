@@ -7,7 +7,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Home from './pages/Home';
 import { appPages } from './pages/pageRegistry';
-import { getRoles, UserRole } from './services/api';
+import { getRoles, UserRole } from './services/firebase/users';
 import TechDashboard from './pages/TechDashboard';
 import QuickCheck from './pages/QuickCheck';
 import NoCheck from './pages/NoCheck';
