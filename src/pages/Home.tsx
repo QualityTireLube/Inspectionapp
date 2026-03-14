@@ -58,7 +58,14 @@ import {
   Close as CloseIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
-import { getSubmittedQuickChecks, getInProgressQuickChecks, archiveQuickCheck, deleteQuickCheck, getUploadUrl, getTimingSummary, decodeVinCached, formatVehicleDetails, getUserSettings } from '../services/api';
+import { archiveInspection, deleteInspection } from '../services/firebase/inspections';
+import { decodeVinCached } from '../services/vinDecoder';
+import { getUserSettings } from '../services/firebase/users';
+// Legacy stubs — replaced by Firestore realtime data
+const getTimingSummary = async (_id: any) => ({});
+const formatVehicleDetails = (d: any) => d;
+const archiveQuickCheck = async (id: any) => archiveInspection(id);
+const deleteQuickCheck = async (id: any) => deleteInspection(id);
 import { StaticSticker, CreateStickerFormData, OilType } from '../types/stickers';
 import { GeneratedLabel } from '../types/labels';
 import { LabelTemplate } from '../types/labelTemplates';
@@ -81,6 +88,7 @@ import LocationIndicator from '../components/LocationIndicator';
 
 interface QuickCheck {
   id: number;
+  firestoreId?: string; // Firestore document ID for Firebase operations
   user_name: string;
   title: string;
   created_at: string;
@@ -98,7 +106,8 @@ interface QuickCheck {
     model?: string;
     engine?: string;
     engineCylinders?: string;
-    [key: string]: any; // Allow additional dynamic fields
+    inspection_type?: string;
+    [key: string]: any;
   };
   archived_at?: string;
   archived_by?: string;
@@ -204,8 +213,22 @@ const Home: React.FC = () => {
   const [showTimingDialog, setShowTimingDialog] = useState(false);
   const [timingLoading, setTimingLoading] = useState(false);
 
-  // WebSocket integration
-  const { isConnected, connectionStatus, subscribe, reconnect } = useWebSocket();
+  // Firestore realtime integration (replaces WebSocket)
+  const { isConnected, connectionStatus, subscribe, reconnect, inProgressInspections, submittedInspections } = useWebSocket() as any;
+
+  // Sync Firestore realtime data into component state
+  useEffect(() => {
+    if (inProgressInspections) {
+      setInProgressChecks((inProgressInspections as any[]).map(mapInspection));
+      setLoading(false);
+    }
+  }, [inProgressInspections]);
+
+  useEffect(() => {
+    if (submittedInspections) {
+      setSubmittedChecks((submittedInspections as any[]).map(mapInspection));
+    }
+  }, [submittedInspections]);
   const [realtimeUpdateSnackbar, setRealtimeUpdateSnackbar] = useState({ open: false, message: '', action: '' });
   
   // Track processing IDs to prevent duplicate WebSocket processing
@@ -1070,40 +1093,37 @@ const Home: React.FC = () => {
     return parseInt(str.replace(/,/g, '')) || 0;
   };
 
+  /** Map a Firestore InspectionDocument to the legacy QuickCheck shape */
+  const mapInspection = (doc: any): QuickCheck => {
+    const ts = doc.createdAt?.toDate ? doc.createdAt.toDate() : new Date();
+    const upd = doc.updatedAt?.toDate ? doc.updatedAt.toDate() : ts;
+    return {
+      id: parseInt(doc.id?.replace(/\D/g, '').slice(0, 9) || '0', 10) || Math.abs(
+        doc.id?.split('').reduce((a: number, c: string) => (a * 31 + c.charCodeAt(0)) & 0x7fffffff, 0) ?? 0
+      ),
+      firestoreId: doc.id,
+      user_name: doc.userName ?? '',
+      title: doc.data?.vin ?? '',
+      created_at: ts.toISOString(),
+      updated_at: upd.toISOString(),
+      status: doc.status,
+      data: {
+        ...doc.data,
+        vin: doc.data?.vin ?? '',
+        date: doc.data?.date ?? '',
+        user: doc.data?.user ?? doc.userName ?? '',
+        mileage: String(doc.data?.mileage ?? ''),
+        dash_lights_photos: doc.data?.dash_lights_photos ?? [],
+        inspection_type: doc.inspectionType,
+      },
+    };
+  };
+
   const loadQuickChecks = async (isAutoRefresh = false) => {
-    try {
-      if (isAutoRefresh) {
-        setAutoRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-      setError('');
-      
-      // Use location filter if user has a location (null means "All Locations" for admins)
-      const locationFilter = effectiveLocation?.name;
-      console.log('Loading QuickChecks for location:', locationFilter || 'All Locations');
-      
-      const [inProgress, submitted] = await Promise.all([
-        getInProgressQuickChecks(locationFilter),
-        getSubmittedQuickChecks(locationFilter)
-      ]);
-      console.log('In Progress API response:', inProgress); // Debug log
-      console.log('Submitted API response:', submitted); // Debug log
-      setInProgressChecks(inProgress);
-      setSubmittedChecks(submitted);
-    } catch (err: any) {
-      console.error('Error loading quick checks:', err); // Debug log
-      console.error('Error details:', {
-        message: err.message,
-        status: err.response?.status,
-        data: err.response?.data,
-        config: err.config
-      }); // Debug log
-      setError(err.response?.data?.error || 'Failed to load quick checks');
-    } finally {
-      setLoading(false);
-      setAutoRefreshing(false);
-    }
+    // Data comes via Firestore onSnapshot in WebSocketProvider — this function
+    // is kept for compatibility but relies on the realtime sync useEffect below.
+    if (!isAutoRefresh) setLoading(false);
+    setAutoRefreshing(false);
   };
 
   const loadStickersData = async () => {
@@ -2304,10 +2324,11 @@ const Home: React.FC = () => {
   const handleArchive = async (id: number) => {
     try {
       setArchivingId(id);
-      await archiveQuickCheck(id);
-      // No need to reload - WebSocket will handle the update
+      const item = [...inProgressChecks, ...submittedChecks].find(c => c.id === id);
+      const fid = item?.firestoreId ?? String(id);
+      await archiveQuickCheck(fid);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to archive quick check');
+      setError('Failed to archive inspection');
     } finally {
       setArchivingId(null);
     }
@@ -2331,10 +2352,11 @@ const Home: React.FC = () => {
   const handleDelete = async (id: number) => {
     try {
       setDeletingId(id);
-      await deleteQuickCheck(id);
-      // No need to reload - WebSocket will handle the update
+      const item = [...inProgressChecks, ...submittedChecks].find(c => c.id === id);
+      const fid = item?.firestoreId ?? String(id);
+      await deleteQuickCheck(fid);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to delete quick check');
+      setError('Failed to delete inspection');
     } finally {
       setDeletingId(null);
     }
