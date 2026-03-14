@@ -40,6 +40,7 @@ import {
 } from '../../services/stateInspectionApi';
 import { useStateInspectionStore } from '../../stores/stateInspectionStore';
 import { lookupUserByPin, getUserProfile } from '../../services/firebase/users';
+import { uploadImageToCloudinary } from '../../services/cloudinary';
 
 interface AddRecordFormProps {
   onRecordCreated: () => void;
@@ -57,6 +58,7 @@ interface FleetAccountFormData {
 
 const AddRecordForm: React.FC<AddRecordFormProps> = ({ onRecordCreated, fleetAccounts }) => {
   const [loading, setLoading] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fleetDialogOpen, setFleetDialogOpen] = useState(false);
   const [selectedFleetForEdit, setSelectedFleetForEdit] = useState<FleetAccount | null>(null);
@@ -147,19 +149,31 @@ const AddRecordForm: React.FC<AddRecordFormProps> = ({ onRecordCreated, fleetAcc
         return;
       }
 
+      // Upload tint affidavit to Cloudinary before saving to Firestore
+      let tintAffidavitData: { url: string; publicId: string } | undefined;
+      if (tintAffidavitFile) {
+        setUploadingFile(true);
+        const uploadResult = await uploadImageToCloudinary(tintAffidavitFile, 'state-inspections/tint-affidavits');
+        setUploadingFile(false);
+        if (uploadResult.success && uploadResult.url) {
+          tintAffidavitData = { url: uploadResult.url, publicId: uploadResult.publicId ?? '' };
+        } else {
+          setError(uploadResult.error || 'Failed to upload tint affidavit image. Please try again.');
+          return;
+        }
+      }
+
       const formData = {
         ...data,
-        createdBy: effectiveUserName, // Use PIN user if available, otherwise current user
-        createdDate: new Date().toISOString().split('T')[0], // Set current date when saving
+        createdBy: effectiveUserName,
+        createdDate: new Date().toISOString().split('T')[0],
         paymentType: data.paymentType,
         paymentAmount: data.paymentAmount,
         status: data.status,
-        tintAffidavit: tintAffidavitFile || undefined,
+        tintAffidavit: tintAffidavitData,
       };
 
-      console.log('Submitting form data:', formData);
       const newRecord = await createStateInspectionRecord(formData);
-      console.log('Created record response:', newRecord);
       addRecord(newRecord);
       
       // Reset form completely including PIN
@@ -183,9 +197,7 @@ const AddRecordForm: React.FC<AddRecordFormProps> = ({ onRecordCreated, fleetAcc
       
       onRecordCreated();
     } catch (err: any) {
-      console.error('Error creating record:', err);
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to create record. Please try again.';
-      setError(`Error: ${errorMessage}`);
+      setError(err?.message || 'Failed to create record. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -620,10 +632,10 @@ const AddRecordForm: React.FC<AddRecordFormProps> = ({ onRecordCreated, fleetAcc
               <Button
                 type="submit"
                 variant="contained"
-                disabled={loading}
-                startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
+                disabled={loading || uploadingFile}
+                startIcon={(loading || uploadingFile) ? <CircularProgress size={20} /> : <SaveIcon />}
               >
-                {loading ? 'Saving...' : 'Save Record'}
+                {uploadingFile ? 'Uploading image…' : loading ? 'Saving…' : 'Save Record'}
               </Button>
             </Box>
           </Grid>
