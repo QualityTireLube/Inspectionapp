@@ -27,7 +27,6 @@ interface SettingsData {
   enableHistoryView: boolean;
   mobileViewEnabled: boolean;
   showDebugTimerPanel: boolean;
-  showShopMonkeyDebug: boolean;
 }
 
 const GeneralSettings: React.FC = () => {
@@ -42,7 +41,6 @@ const GeneralSettings: React.FC = () => {
     enableHistoryView: true,
     mobileViewEnabled: true,
     showDebugTimerPanel: false,
-    showShopMonkeyDebug: false,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -251,20 +249,6 @@ const GeneralSettings: React.FC = () => {
                   Display timing debug information in Quick Check forms
                 </Typography>
                 
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.showShopMonkeyDebug}
-                      onChange={(e) => handleSettingChange('showShopMonkeyDebug', e.target.checked)}
-                      color="primary"
-                    />
-                  }
-                  label="Show ShopMonkey Debug Controls"
-                  sx={{ mb: 1 }}
-                />
-                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', ml: 4 }}>
-                  Display debugging controls and detailed logging for ShopMonkey integration
-                </Typography>
               </Stack>
             </CardContent>
           </Card>

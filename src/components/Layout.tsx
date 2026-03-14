@@ -297,8 +297,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { text: 'Database', path: '/databases' },
     { text: 'Label Manager', path: '/label-manager' },
     { text: 'Print Queue Archive', path: '/print-queue-archive' },
-    { text: 'ShopMonkey API', path: '/shopmonkey' },
-    { text: 'ShopMonkey Admin', path: '/shopmonkey-admin' },
     { text: 'State Inspection Analytics', path: '/state-inspection-records?tab=2' }
   ];
 

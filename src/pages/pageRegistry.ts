@@ -19,8 +19,6 @@ export const appPages: AppPage[] = [
   { id: 'archivedStaticStickers', label: 'Archived Static Stickers', path: '/oil-change-stickers/archived' },
   { id: 'archivedQuickCheck', label: 'Archived Quick Check', path: '/history' },
   { id: 'labelManager', label: 'Label Manager', path: '/label-manager', adminOnly: true },
-  { id: 'shopmonkey', label: 'ShopMonkey', path: '/shopmonkey' },
-  { id: 'shopmonkeyAdmin', label: 'ShopMonkey Admin', path: '/shopmonkey-admin', adminOnly: true },
   { id: 'stateInspectionAnalytics', label: 'State Inspection Analytics', path: '/state-inspection-records?tab=2', adminOnly: true },
   { id: 'databases', label: 'Database', path: '/databases', adminOnly: true },
   { id: 'quickCheckDrafts', label: 'Quick Check Drafts', path: '/quick-check-drafts', adminOnly: true },

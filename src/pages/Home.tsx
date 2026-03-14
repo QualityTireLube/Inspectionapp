@@ -78,7 +78,6 @@ import StickerPrintSettings from '../components/StickerPrintSettings';
 import LabelPrintSettings from '../components/LabelPrintSettings';
 import { useWebSocket, useQuickCheckUpdates, useStaticStickerUpdates, useGeneratedLabelUpdates } from '../contexts/WebSocketProvider';
 import LocationIndicator from '../components/LocationIndicator';
-import ShopMonkeyOrdersSection from '../components/ShopMonkeyOrdersSection';
 
 interface QuickCheck {
   id: number;
@@ -1180,110 +1179,6 @@ const Home: React.FC = () => {
     return sticker.vin;
   };
 
-  const autoCreateStickerFromShopMonkey = async (oilStickerData: any, oilTypeId: string, passedDecodedVin?: any) => {
-    const oilType = oilTypes.find(type => type.id === oilTypeId);
-    if (!oilType) {
-      throw new Error('Oil type not found');
-    }
-
-    const nextServiceDate = calculateNextServiceDate(oilTypeId);
-    const settings = StickerStorageService.getSettings();
-    
-    const companyElement = settings.layout.elements.find(el => el.id === 'companyName');
-    const addressElement = settings.layout.elements.find(el => el.id === 'address');
-    const messageElement = settings.layout.elements.find(el => el.id === 'message');
-    
-    // Use passed decoded VIN data or component state, otherwise create basic details
-    const vinDataToUse = passedDecodedVin || decodedVin;
-    let transformedDecodedDetails: any = { error: 'VIN not decoded' };
-    
-    console.log('🔧 VIN data to use for sticker:', vinDataToUse ? 'Available' : 'Not available');
-    
-    if (vinDataToUse && vinDataToUse.Results && Array.isArray(vinDataToUse.Results)) {
-      const getValue = (variable: string) => {
-        const result = vinDataToUse.Results.find((r: any) => r.Variable === variable);
-        return result && result.Value && result.Value !== 'Not Available' ? result.Value : null;
-      };
-      
-      transformedDecodedDetails = {
-        year: getValue('Model Year'),
-        make: getValue('Make'),
-        model: getValue('Model'),
-        engine: getValue('Engine Configuration'),
-        engineL: getValue('Displacement (L)'),
-        engineCylinders: getValue('Engine Number of Cylinders'),
-        trim: getValue('Trim'),
-        bodyType: getValue('Body Class'),
-        bodyClass: getValue('Body Class'),
-        driveType: getValue('Drive Type'),
-        transmission: getValue('Transmission Style'),
-        fuelType: getValue('Fuel Type - Primary'),
-        manufacturer: getValue('Manufacturer Name'),
-        plant: getValue('Plant Company Name'),
-        vehicleType: getValue('Vehicle Type'),
-        ...vinDataToUse
-      };
-    } else if (oilStickerData.vehicleInfo) {
-      // Create basic decoded details from vehicle info
-      transformedDecodedDetails = {
-        vehicleInfo: oilStickerData.vehicleInfo,
-        customerName: oilStickerData.customerName,
-        orderNumber: oilStickerData.orderNumber
-      };
-    }
-
-    // Create new sticker
-    const newSticker: StaticSticker = {
-      id: Date.now().toString(),
-      dateCreated: new Date().toISOString(),
-      vin: VinDecoderService.formatVin(oilStickerData.vin),
-      decodedDetails: transformedDecodedDetails,
-      date: nextServiceDate,
-      oilType,
-      mileage: oilStickerData.mileage || 0,
-      companyName: companyElement?.content.replace('{companyName}', '') || '',
-      address: addressElement?.content.replace('{address}', '') || '',
-      message: messageElement?.content || '',
-      qrCode: '',
-      printed: false,
-      lastUpdated: new Date().toISOString(),
-      archived: false,
-    };
-
-    newSticker.qrCode = generateQRCode(newSticker);
-
-    // Save the sticker with location
-    let stickerWithLocation;
-    if (effectiveLocation?.id) {
-      stickerWithLocation = await LocationAwareStorageService.createLocationAwareSticker(newSticker, effectiveLocation.id);
-    } else {
-      await StickerStorageService.saveSticker(newSticker);
-      stickerWithLocation = newSticker;
-    }
-    
-    // Generate PDF and open in new tab
-    try {
-      await PDFGeneratorService.generateStickerPDF(stickerWithLocation, settings, true);
-      setStickerSuccess(`✅ Oil sticker created and PDF opened! Order #${oilStickerData.orderNumber || 'N/A'} - ${oilType.name}`);
-    } catch (pdfError) {
-      console.error('PDF generation failed:', pdfError);
-      setStickerSuccess(`✅ Oil sticker created! Order #${oilStickerData.orderNumber || 'N/A'} - ${oilType.name}`);
-    }
-
-    // Refresh stickers list
-    loadStickersData();
-    
-    // Clear form data
-    setStickerFormData({
-      vin: '',
-      oilTypeId: '',
-      mileage: 0,
-    });
-    setDecodedVin(null);
-
-    // Clear success message after 5 seconds
-    setTimeout(() => setStickerSuccess(''), 5000);
-  };
 
   const handleCreateSticker = async () => {
     try {
@@ -2363,115 +2258,6 @@ const Home: React.FC = () => {
     }
   }, [selectedSticker, showCreateStickerForm]);
 
-  // Check for ShopMonkey oil sticker data on component mount
-  useEffect(() => {
-    const checkForShopMonkeyData = async () => {
-      try {
-        const storedData = localStorage.getItem('shopmonkey-oil-sticker-data');
-        if (storedData) {
-          const oilStickerData = JSON.parse(storedData);
-                      console.log('🔍 Found ShopMonkey oil sticker data:', oilStickerData);
-            console.log('🏷️ Oil type name from ShopMonkey:', `"${oilStickerData.oilTypeName}"`);
-            
-            // Find matching oil type ID with detailed debugging
-            const findOilTypeId = (oilTypeName: string): string => {
-              console.log('🔍 Finding oil type ID for:', `"${oilTypeName}"`);
-              console.log('📋 Available oil types:', oilTypes.map(type => `"${type.name}" (id: ${type.id})`));
-            
-            // Try exact match first
-            let oilType = oilTypes.find(type => 
-              type.name.toLowerCase() === oilTypeName.toLowerCase()
-            );
-            
-            if (oilType) {
-              console.log('✅ Exact match found:', oilType.name, '(id:', oilType.id + ')');
-              return oilType.id;
-            }
-            
-            console.log('⚠️ No exact match, trying partial matches...');
-            
-            // Try partial matches
-            oilType = oilTypes.find(type => {
-              const typeNameLower = type.name.toLowerCase();
-              const oilTypeNameLower = oilTypeName.toLowerCase();
-              const match = oilTypeNameLower.includes(typeNameLower) || typeNameLower.includes(oilTypeNameLower);
-              if (match) {
-                console.log(`🎯 Partial match found: "${oilTypeName}" contains "${type.name}"`);
-              }
-              return match;
-            });
-            
-            if (oilType) {
-              console.log('✅ Partial match found:', oilType.name, '(id:', oilType.id + ')');
-              return oilType.id;
-            }
-            
-            console.log('❌ No matches found, defaulting to first oil type:', oilTypes[0]?.name || 'none');
-            return oilTypes[0]?.id || '1'; // Default to first oil type
-          };
-          
-          const oilTypeId = findOilTypeId(oilStickerData.oilTypeName);
-          console.log('🏆 Final selected oil type ID:', oilTypeId);
-          
-          // Auto-fill the form data
-          setStickerFormData({
-            vin: oilStickerData.vin,
-            oilTypeId: oilTypeId,
-            mileage: oilStickerData.mileage || 0,
-          });
-          
-          // Show success message
-          setStickerSuccess(`🏷️ Auto-creating oil sticker from ShopMonkey order #${oilStickerData.orderNumber || 'N/A'} - ${oilStickerData.customerName || 'Unknown Customer'}`);
-          
-          // Decode VIN and create sticker in sequence
-          const processVinAndCreateSticker = async () => {
-            let decodedVinData = null;
-            
-            // Step 1: Decode VIN if available
-            if (oilStickerData.vin && oilStickerData.vin.length === 17) {
-              console.log('🔍 Decoding VIN from ShopMonkey:', oilStickerData.vin);
-              setIsDecodingVin(true);
-              try {
-                decodedVinData = await decodeVinCached(oilStickerData.vin);
-                console.log('✅ VIN decoded successfully:', decodedVinData);
-                setDecodedVin(decodedVinData);
-              } catch (error) {
-                console.error('❌ VIN decoding failed:', error);
-                setDecodedVin(null);
-              } finally {
-                setIsDecodingVin(false);
-              }
-            } else {
-              console.log('⚠️ Invalid VIN for decoding:', oilStickerData.vin);
-              setDecodedVin(null);
-            }
-            
-            // Step 2: Create sticker with decoded VIN data
-            try {
-              console.log('🏷️ Creating sticker with decoded VIN data...');
-              await autoCreateStickerFromShopMonkey(oilStickerData, oilTypeId, decodedVinData);
-            } catch (error) {
-              console.error('Error auto-creating sticker:', error);
-              setStickerError('Failed to auto-create sticker. Please create manually.');
-            }
-          };
-          
-          // Start the process after a short delay
-          setTimeout(processVinAndCreateSticker, 2000);
-          
-          // Clean up the localStorage data
-          localStorage.removeItem('shopmonkey-oil-sticker-data');
-        }
-      } catch (error) {
-        console.error('Error processing ShopMonkey oil sticker data:', error);
-      }
-    };
-
-    // Only check if oil types are loaded
-    if (oilTypes.length > 0) {
-      checkForShopMonkeyData();
-    }
-  }, [oilTypes]); // Run when oil types are loaded
 
   const handleCreateStickerFormClose = () => {
     setShowCreateStickerForm(false);
@@ -3853,14 +3639,6 @@ const Home: React.FC = () => {
           </Box>
         )}
       </Box>
-
-      {/* ShopMonkey Orders Section */}
-              <ShopMonkeyOrdersSection 
-          stickerPrintMethod={stickerPrintMethod}
-          stickerPrinterId={stickerPrinterId}
-          stickerPrintOrientation={stickerPrintOrientation}
-          stickerPrintAutoPrint={stickerPrintAutoPrint}
-        />
 
       {/* Create Sticker Dialog */}
       <Dialog 

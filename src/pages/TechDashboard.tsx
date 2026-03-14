@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Container, Box, Typography, Card, CardContent, CardActionArea, Chip, Divider, Button, CircularProgress } from '@mui/material';
 import Grid from '../components/CustomGrid';
 import { DirectionsCar as CarIcon, PlayArrow as PlayArrowIcon, Schedule as ScheduleIcon, Person as PersonIcon, Speed as SpeedIcon, Label as LabelIcon } from '@mui/icons-material';
-import ShopMonkeyOrdersSection from '../components/ShopMonkeyOrdersSection';
 import LabelCreator from '../components/LabelCreator';
 import { useUser } from '../contexts/UserContext';
 import { getInProgressQuickChecks, getSubmittedQuickChecks } from '../services/api';
@@ -92,13 +91,6 @@ const TechDashboard: React.FC = () => {
   return (
     <Container maxWidth="lg">
       <Box sx={{ py: 3 }}>
-        {/* Shop Monkey at top */}
-        <Box sx={{ mb: 4 }}>
-          <ShopMonkeyOrdersSection />
-        </Box>
-
-        <Divider sx={{ my: 3 }} />
-
         {/* Inspections section */}
         <Box sx={{ mb: 4 }}>
           <Typography variant="h5" component="h2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

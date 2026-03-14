@@ -27,7 +27,6 @@ export interface UserSettings {
   enableHistoryView?: boolean;
   mobileViewEnabled?: boolean;
   showDebugTimerPanel?: boolean;
-  showShopMonkeyDebug?: boolean;
 
   // Printer settings
   labelPrintSettings?: LabelPrintSettings;

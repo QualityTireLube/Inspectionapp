@@ -13,7 +13,6 @@ export interface DebugSettings {
   storage: boolean;         // LocalStorage and data persistence
   
   // Communication & Integration
-  shopMonkey: boolean;      // ShopMonkey integration
   notifications: boolean;  // Push notifications and alerts
   
   // Business Modules & Inspections
@@ -98,7 +97,6 @@ class DebugManager {
       storage: false,
       
       // Communication & Integration
-      shopMonkey: false,
       notifications: false,
       
       // Business Modules & Inspections
@@ -315,7 +313,6 @@ class DebugManager {
       storage: '💾',
       
       // Communication & Integration
-      shopMonkey: '🐒',
       notifications: '🔔',
       
       // Business Modules & Inspections
@@ -432,7 +429,6 @@ class DebugManager {
       storage: 'LocalStorage, sessionStorage, and data persistence',
       
       // Communication & Integration
-      shopMonkey: 'ShopMonkey integration and order synchronization',
       notifications: 'Push notifications, alerts, and user notifications',
       
       // Business Modules & Inspections

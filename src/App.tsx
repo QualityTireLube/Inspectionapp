@@ -24,7 +24,6 @@ import ActiveStickers from './pages/ActiveStickers';
 import ArchivedStickers from './pages/ArchivedStickers';
 import LabelManager from './pages/LabelManager';
 import StateInspectionRecords from './pages/StateInspectionRecords';
-import ShopMonkey from './pages/ShopMonkey';
 import Databases from './pages/Databases';
 import ImageUploadTest from './pages/ImageUploadTest';
 // Removed Parts Ordering feature
@@ -243,14 +242,6 @@ function App() {
               </ProtectedRoute>
             } />
 
-
-            <Route path="/shopmonkey" element={
-              <ProtectedRoute>
-                <Layout>
-                  <ShopMonkey />
-                </Layout>
-              </ProtectedRoute>
-            } />
 
             <Route path="/print-token-manager" element={
               <ProtectedRoute>
