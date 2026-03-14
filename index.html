@@ -29,7 +29,14 @@
     />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Pre-React loading indicator — replaced once JS hydrates -->
+      <div id="app-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#fff;font-family:Roboto,sans-serif;gap:16px;">
+        <div style="width:48px;height:48px;border:4px solid #e0e0e0;border-top-color:#024FFF;border-radius:50%;animation:spin 0.9s linear infinite;"></div>
+        <span style="color:#666;font-size:14px;">Loading…</span>
+      </div>
+      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+    </div>
     <script type="module" src="/src/index.tsx"></script>
   </body>
 </html> 

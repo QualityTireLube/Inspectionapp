@@ -10,21 +10,14 @@ root.render(
   <App />
 );
 
-// Service worker management: only register in production
-if ('serviceWorker' in navigator) {
-  if (import.meta.env.PROD) {
-    // Register service worker in production
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('/service-worker.js');
+// Service worker: vite-plugin-pwa handles registration automatically in production
+// via injectRegister:'auto'. We only manually unregister stale SWs in dev.
+if ('serviceWorker' in navigator && !import.meta.env.PROD) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+      for (const registration of registrations) {
+        registration.unregister();
+      }
     });
-  } else {
-    // Unregister any existing service workers in development to avoid SSL issues
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for(let registration of registrations) {
-          registration.unregister();
-        }
-      });
-    });
-  }
+  });
 } 
