@@ -49,6 +49,12 @@ export const loginUser = async (
 /**
  * Sign out current user
  */
+export const signOutUser = async (): Promise<void> => {
+  localStorage.clear();
+  sessionStorage.clear();
+  await signOut(auth).catch(() => {});
+};
+
 export const logoutUser = async (): Promise<void> => {
   try {
     await signOut(auth);

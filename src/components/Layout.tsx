@@ -56,7 +56,7 @@ import {
   Label as LabelIcon,
   CarRepair as CarRepairIcon
 } from '@mui/icons-material';
-import { logout } from '../services/api';
+import { signOutUser as logout } from '../services/firebase/auth';
 import { getRoles, getUserSettings, UserRole } from '../services/firebase/users';
 import { appPages } from '../pages/pageRegistry';
 import { fetchSchemas } from '../services/inspectionSchemasApi';

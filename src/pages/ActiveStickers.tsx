@@ -39,7 +39,7 @@ import Grid from '../components/CustomGrid';
 import { StaticSticker, CreateStickerFormData, OilType } from '../types/stickers';
 import { StickerStorageService } from '../services/stickerStorage';
 import { VinDecoderService } from '../services/vinDecoder';
-import { decodeVinCached } from '../services/api';
+import { decodeVinCached } from '../services/vinDecoder';
 import { PDFGeneratorService } from '../services/pdfGenerator';
 import StickerPreview from '../components/StickerPreview';
 import PrintButton from '../components/PrintButton';

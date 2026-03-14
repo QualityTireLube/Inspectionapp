@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { decodeVinCached } from '../services/api';
+import { decodeVinCached } from '../services/vinDecoder';
 import { vinCacheService } from '../services/vinCache';
 
 // VIN Decoder Hook

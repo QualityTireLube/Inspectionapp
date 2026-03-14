@@ -144,6 +144,42 @@ service cloud.firestore {
     }
 
     // ─────────────────────────────────────────────────────────────
+    // /state_inspection_records/{recordId}
+    // ─────────────────────────────────────────────────────────────
+    match /state_inspection_records/{recordId} {
+      allow read: if isSignedIn();
+      allow create, update: if isKnownUser();
+      allow delete: if isManagerOrAbove();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // /static_stickers/{stickerId}  (oil change stickers)
+    // ─────────────────────────────────────────────────────────────
+    match /static_stickers/{stickerId} {
+      allow read: if isSignedIn();
+      allow create, update: if isKnownUser();
+      allow delete: if isManagerOrAbove();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // /label_templates/{templateId}
+    // ─────────────────────────────────────────────────────────────
+    match /label_templates/{templateId} {
+      allow read: if isSignedIn();
+      allow write: if isManagerOrAbove();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // /saved_labels/{labelId}  (generated label instances)
+    // ─────────────────────────────────────────────────────────────
+    match /saved_labels/{labelId} {
+      allow read: if isSignedIn();
+      allow create: if isKnownUser();
+      allow update: if isManagerOrAbove();
+      allow delete: if isManagerOrAbove();
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // /audit_logs/{logId}  (security / activity audit trail)
     // ─────────────────────────────────────────────────────────────
     // Only admins can read; any authenticated user can append new entries.

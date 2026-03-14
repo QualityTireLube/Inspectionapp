@@ -45,7 +45,7 @@ import PrintApiService from '../services/printApi';
 import { LocationPrintDefaultsService } from '../services/locationPrintDefaults';
 import { useNotification } from '../hooks/useNotification';
 import { PrinterConfig, PrintConfiguration, PrinterStatus } from '../types/print';
-import { getUserSettings, updateUserSettings } from '../services/api';
+import { getUserSettings, updateUserSettings } from '../services/firebase/users';
 
 // Interface for grouping printers by client
 interface PrintersByClient {

@@ -38,7 +38,7 @@ import { usePrintStore } from '../stores/printStore';
 import PrintApiService from '../services/printApi';
 import { PrinterConfig } from '../types/print';
 import { usePrintConfiguration } from '../hooks/usePrintConfiguration';
-import { getUserSettings } from '../services/api';
+import { getUserSettings } from '../services/firebase/users';
 
 interface LabelCreatorProps {
   open: boolean;
