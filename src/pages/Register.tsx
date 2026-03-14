@@ -18,7 +18,9 @@ import {
   Select,
   MenuItem
 } from '@mui/material';
-import { register } from '../services/api';
+import { registerUser } from '../services/firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../services/firebase/config';
 
 const Register: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -107,15 +109,31 @@ const Register: React.FC = () => {
 
     try {
       console.log('Attempting registration with:', { email, name, pin, location, password: '[REDACTED]' });
-      await register(email, password, name, pin, location);
+      const userCredential = await registerUser(email.toLowerCase().trim(), password);
+      const uid = userCredential.user.uid;
+
+      await setDoc(doc(db, 'users', uid), {
+        name,
+        email: email.toLowerCase().trim(),
+        role: 'technician',
+        pin,
+        location: location || null,
+        createdAt: new Date().toISOString(),
+      });
+
       navigate('/login');
     } catch (err: any) {
-      console.error('Registration error details:', {
-        status: err.response?.status,
-        data: err.response?.data,
-        message: err.message
-      });
-      setError(err.response?.data?.error || 'Registration failed. Please try again.');
+      console.error('Registration error:', err);
+      const code = err?.code ?? '';
+      if (code === 'auth/email-already-in-use') {
+        setError('An account with this email already exists.');
+      } else if (code === 'auth/invalid-email') {
+        setError('Please enter a valid email address.');
+      } else if (code === 'auth/weak-password') {
+        setError('Password must be at least 6 characters long.');
+      } else {
+        setError(err.message || 'Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
