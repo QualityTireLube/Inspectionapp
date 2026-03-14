@@ -71,9 +71,10 @@ export const deleteFleetAccount = async (_id: string): Promise<void> => {};
 export const getUploadUrl = async (_inspectionId: string): Promise<string> => '';
 
 // Aliases used by StateInspectionRecords.tsx
-export const getStateInspectionRecords = async (filters?: StateInspectionFilters) => {
+// Returns { data, total, page, pageSize } to match the paginated branch the component expects.
+export const getStateInspectionRecords = async (_filters?: StateInspectionFilters, _pagination?: { page?: number; pageSize?: number }) => {
   const recs = await getStateInspections();
-  return { records: recs, total: recs.length, page: 1, totalPages: 1 } as PaginatedResponse<StateInspectionRecord>;
+  return { data: recs, total: recs.length, page: 1, pageSize: recs.length || 50 };
 };
 export const getStateInspectionStats = async (): Promise<StateInspectionStats> => ({
   total: 0, pass: 0, fail: 0, pending: 0,

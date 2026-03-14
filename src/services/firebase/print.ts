@@ -78,7 +78,7 @@ export async function submitPrintJob(request: PrintJobRequest): Promise<PrintJob
 
 export async function getPrinters(): Promise<Printer[]> {
   try {
-    const data = await cfFetch('/api/printers');
+    const data = await cfFetch('/api/print/printers');
     return (data.printers ?? data ?? []) as Printer[];
   } catch {
     return [];
@@ -89,7 +89,7 @@ export async function getPrinters(): Promise<Printer[]> {
 
 export async function getPrintClients(): Promise<PrintClient[]> {
   try {
-    const data = await cfFetch('/api/clients');
+    const data = await cfFetch('/api/print/clients');
     return (data.clients ?? data ?? []) as PrintClient[];
   } catch {
     return [];
