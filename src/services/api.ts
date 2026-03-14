@@ -4,18 +4,23 @@ import { debug } from './debugManager';
 
 /**
  * Get the API server base URL (without /api suffix)
- * In production (autoflopro.com), uses api.autoflopro.com subdomain
+ * In production (autoflopro.com or Amplify), uses api.autoflopro.com subdomain
  * In development, uses hostname:5001
  */
 export const getApiServerUrl = (): string => {
   const hostname = window.location.hostname;
-  
-  // Production: use api.autoflopro.com subdomain
-  if (hostname === 'autoflopro.com' || hostname === 'www.autoflopro.com') {
+
+  // Any production deployment routes to the real API server
+  if (
+    hostname === 'autoflopro.com' ||
+    hostname === 'www.autoflopro.com' ||
+    hostname.endsWith('.amplifyapp.com') ||
+    hostname.endsWith('.autoflopro.com')
+  ) {
     return 'https://api.autoflopro.com';
   }
-  
-  // Development/other: use port 5001
+
+  // Local development: use port 5001
   const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
   return `${protocol}://${hostname}:5001`;
 };
@@ -319,28 +324,23 @@ const getBaseUrl = () => {
   }
   
   const hostname = window.location.hostname;
-  
-  // Production: use api.autoflopro.com subdomain
-  if (hostname === 'autoflopro.com' || hostname === 'www.autoflopro.com') {
+
+  // Any production deployment routes to the real API server
+  if (
+    hostname === 'autoflopro.com' ||
+    hostname === 'www.autoflopro.com' ||
+    hostname.endsWith('.amplifyapp.com') ||
+    hostname.endsWith('.autoflopro.com')
+  ) {
     const productionUrl = 'https://api.autoflopro.com/api';
     debug.log('api', 'Using production API URL:', productionUrl);
     return productionUrl;
   }
-  
-  // Always use HTTPS in development for mixed content security
-  const protocol = 'https';
-  
-  // In development with localhost, use direct HTTPS connection (no proxy for mixed content)
-  if (import.meta.env.DEV) {
-    const backendUrl = `${protocol}://${hostname}:5001/api`;
-    debug.log('api', 'Using direct HTTPS API URL:', backendUrl);
-    return backendUrl;
-  }
-  
-  // Fallback for other environments (staging, etc.) - use port 5001
-  const fallbackUrl = `${protocol}://${hostname}:5001/api`;
-  debug.log('api', 'Using fallback HTTPS API URL:', fallbackUrl);
-  return fallbackUrl;
+
+  // Local development: direct connection on port 5001
+  const backendUrl = `https://${hostname}:5001/api`;
+  debug.log('api', 'Using dev API URL:', backendUrl);
+  return backendUrl;
 };
 
 export const getUploadUrl = (relativePath: string): string => {
@@ -361,9 +361,14 @@ export const getUploadUrl = (relativePath: string): string => {
   }
   
   const hostname = window.location.hostname;
-  
-  // Production: use api.autoflopro.com subdomain
-  if (hostname === 'autoflopro.com' || hostname === 'www.autoflopro.com') {
+
+  // Any production deployment routes to the real API server
+  if (
+    hostname === 'autoflopro.com' ||
+    hostname === 'www.autoflopro.com' ||
+    hostname.endsWith('.amplifyapp.com') ||
+    hostname.endsWith('.autoflopro.com')
+  ) {
     const baseUrl = 'https://api.autoflopro.com';
     console.log('🔒 Using production upload URL:', `${baseUrl}${relativePath}`);
     return `${baseUrl}${relativePath}`;
