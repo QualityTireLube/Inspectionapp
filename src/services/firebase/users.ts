@@ -123,16 +123,57 @@ export type UserRole = {
 };
 
 const ROLE_PRESETS: UserRole[] = [
-  { id: 'admin', name: 'Admin', homePageId: 'home' },
-  { id: 'manager', name: 'Manager', homePageId: 'home' },
+  { id: 'admin',           name: 'Admin',           homePageId: 'home' },
+  { id: 'manager',         name: 'Manager',         homePageId: 'home' },
   { id: 'service_advisor', name: 'Service Advisor', homePageId: 'home' },
-  { id: 'technician', name: 'Technician', homePageId: 'quickCheck' },
+  { id: 'technician',      name: 'Technician',      homePageId: 'quickCheck' },
 ];
 
 export async function getRoles(): Promise<UserRole[]> {
   return ROLE_PRESETS;
 }
 
+const ROLE_CONFIGS = 'roleConfigs';
+
+/**
+ * Load the page-access config for a single role from Firestore.
+ * Falls back to the default page list from pageRegistry if no Firestore doc exists.
+ */
+export async function getRoleConfig(roleId: string): Promise<string[]> {
+  const { DEFAULT_ROLE_PAGES } = await import('../../pages/pageRegistry');
+  try {
+    const snap = await getDoc(doc(db, ROLE_CONFIGS, roleId));
+    if (snap.exists()) {
+      const data = snap.data();
+      if (Array.isArray(data.pages)) return data.pages as string[];
+    }
+  } catch {
+    // Firestore unavailable — fall through to defaults
+  }
+  return DEFAULT_ROLE_PAGES[roleId] ?? [];
+}
+
+/**
+ * Persist the allowed page list for a role to Firestore.
+ */
+export async function saveRoleConfig(roleId: string, pages: string[]): Promise<void> {
+  await setDoc(doc(db, ROLE_CONFIGS, roleId), { roleId, pages }, { merge: true });
+}
+
+/**
+ * Load page configs for all known roles.
+ */
+export async function getAllRoleConfigs(): Promise<Record<string, string[]>> {
+  const result: Record<string, string[]> = {};
+  await Promise.all(
+    ROLE_PRESETS.map(async (role) => {
+      result[role.id] = await getRoleConfig(role.id);
+    })
+  );
+  return result;
+}
+
+/** @deprecated Use getRoleConfig / saveRoleConfig instead */
 export async function getRolePages(): Promise<{ roleId: string; pages: string[] }[]> {
   return [];
 }

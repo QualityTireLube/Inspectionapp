@@ -4,6 +4,7 @@ import { db } from '../services/firebase/config';
 import { LocationService } from '../services/locationService';
 import { Location } from '../types/locations';
 import { onAuthChange } from '../services/firebase/auth';
+import { getRoleConfig } from '../services/firebase/users';
 import { User } from 'firebase/auth';
 
 export interface UserProfile {
@@ -17,6 +18,8 @@ export interface UserProfile {
 export interface UserContextType {
   user: UserProfile | null;
   userLocation: Location | null;
+  /** Page IDs the current user's role is allowed to access. null = still loading. */
+  allowedPageIds: string[] | null;
   loading: boolean;
   error: string | null;
   refreshUser: () => Promise<void>;
@@ -36,6 +39,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [userLocation, setUserLocation] = useState<Location | null>(null);
+  const [allowedPageIds, setAllowedPageIds] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
@@ -51,6 +55,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     if (!fbUser) {
       setUser(null);
       setUserLocation(null);
+      setAllowedPageIds(null);
       setNeedsProfileSetup(false);
       setLoading(false);
       return;
@@ -94,7 +99,12 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
       setUser(profile);
 
-      if (profile.location) {
+      // Load page-access permissions for this role from Firestore (falls back to defaults)
+      const roleId = profile?.role || 'technician';
+      const pages = await getRoleConfig(roleId);
+      setAllowedPageIds(pages);
+
+      if (profile?.location) {
         const locations = LocationService.getLocations();
         const location =
           locations.find(loc => loc.name === profile!.location) ||
@@ -120,6 +130,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const value: UserContextType = useMemo(() => ({
     user,
     userLocation,
+    allowedPageIds,
     loading,
     error,
     refreshUser,
@@ -127,7 +138,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     roleHomePageId: undefined,
     needsProfileSetup,
     firebaseUid: firebaseUser?.uid ?? null,
-  }), [user, userLocation, loading, error, refreshUser, firebaseUser, needsProfileSetup]);
+  }), [user, userLocation, allowedPageIds, loading, error, refreshUser, firebaseUser, needsProfileSetup]);
 
   return (
     <UserContext.Provider value={value}>
