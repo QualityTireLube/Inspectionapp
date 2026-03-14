@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
-import { getUserProfile } from '../services/api';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../services/firebase/config';
 import { LocationService } from '../services/locationService';
 import { Location } from '../types/locations';
 import { onAuthChange } from '../services/firebase/auth';
@@ -36,7 +37,6 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Track Firebase auth state
   useEffect(() => {
     const unsubscribe = onAuthChange((fbUser) => {
       setFirebaseUser(fbUser);
@@ -56,26 +56,43 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      // Try to load profile from the backend API
+      // Load profile from Firestore users/{uid} document
+      let profile: UserProfile | null = null;
       try {
-        const profile = await getUserProfile();
-        setUser(profile);
-
-        if (profile.location) {
-          const locations = LocationService.getLocations();
-          let location = locations.find(loc => loc.name === profile.location);
-          if (!location) location = LocationService.getLocationById(profile.location);
-          setUserLocation(location || null);
-        } else {
-          setUserLocation(null);
+        const snap = await getDoc(doc(db, 'users', fbUser.uid));
+        if (snap.exists()) {
+          const data = snap.data();
+          profile = {
+            name:     data.name     || fbUser.displayName || fbUser.email || 'User',
+            email:    data.email    || fbUser.email || '',
+            role:     data.role     || 'technician',
+            pin:      data.pin,
+            location: data.location,
+          };
         }
       } catch {
-        // Backend unavailable — fall back to Firebase user data
-        setUser({
-          name: fbUser.displayName || fbUser.email || 'User',
+        // Firestore read failed — build a minimal profile from Firebase Auth
+      }
+
+      // Fallback: use Firebase Auth fields if Firestore doc doesn't exist yet
+      if (!profile) {
+        profile = {
+          name:  fbUser.displayName || fbUser.email || 'User',
           email: fbUser.email || '',
-          role: localStorage.getItem('userRole') || 'user',
-        });
+          role:  localStorage.getItem('userRole') || 'technician',
+        };
+      }
+
+      setUser(profile);
+
+      if (profile.location) {
+        const locations = LocationService.getLocations();
+        const location =
+          locations.find(loc => loc.name === profile!.location) ||
+          LocationService.getLocationById(profile!.location!) ||
+          null;
+        setUserLocation(location);
+      } else {
         setUserLocation(null);
       }
     } finally {
