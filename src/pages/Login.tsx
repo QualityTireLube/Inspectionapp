@@ -97,7 +97,6 @@ const Login: React.FC = () => {
 
       safariSetItem('userName', firebaseUser.displayName || normalizedEmail);
       safariSetItem('userEmail', firebaseUser.email || normalizedEmail);
-      safariSetItem('userRole', 'user');
       safariSetItem('userId', firebaseUser.uid);
 
       navigate(from, { replace: true });
