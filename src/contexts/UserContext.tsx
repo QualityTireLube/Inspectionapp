@@ -22,6 +22,8 @@ export interface UserContextType {
   refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
   roleHomePageId?: string;
+  needsProfileSetup: boolean;
+  firebaseUid: string | null;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -36,6 +38,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [userLocation, setUserLocation] = useState<Location | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthChange((fbUser) => {
@@ -48,6 +51,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     if (!fbUser) {
       setUser(null);
       setUserLocation(null);
+      setNeedsProfileSetup(false);
       setLoading(false);
       return;
     }
@@ -58,9 +62,11 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
       // Load profile from Firestore users/{uid} document
       let profile: UserProfile | null = null;
+      let firestoreDocExists = false;
       try {
         const snap = await getDoc(doc(db, 'users', fbUser.uid));
         if (snap.exists()) {
+          firestoreDocExists = true;
           const data = snap.data();
           profile = {
             name:     data.name     || fbUser.displayName || fbUser.email || 'User',
@@ -74,13 +80,16 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         // Firestore read failed — build a minimal profile from Firebase Auth
       }
 
-      // Fallback: use Firebase Auth fields if Firestore doc doesn't exist yet
-      if (!profile) {
+      // No Firestore doc — user was created directly in Firebase Console
+      if (!firestoreDocExists) {
+        setNeedsProfileSetup(true);
         profile = {
-          name:  fbUser.displayName || fbUser.email || 'User',
+          name:  fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
           email: fbUser.email || '',
-          role:  localStorage.getItem('userRole') || 'technician',
+          role:  'technician',
         };
+      } else {
+        setNeedsProfileSetup(false);
       }
 
       setUser(profile);
@@ -116,7 +125,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     refreshUser,
     isAuthenticated: !!firebaseUser,
     roleHomePageId: undefined,
-  }), [user, userLocation, loading, error, refreshUser, firebaseUser]);
+    needsProfileSetup,
+    firebaseUid: firebaseUser?.uid ?? null,
+  }), [user, userLocation, loading, error, refreshUser, firebaseUser, needsProfileSetup]);
 
   return (
     <UserContext.Provider value={value}>

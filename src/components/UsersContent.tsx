@@ -37,6 +37,7 @@ import { LocationService } from '../services/locationService';
 import { Location } from '../types/locations';
 
 interface User {
+  uid: string;
   email: string;
   name: string;
   enabled: boolean;
@@ -84,10 +85,10 @@ const UsersContent: React.FC = () => {
     try {
       setLoading(true);
       const data = await getUsers();
-      setUsers(data);
+      setUsers(data as User[]);
       setError('');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to fetch users');
+      setError(err?.message || 'Failed to fetch users');
     } finally {
       setLoading(false);
     }
@@ -95,59 +96,50 @@ const UsersContent: React.FC = () => {
 
   const handleDeleteUser = async () => {
     if (!selectedUser) return;
-    
     try {
-      await deleteUser(selectedUser.email);
-      setUsers(users.filter(user => user.email !== selectedUser.email));
+      await deleteUser(selectedUser.uid);
+      setUsers(users.filter(u => u.uid !== selectedUser.uid));
       setSuccess('User deleted successfully');
       setDeleteDialogOpen(false);
       setSelectedUser(null);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to delete user');
+      setError(err?.message || 'Failed to delete user');
     }
   };
 
   const handleToggleUserStatus = async (user: User) => {
     try {
       if (user.enabled) {
-        await disableUser(user.email);
-        setUsers(users.map(u => 
-          u.email === user.email ? { ...u, enabled: false } : u
-        ));
+        await disableUser(user.uid);
+        setUsers(users.map(u => u.uid === user.uid ? { ...u, enabled: false } : u));
         setSuccess('User disabled successfully');
       } else {
-        await enableUser(user.email);
-        setUsers(users.map(u => 
-          u.email === user.email ? { ...u, enabled: true } : u
-        ));
+        await enableUser(user.uid);
+        setUsers(users.map(u => u.uid === user.uid ? { ...u, enabled: true } : u));
         setSuccess('User enabled successfully');
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update user status');
+      setError(err?.message || 'Failed to update user status');
     }
   };
 
   const handleUpdateRole = async (user: User, newRole: string) => {
     try {
-      await updateUserRole(user.email, newRole);
-      setUsers(users.map(u => 
-        u.email === user.email ? { ...u, role: newRole } : u
-      ));
+      await updateUserRole(user.uid, newRole);
+      setUsers(users.map(u => u.uid === user.uid ? { ...u, role: newRole } : u));
       setSuccess('User role updated successfully');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update user role');
+      setError(err?.message || 'Failed to update user role');
     }
   };
 
   const handleUpdateLocation = async (user: User, newLocation: string) => {
     try {
-      await updateUserLocation(user.email, newLocation);
-      setUsers(users.map(u => 
-        u.email === user.email ? { ...u, location: newLocation } : u
-      ));
+      await updateUserLocation(user.uid, newLocation);
+      setUsers(users.map(u => u.uid === user.uid ? { ...u, location: newLocation } : u));
       setSuccess('User location updated successfully');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update user location');
+      setError(err?.message || 'Failed to update user location');
     }
   };
 
@@ -157,7 +149,7 @@ const UsersContent: React.FC = () => {
   };
 
   const openUserDetails = (user: User) => {
-    setEditingUser(user);
+    setEditingUser({ ...user });
     setUserForm({
       name: user.name,
       email: user.email,
@@ -177,32 +169,28 @@ const UsersContent: React.FC = () => {
 
   const handleSaveUserDetails = async () => {
     if (!editingUser) return;
-    
     try {
-      await updateUserDetails(editingUser.email, {
-        name: userForm.name,
-        newEmail: userForm.email,
-        role: userForm.role,
-        location: userForm.location,
-        pin: userForm.pin || undefined
-      });
+      const updates: Record<string, any> = {
+        name:     userForm.name,
+        email:    userForm.email,
+        role:     userForm.role,
+        location: userForm.location || null,
+      };
+      if (userForm.pin) updates.pin = userForm.pin;
 
-      setUsers(users.map(u => 
-        u.email === editingUser.email ? {
-          ...u,
-          name: userForm.name,
-          email: userForm.email,
-          role: userForm.role,
-          location: userForm.location,
-          pin: userForm.pin
-        } : u
+      await updateUserDetails(editingUser.uid, updates);
+
+      setUsers(users.map(u =>
+        u.uid === editingUser.uid
+          ? { ...u, name: userForm.name, email: userForm.email, role: userForm.role, location: userForm.location, pin: userForm.pin || u.pin }
+          : u
       ));
 
       setSuccess('User details updated successfully');
       setUserDetailsOpen(false);
       setEditingUser(null);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update user details');
+      setError(err?.message || 'Failed to update user details');
     }
   };
 
@@ -273,8 +261,8 @@ const UsersContent: React.FC = () => {
             </TableHead>
             <TableBody>
               {users.map((user) => (
-                <TableRow 
-                  key={user.email}
+                <TableRow
+                  key={user.uid || user.email}
                   onClick={() => openUserDetails(user)}
                   sx={{ 
                     cursor: 'pointer',

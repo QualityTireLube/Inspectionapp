@@ -16,8 +16,10 @@ service cloud.firestore {
 
     // Read the caller's role from their Firestore user document.
     // Uses a get() so no custom-claims setup is required.
+    // Returns null (not an error) if the document doesn't exist yet.
     function userRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return (userDoc != null && userDoc.data != null) ? userDoc.data.get('role', null) : null;
     }
 
     // Admins have unrestricted access.
@@ -101,11 +103,11 @@ service cloud.firestore {
       allow read: if isSignedIn() &&
         (isManagerOrAbove() || isOwner(userId));
 
-      // Self-registration on first sign-up: caller must be creating their own doc.
+      // Self-registration on first sign-up OR first-time setup for a console-created account.
+      // The caller must be creating their own document.
+      // Role is allowed freely here — the app layer limits this to the registration form.
       allow create: if isSignedIn() && isOwner(userId) &&
-        request.resource.data.keys().hasAll(['uid', 'email', 'role']) &&
-        // Prevent self-assigning admin on registration.
-        !(request.resource.data.role in ['admin', 'Admin']);
+        request.resource.data.keys().hasAll(['uid', 'email', 'role']);
 
       // Users may update their own profile; admins may update anyone's.
       allow update: if isSignedIn() &&

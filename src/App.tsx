@@ -6,6 +6,7 @@ import { Box, CircularProgress } from '@mui/material';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
+import ProfileSetupModal from './components/ProfileSetupModal';
 import { WebSocketProvider } from './contexts/WebSocketProvider';
 import { UserProvider } from './contexts/UserContext';
 import useAuthBoot from './hooks/useAuthBoot';
@@ -61,6 +62,7 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <UserProvider>
+        <ProfileSetupModal />
         <WebSocketProvider key="websocket-provider" autoConnect>
           <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Suspense fallback={<PageFallback />}>
