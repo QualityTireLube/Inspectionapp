@@ -402,18 +402,18 @@ axiosInstance.interceptors.request.use(
     if (!isPublic) {
       const token = getToken();
       if (!token || isTokenExpired(token)) {
-        logout(true);
+        // No legacy JWT — reject silently. Firebase manages auth; components
+        // handle the error and show empty states. Never force a page redirect
+        // here because the user may already be authenticated via Firebase.
         return Promise.reject(new Error('Auth token missing/expired'));
       }
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
-    // Ensure HTTPS URLs
+
     if (config.baseURL && config.baseURL.startsWith('http://')) {
-      console.warn('🚨 Converting HTTP to HTTPS in request');
       config.baseURL = config.baseURL.replace('http://', 'https://');
     }
-    
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -425,13 +425,7 @@ axiosInstance.interceptors.response.use(
     debug.log('api', 'API Response received:', { status: response.status, url: response.config?.url });
     return response;
   },
-  (error) => {
-    const status = error?.response?.status;
-    if (status === 401) {
-      logout(true);
-    }
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Simple API functions
@@ -1040,8 +1034,7 @@ export const createApiInstance = () => {
     const token = getToken();
     if (!isPublic) {
       if (!token || isTokenExpired(token)) {
-        logout(true);
-        return config;
+        return Promise.reject(new Error('Auth token missing/expired'));
       }
       config.headers = config.headers ?? {};
       (config.headers as any).Authorization = `Bearer ${token}`;
@@ -1051,13 +1044,7 @@ export const createApiInstance = () => {
 
   apiInstance.interceptors.response.use(
     (res) => res,
-    (error) => {
-      const status = error?.response?.status;
-      if (status === 401) {
-        logout(true);
-      }
-      return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
   );
 
   return apiInstance;

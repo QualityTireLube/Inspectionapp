@@ -191,7 +191,9 @@ let _expiryTimer: number | undefined;
 export const startExpiryWatcher = () => {
   stopExpiryWatcher();
   _expiryTimer = window.setInterval(() => {
-    if (isTokenExpired()) logout(true);
+    // Only clear storage when the legacy JWT expires; do not redirect
+    // since Firebase manages the active session independently.
+    if (isTokenExpired()) clearAllAuthStorage();
   }, 60_000);
 };
 
