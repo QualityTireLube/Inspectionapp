@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Container,
@@ -36,9 +36,9 @@ const StateInspectionRecords: React.FC = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [autoReopen, setAutoReopen] = useState(false);
-  const { notification, showSuccess, hideNotification, handleApiCall } = useNotification();
+  const { notification, showSuccess, hideNotification } = useNotification();
+  const isLoadingRef = useRef(false);
 
-  
   const {
     records,
     fleetAccounts,
@@ -70,109 +70,76 @@ const StateInspectionRecords: React.FC = () => {
     loadData();
   }, []);
 
-  const loadData = useCallback(async (page = 1, pageSize = 50, resetPage = false) => {
+  const loadData = useCallback(async (page = 1, pageSize = 50) => {
+    if (isLoadingRef.current) return;
+    isLoadingRef.current = true;
     setLoading(true);
     setError(null);
-    
-    const result = await handleApiCall(
-      async () => {
-        const [recordsResponse, fleetAccountsData, statsData] = await Promise.all([
-          getStateInspectionRecords({}, { page, pageSize }),
-          getFleetAccounts(),
-          getStateInspectionStats()
-        ]);
-        
-        console.log('Loaded records response:', recordsResponse);
-        console.log('Loaded fleet accounts data:', fleetAccountsData);
-        console.log('Loaded stats data:', statsData);
-        
-        return { recordsResponse, fleetAccountsData, statsData };
-      },
-      {
-        successMessage: page === 1 ? 'State inspection data loaded successfully' : 'Page loaded successfully',
-        errorMessage: 'Failed to load state inspection data',
-        showSuccessNotification: false, // Don't show success for routine data loading
-      }
-    );
 
-    if (result) {
-      const { recordsResponse, fleetAccountsData, statsData } = result;
-      
-      // Handle paginated response
+    try {
+      const [recordsResponse, fleetAccountsData, statsData] = await Promise.all([
+        getStateInspectionRecords({}, { page, pageSize }),
+        getFleetAccounts(),
+        getStateInspectionStats()
+      ]);
+
       if ('data' in recordsResponse) {
         const paginatedData = recordsResponse as PaginatedResponse<StateInspectionRecord>;
         setPaginatedRecords(paginatedData.data, paginatedData.total, paginatedData.page, paginatedData.pageSize);
       } else {
-        // Backward compatibility - non-paginated response
         setRecords(recordsResponse as StateInspectionRecord[]);
       }
-      
+
       setFleetAccounts(fleetAccountsData);
       setStats(statsData);
-    } else {
-      setError('Failed to load data. Please try again.');
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to load data. Please try again.');
+    } finally {
+      setLoading(false);
+      isLoadingRef.current = false;
     }
-    
-    setLoading(false);
-  }, [setPaginatedRecords, setRecords, setFleetAccounts, setStats, setLoading, setError, handleApiCall]);
+  }, [setPaginatedRecords, setRecords, setFleetAccounts, setStats, setLoading, setError]);
 
   const handlePageChange = useCallback((page: number, pageSize: number) => {
     loadData(page, pageSize);
   }, [loadData]);
 
-  const handleRecordCreated = () => {
-    // Show success notification
+  const handleRecordCreated = useCallback(() => {
     showSuccess('State inspection record created successfully');
-    
-    // Refresh data after creating a new record
     loadData();
-    
-    // If auto-reopen is enabled, keep the form open
-    if (autoReopen) {
-      // Form will stay open for next record
-      return;
-    }
-    
-    // Otherwise close the form
-    setShowAddForm(false);
-  };
+    if (!autoReopen) setShowAddForm(false);
+  }, [showSuccess, loadData, autoReopen]);
 
-  const handleOpenAddForm = () => {
+  const handleOpenAddForm = useCallback(() => {
     setShowAddForm(true);
-    setAutoReopen(true); // Enable auto-reopen when opened via button
-  };
+    setAutoReopen(true);
+  }, []);
 
-  const handleCloseAddForm = () => {
+  const handleCloseAddForm = useCallback(() => {
     setShowAddForm(false);
-    setAutoReopen(false); // Disable auto-reopen when manually closed
-  };
+    setAutoReopen(false);
+  }, []);
+
+  const handleCloseAnalytics = useCallback(() => setShowAnalytics(false), []);
+  const handleOpenAnalytics = useCallback(() => setShowAnalytics(true), []);
 
 
-
-  if (loading && records.length === 0) {
-    return (
-      <Container maxWidth="lg">
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-          <CircularProgress />
-        </Box>
-      </Container>
-    );
-  }
 
   return (
     <Container maxWidth="lg">
       <Box sx={{ py: 3 }}>
         {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Box>
-            <Typography variant="h6" component="h1" gutterBottom>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="h6" component="h1" gutterBottom sx={{ mb: 0 }}>
               State Inspections
             </Typography>
+            {loading && <CircularProgress size={18} thickness={5} />}
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button
               startIcon={<AnalyticsIcon />}
-              onClick={() => setShowAnalytics(true)}
+              onClick={handleOpenAnalytics}
               variant="outlined"
               size="small"
             >
@@ -237,7 +204,7 @@ const StateInspectionRecords: React.FC = () => {
         {/* Analytics Dialog */}
         <Dialog 
           open={showAnalytics} 
-          onClose={() => setShowAnalytics(false)}
+          onClose={handleCloseAnalytics}
           maxWidth="xl"
           fullWidth
           PaperProps={{
@@ -247,7 +214,7 @@ const StateInspectionRecords: React.FC = () => {
           <DialogTitle>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               State Inspection Analytics
-              <IconButton onClick={() => setShowAnalytics(false)}>
+              <IconButton onClick={handleCloseAnalytics}>
                 <CloseIcon />
               </IconButton>
             </Box>

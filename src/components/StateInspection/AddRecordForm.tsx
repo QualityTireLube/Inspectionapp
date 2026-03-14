@@ -76,15 +76,17 @@ const AddRecordForm: React.FC<AddRecordFormProps> = ({ onRecordCreated, fleetAcc
 
   // Load current user's PIN on component mount
   useEffect(() => {
+    let cancelled = false;
     const loadCurrentUserPin = async () => {
       try {
         const profile = await getUserProfile();
-        setCurrentUserPin(profile.pin || '');
+        if (!cancelled) setCurrentUserPin(profile?.pin ?? '');
       } catch (err) {
-        console.error('Failed to load user profile:', err);
+        // Non-fatal — PIN field just stays empty
       }
     };
     loadCurrentUserPin();
+    return () => { cancelled = true; };
   }, []);
 
   const {
