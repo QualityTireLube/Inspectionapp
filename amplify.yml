@@ -3,27 +3,28 @@ frontend:
   phases:
     preBuild:
       commands:
-        - npm ci
+        # Skip npm ci entirely when package-lock.json hasn't changed since the
+        # last cached build.  On a cache hit this saves ~90s per deployment.
+        - |
+          LOCK_HASH=$(md5sum package-lock.json | cut -d' ' -f1)
+          STAMP=node_modules/.amplify-lock-hash
+          if [ -f "$STAMP" ] && [ "$(cat $STAMP)" = "$LOCK_HASH" ]; then
+            echo "node_modules cache is current — skipping npm ci"
+          else
+            echo "Lock file changed or no cache — running npm ci"
+            npm ci
+            echo "$LOCK_HASH" > "$STAMP"
+          fi
     build:
       commands:
         - npm run build
-    postBuild:
-      commands:
-        # Configure SPA redirect so all routes (e.g. /login, /dashboard) serve
-        # index.html instead of returning 404 from Amplify's CDN.
-        - >
-          aws amplify update-app
-          --app-id $AWS_APP_ID
-          --custom-rules
-          '[{"source":"</^[^.]+$|\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json)$)([^.]+$)/>","target":"/index.html","status":"200"},{"source":"/<*>","target":"/index.html","status":"404-200"}]'
-          || echo "Warning: Could not update redirect rules via CLI (check build role permissions)"
   artifacts:
     baseDirectory: dist
     files:
       - '**/*'
   cache:
     paths:
-      # Cache npm's tarball store — npm ci uses this to reinstall
-      # without re-downloading from the registry (saves ~90s per build).
-      # Do NOT cache node_modules itself; npm ci always deletes it.
+      # Cache node_modules so the hash-check above can skip npm ci on most builds.
+      # Also keep ~/.npm so npm ci is fast on the rare builds that do need it.
+      - node_modules/**/*
       - ~/.npm/**/*
