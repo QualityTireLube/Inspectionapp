@@ -4,7 +4,7 @@ import { db } from '../services/firebase/config';
 import { LocationService } from '../services/locationService';
 import { Location } from '../types/locations';
 import { onAuthChange } from '../services/firebase/auth';
-import { getRoleConfig } from '../services/firebase/users';
+import { getRoleConfig, getRoleHomePath } from '../services/firebase/users';
 import { User } from 'firebase/auth';
 
 export interface UserProfile {
@@ -20,6 +20,8 @@ export interface UserContextType {
   userLocation: Location | null;
   /** Page IDs the current user's role is allowed to access. null = still loading. */
   allowedPageIds: string[] | null;
+  /** The React Router path that is the home page for the current user's role (e.g. '/quick-check' for technicians). */
+  roleHomePath: string;
   loading: boolean;
   error: string | null;
   refreshUser: () => Promise<void>;
@@ -131,6 +133,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     user,
     userLocation,
     allowedPageIds,
+    roleHomePath: getRoleHomePath(user?.role ?? ''),
     loading,
     error,
     refreshUser,

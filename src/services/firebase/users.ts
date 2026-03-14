@@ -133,6 +133,26 @@ export async function getRoles(): Promise<UserRole[]> {
   return ROLE_PRESETS;
 }
 
+/**
+ * Returns the React Router path for a role's home page.
+ * Falls back to '/' if the role or its homePageId is not found.
+ */
+export function getRoleHomePath(roleId: string): string {
+  const role = ROLE_PRESETS.find(r => r.id === roleId);
+  if (!role?.homePageId) return '/';
+  // Lazy import avoided here — use a local lookup instead of importing appPages
+  // to keep this synchronous and avoid circular dependencies.
+  const homePathMap: Record<string, string> = {
+    home:        '/',
+    quickCheck:  '/quick-check',
+    techDashboard: '/tech-dashboard',
+    noCheck:     '/no-check',
+    vsi:         '/vsi',
+    settings:    '/settings',
+  };
+  return homePathMap[role.homePageId] ?? '/';
+}
+
 const ROLE_CONFIGS = 'roleConfigs';
 
 /**

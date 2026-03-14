@@ -24,7 +24,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, pageId }) => 
   // undefined = still checking, null = not logged in, User = logged in
   const [firebaseUser, setFirebaseUser] = useState<User | null | undefined>(undefined);
   const [timedOut, setTimedOut] = useState(false);
-  const { user, allowedPageIds, loading: userLoading } = useUser();
+  const { user, allowedPageIds, roleHomePath, loading: userLoading } = useUser();
 
   // If Firebase failed to initialise entirely, go straight to login.
   if (firebaseInitError) {
@@ -74,7 +74,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, pageId }) => 
   // Admins always have full access. Other roles are checked against allowedPageIds.
   if (pageId && user && user.role !== 'admin' && allowedPageIds !== null) {
     if (!allowedPageIds.includes(pageId)) {
-      return <Navigate to="/" replace />;
+      // Redirect to role home path (e.g. /quick-check for technicians).
+      // Never redirect back to the same page — that would create an infinite loop.
+      const destination = roleHomePath !== location.pathname ? roleHomePath : '/quick-check';
+      return <Navigate to={destination} replace />;
     }
   }
 
