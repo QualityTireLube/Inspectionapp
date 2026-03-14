@@ -74,26 +74,25 @@ const RecordDeckView: React.FC<RecordDeckViewProps> = ({ records, fleetAccounts,
 
   const { removeRecord, setError } = useStateInspectionStore();
 
-  // Apply filters and search with debouncing
+  // Apply filters and search with debouncing — only fires when filters/search actually change
   const applyFiltersAndSearch = useCallback(() => {
-    const currentFilters = { ...filters };
-    if (searchTerm) {
-      // Add search term to filters for server-side processing
-      currentFilters.stickerNumber = searchTerm;
-    }
-    
-    // Reset to page 1 when filters change
     onPageChange(1, pagination.pageSize);
-  }, [filters, searchTerm, onPageChange, pagination.pageSize]);
+  }, [filters, searchTerm, onPageChange, pagination.pageSize]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-apply filters when they change (with debouncing)
+  const isFirstRender = React.useRef(true);
+
+  // Auto-apply filters when they change (skip on initial mount to avoid load loop)
   React.useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     const timer = setTimeout(() => {
       applyFiltersAndSearch();
-    }, 500); // 500ms debounce
+    }, 500);
 
     return () => clearTimeout(timer);
-  }, [applyFiltersAndSearch]);
+  }, [filters, searchTerm]); // deliberately omit applyFiltersAndSearch to prevent loop
 
   const handleFilterChange = (key: keyof StateInspectionFilters, value: string) => {
     setFilters(prev => ({

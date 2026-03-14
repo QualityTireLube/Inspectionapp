@@ -116,6 +116,10 @@ const StateInspectionRecords: React.FC = () => {
     setLoading(false);
   }, [setPaginatedRecords, setRecords, setFleetAccounts, setStats, setLoading, setError, handleApiCall]);
 
+  const handlePageChange = useCallback((page: number, pageSize: number) => {
+    loadData(page, pageSize);
+  }, [loadData]);
+
   const handleRecordCreated = () => {
     // Show success notification
     showSuccess('State inspection record created successfully');
@@ -202,7 +206,7 @@ const StateInspectionRecords: React.FC = () => {
           fleetAccounts={fleetAccounts}
           pagination={pagination}
           onDataChange={loadData}
-          onPageChange={(page, pageSize) => loadData(page, pageSize)}
+          onPageChange={handlePageChange}
         />
 
 
