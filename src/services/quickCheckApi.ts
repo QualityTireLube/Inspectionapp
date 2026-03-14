@@ -1,100 +1,49 @@
-import axios from 'axios';
-import { getToken as authGetToken, isExpired as authIsExpired, logout as authLogout, scheduleAutoLogout as authSchedule } from '../auth';
+/**
+ * quickCheckApi.ts — re-implemented using Firebase/Firestore.
+ * Exports the same `quickCheckApi` object shape for backwards compatibility.
+ */
 
-interface QuickCheckResponse {
-  id: number;
-  user_email: string;
-  user_name: string;
-  title: string;
-  data: string;
-  created_at: string;
+import {
+  getSubmittedInspections,
+  getDraftInspections,
+  deleteInspection,
+  InspectionDocument,
+} from './firebase/inspections';
+
+/** Map an InspectionDocument to the legacy QuickCheckResponse shape. */
+function mapToLegacy(doc: InspectionDocument) {
+  const ts = (doc.createdAt as any)?.toDate ? (doc.createdAt as any).toDate() : new Date();
+  return {
+    id: doc.id!,
+    user_email: '',
+    user_name: doc.userName ?? '',
+    title: doc.data?.vin ?? '',
+    data: typeof doc.data === 'string' ? doc.data : JSON.stringify(doc.data ?? {}),
+    created_at: ts.toISOString(),
+    status: doc.status,
+    inspectionType: doc.inspectionType,
+    firestoreId: doc.id,
+    _doc: doc,
+  };
 }
 
-interface ApiResponse<T> {
-  data: T;
-}
-
-const getApiBaseUrl = () => {
-  // Use environment variable if set, otherwise use dynamic protocol detection
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envUrl) {
-    return `${envUrl}/api`;
-  }
-  
-  const hostname = window.location.hostname;
-  
-  // Production: use api.autoflopro.com subdomain
-  if (hostname === 'autoflopro.com' || hostname === 'www.autoflopro.com') {
-    return 'https://api.autoflopro.com/api';
-  }
-  
-  // Use HTTPS if the frontend is served over HTTPS, otherwise use HTTP
-  const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
-  return `${protocol}://${hostname}:5001/api`;
-};
-
-// Create a simple axios instance
-const apiClient = axios.create({
-  baseURL: getApiBaseUrl(),
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  withCredentials: true
-});
-
-// Add auth token to requests
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = authGetToken();
-    if (!token || authIsExpired(token)) {
-      authLogout();
-      return Promise.reject(new Error('Auth token missing/expired'));
-    }
-    authSchedule(token);
-    config.headers.Authorization = `Bearer ${token}`;
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Handle auth errors
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      authLogout();
-    }
-    return Promise.reject(error);
-  }
-);
-
-// Simple submit function
-export const submitQuickCheck = async (formData: FormData): Promise<QuickCheckResponse> => {
-  for (let pair of formData.entries()) {
-    console.log(pair[0], pair[1]);
-  }
-  const response = await apiClient.post<ApiResponse<QuickCheckResponse>>('/quick-checks', formData);
-  return response.data.data;
-};
-
-// Simple get history function
 export const getQuickCheckHistory = async (): Promise<any[]> => {
-  const response = await apiClient.get<ApiResponse<any[]>>('/quick-checks/history');
-  return response.data.data;
+  const docs = await getSubmittedInspections(200);
+  return docs.map(mapToLegacy);
 };
 
-// Delete a quick check by ID
-export const deleteQuickCheck = async (id: number): Promise<void> => {
-  await apiClient.delete(`/quick-checks/${id}`);
+export const deleteQuickCheck = async (id: any): Promise<void> => {
+  await deleteInspection(String(id));
 };
 
-// Export a simple API object
+export const submitQuickCheck = async (_formData: FormData): Promise<any> => {
+  throw new Error('submitQuickCheck: use firebase/inspections.createInspection instead');
+};
+
 export const quickCheckApi = {
   submit: submitQuickCheck,
   getHistory: getQuickCheckHistory,
-  delete: deleteQuickCheck
+  delete: deleteQuickCheck,
 };
 
-export default quickCheckApi; 
+export default quickCheckApi;

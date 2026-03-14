@@ -1,5 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { getDraftQuickChecks, deleteQuickCheck, deleteAllDrafts } from '../services/api';
+import {
+  getDraftInspections,
+  deleteInspection,
+  deleteAllDraftInspections,
+  InspectionDocument,
+} from '../services/firebase/inspections';
+
+const getDraftQuickChecks = async () => {
+  const docs = await getDraftInspections();
+  return docs.map((d: InspectionDocument) => ({
+    id: d.id,
+    user_email: '',
+    user_name: d.userName ?? '',
+    title: d.data?.vin ?? '',
+    created_at: (d.createdAt as any)?.toDate ? (d.createdAt as any).toDate().toISOString() : '',
+    firestoreId: d.id,
+  }));
+};
+const deleteQuickCheck = (id: any) => deleteInspection(String(id));
+const deleteAllDrafts = deleteAllDraftInspections;
 import { 
   Box, 
   Typography, 

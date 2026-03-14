@@ -169,13 +169,52 @@ export const archiveInspection = async (inspectionId: string): Promise<void> => 
  */
 export const submitInspection = async (inspectionId: string): Promise<void> => {
   try {
-    await updateInspection(inspectionId, {
-      status: 'submitted'
-    });
-    
+    await updateInspection(inspectionId, { status: 'submitted' });
     console.log('✅ Inspection submitted:', inspectionId);
   } catch (error) {
     console.error('❌ Error submitting inspection:', error);
     throw error;
   }
+};
+
+/** Get all submitted inspections (paginated, newest first). */
+export const getSubmittedInspections = async (limitCount = 100): Promise<InspectionDocument[]> => {
+  const q = query(
+    collection(db, INSPECTIONS_COLLECTION),
+    where('status', '==', 'submitted'),
+    orderBy('createdAt', 'desc'),
+    limit(limitCount)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() } as InspectionDocument));
+};
+
+/** Get all draft inspections. */
+export const getDraftInspections = async (limitCount = 200): Promise<InspectionDocument[]> => {
+  const q = query(
+    collection(db, INSPECTIONS_COLLECTION),
+    where('status', '==', 'draft'),
+    orderBy('updatedAt', 'desc'),
+    limit(limitCount)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() } as InspectionDocument));
+};
+
+/** Get all archived inspections. */
+export const getArchivedInspections = async (limitCount = 200): Promise<InspectionDocument[]> => {
+  const q = query(
+    collection(db, INSPECTIONS_COLLECTION),
+    where('status', '==', 'archived'),
+    orderBy('createdAt', 'desc'),
+    limit(limitCount)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() } as InspectionDocument));
+};
+
+/** Delete all draft inspections in batch. */
+export const deleteAllDraftInspections = async (): Promise<void> => {
+  const drafts = await getDraftInspections(500);
+  await Promise.all(drafts.map(d => deleteInspection(d.id!)));
 };

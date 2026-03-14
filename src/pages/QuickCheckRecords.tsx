@@ -21,9 +21,24 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DeleteIcon from '@mui/icons-material/Delete';
-import api, { getActiveQuickChecks, getSubmittedQuickChecks } from '../services/api';
-import { quickCheckApi } from '../services/quickCheckApi';
+import { getSubmittedInspections, getArchivedInspections, deleteInspection, InspectionDocument } from '../services/firebase/inspections';
 import PrintButton from '../components/PrintButton';
+
+const mapDoc = (d: InspectionDocument) => ({
+  id: d.id,
+  firestoreId: d.id,
+  user_email: '',
+  user_name: d.userName ?? '',
+  title: d.data?.vin ?? '',
+  created_at: (d.createdAt as any)?.toDate ? (d.createdAt as any).toDate().toISOString() : '',
+  status: d.status,
+  data: d.data ?? {},
+});
+
+const getActiveQuickChecks = async () => (await getSubmittedInspections()).map(mapDoc);
+const getSubmittedQuickChecks = async () => (await getSubmittedInspections()).map(mapDoc);
+const quickCheckApi = { delete: (id: any) => deleteInspection(String(id)) };
+const api = { delete: (id: any) => deleteInspection(String(id)) } as any;
 
 interface QuickCheckData {
   vin: string;

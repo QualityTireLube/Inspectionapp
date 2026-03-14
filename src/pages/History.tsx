@@ -26,8 +26,38 @@ import {
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import api from '../services/api';
-import { quickCheckApi } from '../services/quickCheckApi';
+import { getSubmittedInspections, getArchivedInspections, deleteInspection, InspectionDocument } from '../services/firebase/inspections';
+
+const mapDoc = (d: InspectionDocument) => ({
+  id: d.id,
+  firestoreId: d.id,
+  user_email: '',
+  user_name: d.userName ?? '',
+  title: d.data?.vin ?? '',
+  created_at: (d.createdAt as any)?.toDate ? (d.createdAt as any).toDate().toISOString() : '',
+  status: d.status,
+  data: d.data ?? {},
+});
+
+const api = {
+  get: async (url: string) => {
+    if (url.includes('submitted') || url.includes('history')) {
+      const docs = await getSubmittedInspections();
+      return { data: { data: docs.map(mapDoc) } };
+    }
+    if (url.includes('archived')) {
+      const docs = await getArchivedInspections();
+      return { data: { data: docs.map(mapDoc) } };
+    }
+    return { data: { data: [] } };
+  },
+  delete: (url: string) => {
+    const id = url.split('/').pop()!;
+    return deleteInspection(id);
+  },
+} as any;
+
+const quickCheckApi = { delete: (id: any) => deleteInspection(String(id)) };
 import { useNotification } from '../hooks/useNotification';
 import NotificationSnackbar from '../components/NotificationSnackbar';
 

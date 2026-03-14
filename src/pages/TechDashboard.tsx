@@ -5,7 +5,33 @@ import Grid from '../components/CustomGrid';
 import { DirectionsCar as CarIcon, PlayArrow as PlayArrowIcon, Schedule as ScheduleIcon, Person as PersonIcon, Speed as SpeedIcon, Label as LabelIcon } from '@mui/icons-material';
 import LabelCreator from '../components/LabelCreator';
 import { useUser } from '../contexts/UserContext';
-import { getInProgressQuickChecks, getSubmittedQuickChecks } from '../services/api';
+import { getDraftInspections, getSubmittedInspections, InspectionDocument } from '../services/firebase/inspections';
+
+function mapDoc(d: InspectionDocument) {
+  const ts = (d.createdAt as any)?.toDate ? (d.createdAt as any).toDate().toISOString() : '';
+  return {
+    id: d.id as any,
+    firestoreId: d.id,
+    user_name: d.userName ?? '',
+    created_at: ts,
+    updated_at: ts,
+    status: d.status,
+    data: {
+      ...(d.data ?? {}),
+      inspection_type: d.inspectionType,
+      vin: d.data?.vin,
+      mileage: d.data?.mileage,
+      year: d.data?.year,
+      make: d.data?.make,
+      model: d.data?.model,
+      vehicle_details: d.data?.vehicle_details,
+      technician_duration: d.data?.technician_duration,
+    },
+  };
+}
+
+const getInProgressQuickChecks = async () => (await getDraftInspections()).map(mapDoc);
+const getSubmittedQuickChecks = async () => (await getSubmittedInspections()).map(mapDoc);
 import { GeneratedLabel } from '../types/labels';
 import { LocationAwareStorageService } from '../services/locationAwareStorage';
 import { GeneratedLabelStorageService } from '../services/generatedLabelStorage';
