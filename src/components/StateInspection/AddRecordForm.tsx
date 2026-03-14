@@ -39,7 +39,7 @@ import {
   deleteFleetAccount 
 } from '../../services/stateInspectionApi';
 import { useStateInspectionStore } from '../../stores/stateInspectionStore';
-import { lookupUserByPin, getUserProfile } from '../../services/api';
+import { lookupUserByPin, getUserProfile } from '../../services/firebase/users';
 
 interface AddRecordFormProps {
   onRecordCreated: () => void;

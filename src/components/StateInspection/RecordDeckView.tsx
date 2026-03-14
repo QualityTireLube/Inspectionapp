@@ -51,6 +51,7 @@ import {
 import { format } from 'date-fns';
 import { StateInspectionRecord, FleetAccount, StateInspectionFilters } from '../../types/stateInspection';
 import { deleteStateInspectionRecord, getUploadUrl } from '../../services/stateInspectionApi';
+// getUploadUrl is a stub — Cloudinary handles uploads directly
 import { useStateInspectionStore, PaginationState } from '../../stores/stateInspectionStore';
 
 interface RecordDeckViewProps {

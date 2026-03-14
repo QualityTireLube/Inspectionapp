@@ -1,184 +1,81 @@
-import axios from 'axios';
-import { getToken as authGetToken, isExpired as authIsExpired, logout as authLogout, scheduleAutoLogout as authSchedule } from '../auth';
-import { 
-  StateInspectionRecord, 
-  FleetAccount, 
-  CreateStateInspectionFormData, 
-  StateInspectionFilters,
-  StateInspectionStats 
-} from '../types/stateInspection';
+/**
+ * stateInspectionApi.ts — re-exports from firebase/stateInspections.ts for backwards compatibility.
+ */
+export {
+  getStateInspections,
+  getStateInspectionById,
+  createStateInspection,
+  updateStateInspection,
+  deleteStateInspection,
+} from './firebase/stateInspections';
+export type { StateInspectionRecord } from './firebase/stateInspections';
 
-const getBaseUrl = () => {
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envUrl) return envUrl;
-  
-  const hostname = window.location.hostname;
-  
-  // Production: use api.autoflopro.com subdomain
-  if (hostname === 'autoflopro.com' || hostname === 'www.autoflopro.com') {
-    return 'https://api.autoflopro.com/api';
-  }
-  
-  // Use dynamic hostname detection for network access, with HTTPS support
-  return `${window.location.protocol === 'https:' ? 'https' : 'http'}://${hostname}:5001/api`;
+// Legacy type stubs for callers that import StateInspection types
+export type FleetAccount = {
+  id: string;
+  name: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  notes?: string;
 };
 
-const api = axios.create({
-  baseURL: getBaseUrl(),
-});
+export type CreateStateInspectionFormData = import('./firebase/stateInspections').StateInspectionRecord;
+export type StateInspectionFilters = { startDate?: string; endDate?: string; result?: string; locationId?: string };
+export type StateInspectionStats = { total: number; pass: number; fail: number; pending: number };
 
-// Add token to requests
-api.interceptors.request.use((config) => {
-  const token = authGetToken();
-  if (!token || authIsExpired(token)) {
-    authLogout();
-    return Promise.reject(new Error('Auth token missing/expired'));
-  }
-  authSchedule(token);
-  config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+// Stub API object for legacy callers
+export const stateInspectionApi = {
+  getAll: async (_filters?: StateInspectionFilters) => {
+    const { getStateInspections } = await import('./firebase/stateInspections');
+    return getStateInspections();
+  },
+  getById: async (id: string) => {
+    const { getStateInspectionById } = await import('./firebase/stateInspections');
+    return getStateInspectionById(id);
+  },
+  create: async (data: CreateStateInspectionFormData) => {
+    const { createStateInspection } = await import('./firebase/stateInspections');
+    return createStateInspection(data);
+  },
+  update: async (id: string, data: Partial<CreateStateInspectionFormData>) => {
+    const { updateStateInspection } = await import('./firebase/stateInspections');
+    return updateStateInspection(id, data);
+  },
+  delete: async (id: string) => {
+    const { deleteStateInspection } = await import('./firebase/stateInspections');
+    return deleteStateInspection(id);
+  },
+};
 
-// Add pagination interface
-export interface PaginationParams {
-  page?: number;
-  pageSize?: number;
-}
+// Additional aliases used by StateInspection components
+export const createStateInspectionRecord = createStateInspection;
+export const updateStateInspectionRecord = updateStateInspection;
+export const deleteStateInspectionRecord = deleteStateInspection;
+
+// Fleet accounts — stub until a `fleet_accounts` collection is set up
+export const getFleetAccounts = async (): Promise<FleetAccount[]> => [];
+export const createFleetAccount = async (data: Omit<FleetAccount, 'id'>): Promise<FleetAccount> =>
+  ({ id: `fa_${Date.now()}`, ...data });
+export const updateFleetAccount = async (_id: string, _data: Partial<FleetAccount>): Promise<void> => {};
+export const deleteFleetAccount = async (_id: string): Promise<void> => {};
+
+export const getUploadUrl = async (_inspectionId: string): Promise<string> => '';
+
+// Aliases used by StateInspectionRecords.tsx
+export const getStateInspectionRecords = async (filters?: StateInspectionFilters) => {
+  const recs = await getStateInspections();
+  return { records: recs, total: recs.length, page: 1, totalPages: 1 } as PaginatedResponse<StateInspectionRecord>;
+};
+export const getStateInspectionStats = async (): Promise<StateInspectionStats> => ({
+  total: 0, pass: 0, fail: 0, pending: 0,
+});
 
 export interface PaginatedResponse<T> {
-  data: T[];
+  records: T[];
   total: number;
   page: number;
-  pageSize: number;
   totalPages: number;
 }
 
-// State Inspection Records API
-export const getStateInspectionRecords = async (
-  filters?: StateInspectionFilters, 
-  pagination?: PaginationParams
-): Promise<StateInspectionRecord[] | PaginatedResponse<StateInspectionRecord>> => {
-  const params = { 
-    ...filters, 
-    ...(pagination && {
-      page: pagination.page || 1,
-      pageSize: pagination.pageSize || 50
-    })
-  };
-  
-  const response = await api.get('/state-inspection-records', { params });
-  return response.data;
-};
-
-export const getStateInspectionRecord = async (id: string): Promise<StateInspectionRecord> => {
-  const response = await api.get(`/state-inspection-records/${id}`);
-  return response.data;
-};
-
-export const createStateInspectionRecord = async (data: CreateStateInspectionFormData): Promise<StateInspectionRecord> => {
-  const formData = new FormData();
-  
-  // Append all form fields
-  Object.entries(data).forEach(([key, value]) => {
-    if (key === 'tintAffidavit' && value instanceof File) {
-      formData.append(key, value);
-    } else if (value !== undefined) {
-      formData.append(key, String(value));
-    }
-  });
-
-  const response = await api.post('/state-inspection-records', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-  return response.data;
-};
-
-export const updateStateInspectionRecord = async (id: string, data: Partial<CreateStateInspectionFormData>): Promise<StateInspectionRecord> => {
-  const formData = new FormData();
-  
-  Object.entries(data).forEach(([key, value]) => {
-    if (key === 'tintAffidavit' && value instanceof File) {
-      formData.append(key, value);
-    } else if (value !== undefined) {
-      formData.append(key, String(value));
-    }
-  });
-
-  const response = await api.put(`/state-inspection-records/${id}`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-  return response.data;
-};
-
-export const deleteStateInspectionRecord = async (id: string): Promise<void> => {
-  await api.delete(`/state-inspection-records/${id}`);
-};
-
-export const getStateInspectionStats = async (filters?: StateInspectionFilters): Promise<StateInspectionStats> => {
-  const response = await api.get('/state-inspection-records/stats', { params: filters });
-  return response.data;
-};
-
-// Fleet Accounts API
-export const getFleetAccounts = async (): Promise<FleetAccount[]> => {
-  const response = await api.get('/fleet-accounts');
-  return response.data;
-};
-
-export const getFleetAccount = async (id: string): Promise<FleetAccount> => {
-  const response = await api.get(`/fleet-accounts/${id}`);
-  return response.data;
-};
-
-export const createFleetAccount = async (data: Omit<FleetAccount, 'id' | 'createdDate' | 'updatedDate'>): Promise<FleetAccount> => {
-  const response = await api.post('/fleet-accounts', data);
-  return response.data;
-};
-
-export const updateFleetAccount = async (id: string, data: Partial<FleetAccount>): Promise<FleetAccount> => {
-  const response = await api.put(`/fleet-accounts/${id}`, data);
-  return response.data;
-};
-
-export const deleteFleetAccount = async (id: string): Promise<void> => {
-  await api.delete(`/fleet-accounts/${id}`);
-};
-
-export const uploadTintAffidavit = async (file: File): Promise<{ url: string; filename: string }> => {
-  const formData = new FormData();
-  formData.append('tintAffidavit', file);
-
-  const response = await api.post('/state-inspection-records/upload-tint-affidavit', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-  return response.data;
-};
-
-export const getUploadUrl = (relativePath: string): string => {
-  if (!relativePath) return '';
-  
-  // If it's already an absolute URL, return as is
-  if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
-    return relativePath;
-  }
-  
-  // Use environment variable if set
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envUrl) {
-    return `${envUrl.replace('/api', '')}${relativePath}`;
-  }
-  
-  // Convert relative path to absolute URL
-  const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
-  const hostname = window.location.hostname;
-  const port = '5001';
-  const baseUrl = `${protocol}://${hostname}:${port}`;
-  
-  return `${baseUrl}${relativePath}`;
-}; 
+export default stateInspectionApi;

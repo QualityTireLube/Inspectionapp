@@ -76,7 +76,7 @@ import StickerCard from '../components/StickerCard';
 import PrintQueueBadge from '../components/PrintQueueBadge';
 import { usePrintStore } from '../stores/printStore';
 import PrintApiService from '../services/printApi';
-import { getUserSettings } from '../services/api';
+import { getUserSettings } from '../services/firebase/users';
 
 interface TabPanelProps {
   children?: React.ReactNode;
