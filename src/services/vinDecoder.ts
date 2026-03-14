@@ -1,5 +1,24 @@
+/**
+ * VIN Decoder — calls NHTSA public API directly from the browser.
+ * No backend or authentication required.
+ * https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/{vin}?format=json
+ */
+
 import { VinDecodedDetails } from '../types/stickers';
-import { truncateDecimalValues } from './api';
+
+const NHTSA_BASE = 'https://vpic.nhtsa.dot.gov/api/vehicles/decodevin';
+
+/** Trim unnecessary decimal precision from NHTSA values (e.g. "1.9999" → "2"). */
+function truncateDecimalValues(value: string): string {
+  if (!value || value === '' || value === 'Not Applicable' || value === '0') return value;
+  const numMatch = value.match(/^\d+\.\d+/);
+  if (numMatch) {
+    const num = parseFloat(numMatch[0]);
+    const decimals = (numMatch[0].split('.')[1] || '').replace(/0+$/, '');
+    return decimals.length === 0 ? String(Math.round(num)) : num.toFixed(decimals.length);
+  }
+  return value;
+}
 
 export class VinDecoderService {
   static async decodeVin(vin: string): Promise<VinDecodedDetails> {
@@ -8,49 +27,27 @@ export class VinDecoderService {
         throw new Error('Invalid VIN length. VIN must be 17 characters.');
       }
 
-      // Clean the VIN (remove spaces and convert to uppercase)
       const cleanVin = vin.replace(/\s/g, '').toUpperCase();
-      
-      // Validate VIN format (17 alphanumeric characters, no I, O, Q)
       const vinRegex = /^[A-HJ-NPR-Z0-9]{17}$/;
       if (!vinRegex.test(cleanVin)) {
         throw new Error('Invalid VIN format. VIN contains invalid characters.');
       }
 
-      // Use backend proxy for comprehensive vehicle data
-      const { getToken, isTokenExpired, logout, scheduleAutoLogout } = await import('../auth');
-      const token = getToken();
-      if (!token || isTokenExpired(token)) {
-        logout();
-        throw new Error('Authentication required');
-      }
-      scheduleAutoLogout(token);
-      // Determine API URL based on environment
-      const hostname = window.location.hostname;
-      const apiBaseUrl = (hostname === 'autoflopro.com' || hostname === 'www.autoflopro.com')
-        ? 'https://api.autoflopro.com/api'
-        : `${window.location.protocol}//${hostname}:5001/api`;
-      
-      const response = await fetch(`${apiBaseUrl}/vin/decode/${cleanVin}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
+      const response = await fetch(`${NHTSA_BASE}/${cleanVin}?format=json`);
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error || `VIN decode request failed: ${response.status}`);
+        throw new Error(`NHTSA VIN decode failed: ${response.status}`);
       }
 
       const data = await response.json();
-      
+
       if (!data.Results || data.Results.length === 0) {
         throw new Error('No vehicle data found for this VIN');
       }
 
-      // Helper function to extract value by variable name with decimal truncation
       const getValue = (variable: string): string => {
         const found = data.Results.find((r: any) => r.Variable === variable);
-        const rawValue = found && found.Value && found.Value !== 'Not Applicable' && found.Value !== '0' ? found.Value : '';
-        return truncateDecimalValues(rawValue);
+        const raw = found?.Value && found.Value !== 'Not Applicable' && found.Value !== '0' ? found.Value : '';
+        return truncateDecimalValues(raw);
       };
 
       return {
@@ -72,20 +69,44 @@ export class VinDecoderService {
       };
     } catch (error) {
       console.error('VIN decode error:', error);
-      return {
-        error: error instanceof Error ? error.message : 'Failed to decode VIN'
-      };
+      return { error: error instanceof Error ? error.message : 'Failed to decode VIN' };
     }
   }
 
   static validateVin(vin: string): boolean {
     if (!vin || vin.length !== 17) return false;
-    const cleanVin = vin.replace(/\s/g, '').toUpperCase();
-    const vinRegex = /^[A-HJ-NPR-Z0-9]{17}$/;
-    return vinRegex.test(cleanVin);
+    const clean = vin.replace(/\s/g, '').toUpperCase();
+    return /^[A-HJ-NPR-Z0-9]{17}$/.test(clean);
   }
 
   static formatVin(vin: string): string {
     return vin.replace(/\s/g, '').toUpperCase();
   }
-} 
+}
+
+/** In-memory VIN cache to avoid duplicate NHTSA requests. */
+const vinCache = new Map<string, VinDecodedDetails>();
+
+export async function decodeVinCached(vin: string): Promise<VinDecodedDetails> {
+  const key = vin.replace(/\s/g, '').toUpperCase();
+  if (vinCache.has(key)) return vinCache.get(key)!;
+  const result = await VinDecoderService.decodeVin(key);
+  if (!result.error) vinCache.set(key, result);
+  return result;
+}
+
+/** Raw NHTSA response (for components that need the full Results array). */
+export async function decodeVinNHTSA(vin: string): Promise<any> {
+  const cleanVin = vin.replace(/\s/g, '').toUpperCase();
+  const response = await fetch(`${NHTSA_BASE}/${cleanVin}?format=json`);
+  if (!response.ok) throw new Error(`NHTSA request failed: ${response.status}`);
+  const data = await response.json();
+  // Normalise decimal values in Results
+  return {
+    ...data,
+    Results: (data.Results ?? []).map((r: any) => ({
+      ...r,
+      Value: r.Value ? truncateDecimalValues(r.Value) : r.Value,
+    })),
+  };
+}
