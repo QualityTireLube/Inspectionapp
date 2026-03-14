@@ -65,6 +65,14 @@
         { "fieldPath": "archived",       "order": "ASCENDING"  },
         { "fieldPath": "dateCreated",    "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "label_templates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "archived",   "order": "ASCENDING"  },
+        { "fieldPath": "labelName",  "order": "ASCENDING"  }
+      ]
     }
   ],
   "fieldOverrides": []

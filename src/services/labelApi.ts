@@ -1,164 +1,124 @@
-import axios from 'axios';
-import { getToken as authGetToken, isExpired as authIsExpired, logout as authLogout, scheduleAutoLogout as authSchedule } from '../auth';
+/**
+ * LabelApiService — Firebase Firestore implementation.
+ * Preserves the original class interface consumed by Labels.tsx.
+ * Replaces the legacy Express/JWT backend.
+ */
+import {
+  collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
+  query, orderBy, where,
+} from 'firebase/firestore';
+import { db } from './firebase/config';
 import { LabelTemplate, CreateLabelRequest, UpdateLabelRequest } from '../types/labelTemplates';
 
-const getApiBaseUrl = () => {
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envUrl) return envUrl;
-  
-  const hostname = window.location.hostname;
-  
-  // Production: use api.autoflopro.com subdomain
-  if (hostname === 'autoflopro.com' || hostname === 'www.autoflopro.com') {
-    return 'https://api.autoflopro.com';
-  }
-  
-  return `${window.location.protocol === 'https:' ? 'https' : 'http'}://${hostname}:5001`;
-};
+const TEMPLATES = 'label_templates';
 
-const API_BASE_URL = getApiBaseUrl();
+// ── helpers ───────────────────────────────────────────────────────────────────
 
-// Get labels API base URL - avoid double /api if already in base URL
-const getLabelsApiBase = () => {
-  if (API_BASE_URL.endsWith('/api')) {
-    return `${API_BASE_URL}/labels`;
-  }
-  return `${API_BASE_URL}/api/labels`;
-};
+function docToTemplate(id: string, data: any): LabelTemplate {
+  return {
+    id,
+    labelName:    data.labelName   ?? data.name ?? '',
+    fields:       data.fields      ?? [],
+    paperSize:    data.paperSize   ?? 'Brother-QL800',
+    width:        data.width       ?? 0,
+    height:       data.height      ?? 0,
+    copies:       data.copies      ?? 1,
+    archived:     data.archived    ?? false,
+    createdBy:    data.createdBy   ?? '',
+    createdDate:  data.createdDate ?? data.createdAt ?? '',
+    updatedDate:  data.updatedDate ?? data.updatedAt,
+    customWidth:  data.customWidth,
+    customHeight: data.customHeight,
+    customUnit:   data.customUnit,
+    canvasRotation: data.canvasRotation,
+    category:     data.category,
+    version:      data.version,
+    is_active:    data.is_active,
+    lastUsed:     data.lastUsed,
+    design_data:  data.design_data,
+    print_settings: data.print_settings,
+  } as LabelTemplate;
+}
 
-// Create axios instance with auth header
-const createAuthenticatedAxios = () => {
-  const token = authGetToken();
-  if (!token || authIsExpired(token)) {
-    authLogout();
-    // Throw axios cancel error to prevent request
-    throw new axios.Cancel('Auth token missing/expired');
-  }
-  authSchedule(token);
-  return axios.create({
-    baseURL: getLabelsApiBase(),
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    }
-  });
-};
+// ── LabelApiService ───────────────────────────────────────────────────────────
 
 export class LabelApiService {
-  // Get all templates
+
   static async getAllTemplates(archived?: boolean): Promise<LabelTemplate[]> {
-    try {
-      const api = createAuthenticatedAxios();
-      const params = archived !== undefined ? { archived: archived.toString() } : {};
-      const response = await api.get('/', { params });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching templates:', error);
-      throw this.handleError(error);
-    }
+    let q = archived === undefined
+      ? query(collection(db, TEMPLATES), orderBy('labelName'))
+      : query(collection(db, TEMPLATES), where('archived', '==', archived), orderBy('labelName'));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => docToTemplate(d.id, d.data()));
   }
 
-  // Get active templates
   static async getActiveTemplates(): Promise<LabelTemplate[]> {
     return this.getAllTemplates(false);
   }
 
-  // Get archived templates
   static async getArchivedTemplates(): Promise<LabelTemplate[]> {
     return this.getAllTemplates(true);
   }
 
-  // Get template by ID
   static async getTemplate(id: string): Promise<LabelTemplate> {
-    try {
-      const api = createAuthenticatedAxios();
-      const response = await api.get(`/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching template:', error);
-      throw this.handleError(error);
-    }
+    const snap = await getDoc(doc(db, TEMPLATES, id));
+    if (!snap.exists()) throw new Error(`Template ${id} not found`);
+    return docToTemplate(snap.id, snap.data());
   }
 
-  // Create new template
   static async createTemplate(template: CreateLabelRequest): Promise<LabelTemplate> {
-    try {
-      const api = createAuthenticatedAxios();
-      const response = await api.post('/', template);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating template:', error);
-      throw this.handleError(error);
-    }
+    const now = new Date().toISOString();
+    const data = {
+      ...template,
+      archived:    false,
+      createdDate: now,
+      updatedDate: now,
+    };
+    const ref = await addDoc(collection(db, TEMPLATES), data);
+    return docToTemplate(ref.id, data);
   }
 
-  // Update template
   static async updateTemplate(id: string, updates: Partial<UpdateLabelRequest>): Promise<LabelTemplate> {
-    try {
-      const api = createAuthenticatedAxios();
-      const response = await api.put(`/${id}`, updates);
-      return response.data;
-    } catch (error) {
-      console.error('Error updating template:', error);
-      throw this.handleError(error);
-    }
+    const now = new Date().toISOString();
+    await updateDoc(doc(db, TEMPLATES, id), { ...updates, updatedDate: now } as any);
+    const snap = await getDoc(doc(db, TEMPLATES, id));
+    return docToTemplate(snap.id, snap.data()!);
   }
 
-  // Archive template
   static async archiveTemplate(id: string): Promise<void> {
-    try {
-      const api = createAuthenticatedAxios();
-      await api.delete(`/${id}`);
-    } catch (error) {
-      console.error('Error archiving template:', error);
-      throw this.handleError(error);
-    }
+    await updateDoc(doc(db, TEMPLATES, id), {
+      archived: true,
+      updatedDate: new Date().toISOString(),
+    } as any);
   }
 
-  // Permanently delete template
   static async deleteTemplate(id: string): Promise<void> {
-    try {
-      const api = createAuthenticatedAxios();
-      await api.delete(`/${id}`, { params: { permanent: 'true' } });
-    } catch (error) {
-      console.error('Error deleting template:', error);
-      throw this.handleError(error);
-    }
+    await deleteDoc(doc(db, TEMPLATES, id));
   }
 
-  // Restore archived template
   static async restoreTemplate(id: string): Promise<LabelTemplate> {
-    try {
-      const api = createAuthenticatedAxios();
-      const response = await api.post(`/${id}/restore`);
-      return response.data;
-    } catch (error) {
-      console.error('Error restoring template:', error);
-      throw this.handleError(error);
-    }
+    await updateDoc(doc(db, TEMPLATES, id), {
+      archived: false,
+      updatedDate: new Date().toISOString(),
+    } as any);
+    const snap = await getDoc(doc(db, TEMPLATES, id));
+    return docToTemplate(snap.id, snap.data()!);
   }
 
-  // Duplicate template
   static async duplicateTemplate(id: string, createdBy: string): Promise<LabelTemplate> {
-    try {
-      const api = createAuthenticatedAxios();
-      const response = await api.post(`/${id}/duplicate`, { createdBy });
-      return response.data;
-    } catch (error) {
-      console.error('Error duplicating template:', error);
-      throw this.handleError(error);
-    }
-  }
-
-  // Error handler
-  private static handleError(error: any): Error {
-    if (axios.isAxiosError(error)) {
-      const message = error.response?.data?.error || error.message || 'An error occurred';
-      return new Error(message);
-    }
-    return error instanceof Error ? error : new Error('An unknown error occurred');
+    const original = await this.getTemplate(id);
+    const now = new Date().toISOString();
+    const data = {
+      ...original,
+      labelName:   `${original.labelName} (copy)`,
+      createdBy,
+      createdDate: now,
+      updatedDate: now,
+      archived:    false,
+    };
+    const ref = await addDoc(collection(db, TEMPLATES), data);
+    return docToTemplate(ref.id, data);
   }
 }
 
-// Export default instance
-export default LabelApiService; 
+export default LabelApiService;
