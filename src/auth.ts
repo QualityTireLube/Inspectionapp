@@ -178,7 +178,7 @@ export const isTokenExpired = (token?: string | null): boolean => {
   }
 };
 
-export const logout = (redirect = true) => {
+export const logout = (redirect = false) => {
   clearAllAuthStorage();
   stopExpiryWatcher();
   if (redirect) {

@@ -8,15 +8,13 @@ const api: AxiosInstance = axios.create({
   timeout: 30000,
 });
 
-// Request interceptor: attach token or logout if expired/missing
+// Request interceptor: attach token if present, reject silently if missing
 api.interceptors.request.use(
   (config) => {
     const token = getToken();
     if (!token || isTokenExpired(token)) {
-      logout();
       return Promise.reject(new Error('Auth token missing/expired'));
     }
-    // Ensure auto-logout is scheduled while app makes calls
     scheduleAutoLogout(token);
     config.headers = config.headers || {};
     (config.headers as any).Authorization = `Bearer ${token}`;
@@ -25,16 +23,10 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor: logout on 401
+// Response interceptor: propagate errors without forcing a redirect
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
-    const status = error.response?.status;
-    if (status === 401) {
-      logout();
-    }
-    return Promise.reject(error);
-  }
+  (error: AxiosError) => Promise.reject(error)
 );
 
 export default api;
