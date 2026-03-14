@@ -286,7 +286,7 @@ const UsersContent: React.FC = () => {
                         }}
                       >
                         {roles.map(r => (
-                          <MenuItem key={r.id} value={r.name}>{r.name}</MenuItem>
+                          <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>
                         ))}
                       </Select>
                     </FormControl>

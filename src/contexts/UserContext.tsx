@@ -7,6 +7,20 @@ import { onAuthChange } from '../services/firebase/auth';
 import { getRoleConfig, getRoleHomePath } from '../services/firebase/users';
 import { User } from 'firebase/auth';
 
+const VALID_ROLE_IDS = ['admin', 'manager', 'service_advisor', 'technician'] as const;
+
+/**
+ * Converts any stored role string to a canonical lowercase role ID.
+ * Handles legacy title-case values written by older UI code that stored
+ * the display name instead of the ID (e.g. "Admin" → "admin",
+ * "Service Advisor" → "service_advisor").
+ */
+function normalizeRole(raw: string | undefined): string {
+  if (!raw) return 'technician';
+  const normalized = raw.trim().toLowerCase().replace(/\s+/g, '_');
+  return (VALID_ROLE_IDS as readonly string[]).includes(normalized) ? normalized : 'technician';
+}
+
 export interface UserProfile {
   name: string;
   email: string;
@@ -78,7 +92,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           profile = {
             name:     data.name     || fbUser.displayName || fbUser.email || 'User',
             email:    data.email    || fbUser.email || '',
-            role:     data.role     || 'technician',
+            role:     normalizeRole(data.role),
             pin:      data.pin,
             location: data.location,
           };

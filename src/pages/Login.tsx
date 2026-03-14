@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link, useLocation, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -13,23 +13,6 @@ import {
 import { loginUser } from '../services/firebase/auth';
 import { clearAllAuthStorage, getToken } from '../auth';
 import { showSafariAlert } from '../services/safariDebug';
-import { appPages } from '../pages/pageRegistry';
-
-// Build the set of valid app paths from the central registry so we never
-// navigate post-login to a stale, bookmarked, or externally-linked URL that
-// doesn't exist in React Router (e.g. /home/ from an old link → 404 on Amplify).
-const VALID_PATHS = new Set(appPages.map(p => p.path.split('?')[0]));
-VALID_PATHS.add('/profile');
-VALID_PATHS.add('/register');
-
-function isValidReturnPath(path: string): boolean {
-  if (!path || path === '/login' || path === '/register') return false;
-  // Exact match against known routes
-  if (VALID_PATHS.has(path)) return true;
-  // Allow dynamic detail routes like /quick-check/abc123
-  if (path.startsWith('/quick-check/')) return true;
-  return false;
-}
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -39,13 +22,7 @@ const Login: React.FC = () => {
   const [expiredMessage, setExpiredMessage] = useState('');
   const [storageClearedBanner, setStorageClearedBanner] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams] = useSearchParams();
-
-  // Validate the return URL so stale/cached paths (e.g. /home/ from old bookmarks)
-  // don't cause a 404 or redirect loop after login.
-  const rawFrom: string = (location.state as any)?.from?.pathname || '/';
-  const from = isValidReturnPath(rawFrom) ? rawFrom : '/';
 
   // Check for expired session parameter
   useEffect(() => {
@@ -118,7 +95,11 @@ const Login: React.FC = () => {
       safariSetItem('userEmail', firebaseUser.email || normalizedEmail);
       safariSetItem('userId', firebaseUser.uid);
 
-      navigate(from, { replace: true });
+      // Always navigate to root so ProtectedRoute's RBAC logic routes each
+      // user to their role-specific home page (e.g. technicians → /quick-check).
+      // Navigating back to `from` caused admins to land on /quick-check when
+      // that was the last page visited before session expiry.
+      navigate('/', { replace: true });
       
     } catch (err: any) {
       let errorMessage = 'Invalid email or password';
