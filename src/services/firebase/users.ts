@@ -4,7 +4,7 @@
  */
 
 import {
-  collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, orderBy
+  collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, orderBy, where
 } from 'firebase/firestore';
 import { updateEmail, updatePassword as fbUpdatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { db, auth } from './config';
@@ -45,12 +45,20 @@ export async function updateProfile(
   pin?: string
 ): Promise<void> {
   const uid = auth.currentUser?.uid;
-  if (!uid) throw new Error('Not authenticated');
+  if (!uid) throw new Error('Not authenticated — please refresh and try again');
   const updates: Partial<UserProfile> = { name, email };
   if (pin !== undefined) updates.pin = pin;
-  await updateDoc(doc(db, USERS, uid), updates as any);
-  localStorage.setItem('userName', name);
-  localStorage.setItem('userEmail', email);
+  // setDoc merge handles the case where the doc was never created via Firestore
+  await setDoc(doc(db, USERS, uid), updates as any, { merge: true });
+  if (name) localStorage.setItem('userName', name);
+  if (email) localStorage.setItem('userEmail', email);
+}
+
+/** Update only the PIN without touching name/email. */
+export async function updatePin(pin: string): Promise<void> {
+  const uid = auth.currentUser?.uid;
+  if (!uid) throw new Error('Not authenticated — please refresh and try again');
+  await setDoc(doc(db, USERS, uid), { pin }, { merge: true });
 }
 
 export async function updatePassword(currentPassword: string, newPassword: string): Promise<void> {

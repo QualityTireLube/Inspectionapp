@@ -16,7 +16,7 @@ import {
   Security as SecurityIcon,
   Person as PersonIcon
 } from '@mui/icons-material';
-import { updateProfile, updatePassword, getUserProfile } from '../services/firebase/users';
+import { updateProfile, updatePin, updatePassword, getUserProfile } from '../services/firebase/users';
 
 interface UserData {
   name: string;
@@ -58,18 +58,17 @@ const Profile: React.FC = () => {
     try {
       setProfileLoading(true);
       const profile = await getUserProfile();
-      setUserData({
-        name: profile.name,
-        email: profile.email,
-        pin: profile.pin || ''
-      });
-      // Also update localStorage
-      localStorage.setItem('userName', profile.name);
-      localStorage.setItem('userEmail', profile.email);
+      if (profile) {
+        setUserData({ name: profile.name, email: profile.email, pin: profile.pin || '' });
+        if (profile.name)  localStorage.setItem('userName', profile.name);
+        if (profile.email) localStorage.setItem('userEmail', profile.email);
+      } else {
+        const userName  = localStorage.getItem('userName')  || '';
+        const userEmail = localStorage.getItem('userEmail') || '';
+        setUserData({ name: userName, email: userEmail, pin: '' });
+      }
     } catch (err: any) {
-      console.error('Failed to load profile:', err);
-      // Fallback to localStorage
-      const userName = localStorage.getItem('userName') || '';
+      const userName  = localStorage.getItem('userName')  || '';
       const userEmail = localStorage.getItem('userEmail') || '';
       setUserData({ name: userName, email: userEmail, pin: '' });
     } finally {
@@ -98,7 +97,7 @@ const Profile: React.FC = () => {
       localStorage.setItem('userEmail', userData.email);
       setSuccess('Profile updated successfully!');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update profile');
+      setError(err?.message || 'Failed to update profile');
     } finally {
       setLoading(false);
     }
@@ -122,12 +121,12 @@ const Profile: React.FC = () => {
     setPinLoading(true);
 
     try {
-      await updateProfile(userData.name, userData.email, pinData.newPin);
+      await updatePin(pinData.newPin);
       setPinSuccess('PIN updated successfully!');
       setPinData({ newPin: '', confirmPin: '' });
       setUserData({ ...userData, pin: pinData.newPin });
     } catch (err: any) {
-      setPinError(err.response?.data?.error || 'Failed to update PIN');
+      setPinError(err?.message || 'Failed to update PIN');
     } finally {
       setPinLoading(false);
     }
