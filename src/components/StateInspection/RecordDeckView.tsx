@@ -47,12 +47,22 @@ import {
   RequestPage as CheckIcon,
   DirectionsCar as FleetIcon,
   Close as CloseIcon,
+  Download as DownloadIcon,
+  ZoomIn as ZoomInIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { StateInspectionRecord, FleetAccount, StateInspectionFilters } from '../../types/stateInspection';
-import { deleteStateInspectionRecord, getUploadUrl } from '../../services/stateInspectionApi';
-// getUploadUrl is a stub — Cloudinary handles uploads directly
+import { deleteStateInspectionRecord } from '../../services/stateInspectionApi';
 import { useStateInspectionStore, PaginationState } from '../../stores/stateInspectionStore';
+
+/** Return a forced-download URL for a Cloudinary image by injecting fl_attachment. */
+function toDownloadUrl(url: string): string {
+  if (!url) return url;
+  if (url.includes('res.cloudinary.com') && url.includes('/upload/')) {
+    return url.replace('/upload/', '/upload/fl_attachment/');
+  }
+  return url;
+}
 
 interface RecordDeckViewProps {
   records: StateInspectionRecord[];
@@ -71,6 +81,7 @@ const RecordDeckView: React.FC<RecordDeckViewProps> = ({ records, fleetAccounts,
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [menuRecord, setMenuRecord] = useState<StateInspectionRecord | null>(null);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const { removeRecord, setError } = useStateInspectionStore();
 
@@ -576,31 +587,60 @@ const RecordDeckView: React.FC<RecordDeckViewProps> = ({ records, fleetAccounts,
                 )}
 
                 {/* Tint Affidavit */}
-                {selectedRecord.tintAffidavit && (
+                {selectedRecord.tintAffidavit?.url && (
                   <Grid xs={12}>
                     <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                        <AttachFileIcon sx={{ fontSize: 24, color: 'info.main' }} />
-                        <Typography variant="subtitle2" color="text.secondary">
-                          Tint Affidavit
-                        </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <AttachFileIcon sx={{ fontSize: 22, color: 'info.main' }} />
+                          <Typography variant="subtitle2" color="text.secondary">
+                            Tint Affidavit
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Button
+                            size="small"
+                            startIcon={<ZoomInIcon />}
+                            onClick={() => setLightboxUrl(selectedRecord.tintAffidavit!.url)}
+                            variant="outlined"
+                          >
+                            View Full Size
+                          </Button>
+                          <Button
+                            size="small"
+                            startIcon={<DownloadIcon />}
+                            component="a"
+                            href={toDownloadUrl(selectedRecord.tintAffidavit.url)}
+                            download="tint-affidavit"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            variant="outlined"
+                            color="secondary"
+                          >
+                            Download
+                          </Button>
+                        </Box>
                       </Box>
                       <Box
                         component="img"
-                        src={getUploadUrl(selectedRecord.tintAffidavit.url)}
+                        src={selectedRecord.tintAffidavit.url}
                         alt="Tint Affidavit"
+                        onClick={() => setLightboxUrl(selectedRecord.tintAffidavit!.url)}
                         sx={{
                           maxWidth: '100%',
-                          maxHeight: 300,
+                          maxHeight: 280,
                           objectFit: 'contain',
                           border: 1,
                           borderColor: 'divider',
                           borderRadius: 1,
                           display: 'block',
-                          mx: 'auto'
+                          mx: 'auto',
+                          cursor: 'zoom-in',
+                          transition: 'opacity 0.2s',
+                          '&:hover': { opacity: 0.85 },
                         }}
                         onError={(e) => {
-                          e.currentTarget.style.display = 'none';
+                          (e.currentTarget as HTMLImageElement).style.display = 'none';
                         }}
                       />
                     </Box>
@@ -872,8 +912,55 @@ const RecordDeckView: React.FC<RecordDeckViewProps> = ({ records, fleetAccounts,
             </Box>
           </Box>
         </Drawer>
+
+      {/* Lightbox — full-size image viewer */}
+      <Dialog
+        open={!!lightboxUrl}
+        onClose={() => setLightboxUrl(null)}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{ sx: { bgcolor: 'black', m: 1 } }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'white', pb: 1 }}>
+          <Typography variant="h6" sx={{ color: 'white' }}>Tint Affidavit</Typography>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {lightboxUrl && (
+              <Button
+                component="a"
+                href={toDownloadUrl(lightboxUrl)}
+                download="tint-affidavit"
+                target="_blank"
+                rel="noopener noreferrer"
+                startIcon={<DownloadIcon />}
+                variant="outlined"
+                sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)', '&:hover': { borderColor: 'white' } }}
+              >
+                Download
+              </Button>
+            )}
+            <IconButton onClick={() => setLightboxUrl(null)} sx={{ color: 'white' }}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300 }}>
+          {lightboxUrl && (
+            <Box
+              component="img"
+              src={lightboxUrl}
+              alt="Tint Affidavit Full Size"
+              sx={{
+                maxWidth: '100%',
+                maxHeight: '80vh',
+                objectFit: 'contain',
+                display: 'block',
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
       </Box>
     );
   };
 
-  export default RecordDeckView; 
+  export default RecordDeckView;
