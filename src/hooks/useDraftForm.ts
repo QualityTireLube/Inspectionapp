@@ -6,6 +6,7 @@ import {
   loadDraft,
   deleteDraft as fbDeleteDraft,
   submitDraftAsInspection,
+  subscribeToDraft,
   getDraftId,
 } from '../services/firebase/drafts';
 import { QuickCheckForm, ImageUpload } from '../types/quickCheck';
@@ -33,6 +34,11 @@ interface UseDraftFormProps {
   userName: string;
   initialForm: QuickCheckForm;
   onFormLoad?: (form: QuickCheckForm) => void;
+  /**
+   * Called whenever a *remote* save arrives (different device / session).
+   * The parent should merge this into its form state.
+   */
+  onRemoteUpdate?: (form: QuickCheckForm, remoteUserName: string) => void;
   autoSaveDelay?: number;
   namespace?: string;
   inspectionType?: string;
@@ -157,6 +163,7 @@ export const useDraftForm = ({
   userName,
   initialForm,
   onFormLoad,
+  onRemoteUpdate,
   autoSaveDelay = 3000,
   inspectionType,
 }: UseDraftFormProps): UseDraftFormReturn => {
@@ -178,6 +185,16 @@ export const useDraftForm = ({
   const savingRef = useRef(false);
   /** The version number we loaded or last successfully saved. */
   const versionRef = useRef<number>(0);
+  /**
+   * Timestamp of the last time we applied a remote update.
+   * Auto-save is suppressed for ~5 s after a remote update to prevent the
+   * save → subscription → save echo loop.
+   */
+  const lastRemoteUpdateRef = useRef<number>(0);
+  /** Stable ref to the onRemoteUpdate callback so the subscription effect
+   *  doesn't need to re-run when the parent re-renders. */
+  const onRemoteUpdateRef = useRef(onRemoteUpdate);
+  useEffect(() => { onRemoteUpdateRef.current = onRemoteUpdate; }, [onRemoteUpdate]);
 
   const iType = (inspectionType || 'quick_check') as 'quick_check' | 'no_check' | 'vsi';
 
@@ -200,6 +217,8 @@ export const useDraftForm = ({
 
   const updateDraft = useCallback(async (form: QuickCheckForm): Promise<void> => {
     if (!userId || savingRef.current) return;
+    // Skip auto-save for ~5 s after a remote update to break the echo loop.
+    if (Date.now() - lastRemoteUpdateRef.current < 5000) return;
     savingRef.current = true;
     setIsAutoSaving(true);
     setState(prev => ({ ...prev, status: 'updating', error: null }));
@@ -348,6 +367,34 @@ export const useDraftForm = ({
       if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
     };
   }, []);
+
+  // ── Live collaboration: subscribe to remote draft changes ──────────────────
+  // Once the draft is initialized, open a real-time listener. Whenever a save
+  // arrives whose version is higher than ours (i.e. it was written by another
+  // session), apply it to the form and record the timestamp so the echo-guard
+  // in updateDraft suppresses the next auto-save cycle.
+  useEffect(() => {
+    if (!userId || !state.isInitialized) return;
+
+    const unsub = subscribeToDraft(userId, iType, (remoteDraft) => {
+      if (!remoteDraft) return;
+      const remoteVersion: number = (remoteDraft as any).version ?? 0;
+      // Only apply if this is genuinely from a *different* session
+      if (remoteVersion <= versionRef.current) return;
+      // Don't clobber if we are in the middle of our own save
+      if (savingRef.current) return;
+
+      versionRef.current = remoteVersion;
+      lastRemoteUpdateRef.current = Date.now();
+
+      const remoteForm = convertToForm(remoteDraft.data);
+      const remoteUser = remoteDraft.userName ?? 'Another user';
+      onRemoteUpdateRef.current?.(remoteForm, remoteUser);
+    });
+
+    return unsub;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, iType, state.isInitialized]);
 
   return {
     draftId: state.draftId,

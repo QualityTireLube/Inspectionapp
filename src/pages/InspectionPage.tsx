@@ -130,6 +130,19 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
   } = useQuickCheckForm(userName);
   const navigate = useNavigate();
   const timerAPI = useRef<any | null>(null);
+
+  // Live-update banner: shows briefly when remote changes arrive
+  const [liveUpdateFrom, setLiveUpdateFrom] = useState<string | null>(null);
+  const liveUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleRemoteUpdate = useCallback((remoteForm: QuickCheckForm, remoteUser: string) => {
+    setForm(remoteForm);
+    // Show a transient banner for 4 s
+    setLiveUpdateFrom(remoteUser);
+    if (liveUpdateTimerRef.current) clearTimeout(liveUpdateTimerRef.current);
+    liveUpdateTimerRef.current = setTimeout(() => setLiveUpdateFrom(null), 4000);
+  }, [setForm]);
+
   // Initialize draft autosave system (mirrors Quick Check)
   const draft = useDraftForm({
     userId,
@@ -170,6 +183,7 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
       }
       return merged as QuickCheckForm;
     }),
+    onRemoteUpdate: handleRemoteUpdate,
     autoSaveDelay: 3000,
     namespace: schema.submitType === 'no_check' ? 'nocheck' : 
               schema.submitType === 'vsi' ? 'vsi' : 'quickcheck',
@@ -618,6 +632,24 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
   return (
     <>
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+
+      {/* Live collaboration banner */}
+      {liveUpdateFrom && (
+        <Box sx={{
+          position: 'fixed', top: 64, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 1400, pointerEvents: 'none',
+          bgcolor: 'success.main', color: 'white',
+          px: 2, py: 0.75, borderRadius: 2,
+          boxShadow: 3,
+          display: 'flex', alignItems: 'center', gap: 1,
+          fontSize: '0.85rem', fontWeight: 500,
+          animation: 'fadeSlideIn 0.3s ease',
+          '@keyframes fadeSlideIn': { from: { opacity: 0, transform: 'translateX(-50%) translateY(-8px)' }, to: { opacity: 1, transform: 'translateX(-50%) translateY(0)' } },
+        }}>
+          🔄 Live update from {liveUpdateFrom}
+        </Box>
+      )}
+
       <InspectionLayout
         title={schema.title}
         tabNames={tabNames}
