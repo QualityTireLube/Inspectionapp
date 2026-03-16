@@ -45,27 +45,13 @@ export class LabelPdfGenerator {
       // Handle canvas rotation for PDF output
       const canvasRotation = template.canvasRotation || 0;
       const isRotated = canvasRotation === 90 || canvasRotation === 270;
-      
-      // If canvas is rotated, create PDF in landscape orientation for viewing
-      let pdfPageWidth = pageWidth;
-      let pdfPageHeight = pageHeight;
-      if (isRotated) {
-        pdfPageWidth = pageHeight;  // Swap dimensions for landscape PDF
-        pdfPageHeight = pageWidth;
-      }
 
-      // Debug logging for DK1201
-      if (template.paperSize === 'DK1201') {
-        console.log('DK1201 PDF Generation:', {
-          paperConfig,
-          pageWidth,
-          pageHeight,
-          pdfPageWidth,
-          pdfPageHeight,
-          canvasRotation,
-          isRotated
-        });
-      }
+      // Always generate PDF in portrait orientation to match the physical label tape.
+      // For rotated-canvas templates (canvasRotation=90), field coordinates are
+      // transformed from the landscape editor canvas to portrait canvas space.
+      // This prevents Brother QL and similar label printers from rotating the content.
+      const pdfPageWidth = pageWidth;
+      const pdfPageHeight = pageHeight;
 
       // Generate the requested number of copies
       for (let copy = 0; copy < copies; copy++) {
@@ -76,40 +62,42 @@ export class LabelPdfGenerator {
           const value = this.getFieldValue(field, labelData);
           if (!value) continue;
 
-          // Calculate position (convert from screen pixels to PDF points)
-          // Use consistent canvas dimensions like the live preview, accounting for rotation
-          // This must match the LabelEditor canvas calculation exactly
-          const baseCanvasWidth = 400; // Reverted back to 400 from 300
+          // Canvas dimensions used in the editor (must match LabelEditor exactly)
+          const baseCanvasWidth = 400;
           const baseCanvasHeight = Math.round((paperConfig.height / paperConfig.width) * baseCanvasWidth);
-          
-          let canvasWidth, canvasHeight;
-          if (isRotated) {
-            // Swap dimensions for rotated canvas (matches LabelEditor isLandscape logic)
-            canvasWidth = baseCanvasHeight;   // Tall dimension becomes width
-            canvasHeight = baseCanvasWidth;   // Short dimension becomes height
-          } else {
-            // Normal canvas dimensions
-            canvasWidth = baseCanvasWidth;
-            canvasHeight = baseCanvasHeight;
-          }
-          
-          const scaleX = pdfPageWidth / canvasWidth;
-          const scaleY = pdfPageHeight / canvasHeight;
 
-          // Debug logging for DK1201 field positioning
-          if (template.paperSize === 'DK1201' && copy === 0 && field === template.fields[0]) {
-            console.log('DK1201 Canvas & Scale:', {
-              baseCanvasWidth,
-              baseCanvasHeight,
-              canvasWidth,
-              canvasHeight,
-              scaleX,
-              scaleY,
-              pdfPageWidth,
-              pdfPageHeight
-            });
+          // For a canvasRotation=90 template the editor shows the canvas landscape:
+          //   editorCanvasWidth  = baseCanvasHeight  (the long dimension, e.g. 1241px = 90mm)
+          //   editorCanvasHeight = baseCanvasWidth   (the short dimension, e.g. 400px  = 29mm)
+          // Field positions (lx, ly) are stored in that landscape coordinate space.
+          //
+          // To generate a portrait PDF we apply the inverse rotation:
+          //   portraitX = ly          (landscape y-axis → portrait x-axis)
+          //   portraitY = lx          (landscape x-axis → portrait y-axis)
+          // Scaling then maps portrait canvas → portrait PDF points.
+          let fieldPdfX: number;
+          let fieldPdfY: number;
+          let scaleX: number;
+          let scaleY: number;
+
+          if (isRotated) {
+            const editorCanvasWidth  = baseCanvasHeight; // long dim (90mm side)
+            const editorCanvasHeight = baseCanvasWidth;  // short dim (29mm side)
+
+            // portrait_x = landscape_y,  portrait_y = landscape_x
+            scaleX = pdfPageWidth  / editorCanvasHeight; // short dim → portrait width
+            scaleY = pdfPageHeight / editorCanvasWidth;  // long  dim → portrait height
+
+            fieldPdfX = field.position.y * scaleX;
+            // PDF y-origin is bottom-left; portrait_y = landscape x → flip for PDF
+            fieldPdfY = pdfPageHeight - (field.position.x * scaleY);
+          } else {
+            scaleX = pdfPageWidth  / baseCanvasWidth;
+            scaleY = pdfPageHeight / baseCanvasHeight;
+            fieldPdfX = field.position.x * scaleX;
+            fieldPdfY = pdfPageHeight - (field.position.y * scaleY);
           }
-          
+
           // Select font based on field properties
           const selectedFont = field.fontFamily?.includes('bold') || field.fontFamily?.includes('Bold') 
             ? boldFont 
@@ -117,13 +105,14 @@ export class LabelPdfGenerator {
           
           const fontSize = field.fontSize || 10;
           
+          // Offset for font descender (PDF draws from baseline)
+          fieldPdfY -= fontSize;
+
           // Calculate text width for alignment
           const textWidth = selectedFont.widthOfTextAtSize(value, fontSize);
           
-          // Calculate base position
-          let x = field.position.x * scaleX;
-          
           // Adjust x position based on text alignment
+          let x = fieldPdfX;
           switch (field.textAlign) {
             case 'center':
               x = x - (textWidth / 2);
@@ -133,26 +122,20 @@ export class LabelPdfGenerator {
               break;
             case 'left':
             default:
-              // x remains as is for left alignment
               break;
           }
-          
-          // PDF coordinates are bottom-left origin, so we need to flip Y
-          const y = pdfPageHeight - (field.position.y * scaleY) - fontSize;
 
-          // Handle text rotation
+          // Handle text rotation (per-field rotation, independent of canvas rotation)
           const rotation = field.rotation || 0;
-          let drawOptions: any = {
+          const drawOptions: any = {
             x,
-            y,
+            y: fieldPdfY,
             size: fontSize,
             font: selectedFont,
             color: this.parseColor(field.color || '#000000'),
           };
 
-          // Add rotation if specified
           if (rotation !== 0) {
-            // Use pdf-lib's degrees() function for proper rotation
             drawOptions.rotate = degrees(rotation);
           }
 
