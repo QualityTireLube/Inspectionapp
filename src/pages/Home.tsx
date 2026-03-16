@@ -59,6 +59,7 @@ import {
   Warning as WarningIcon,
 } from '@mui/icons-material';
 import { archiveInspection, deleteInspection } from '../services/firebase/inspections';
+import { getUploadUrl } from '../services/api';
 import { decodeVinCached } from '../services/vinDecoder';
 import { getUserSettings } from '../services/firebase/users';
 // Legacy stubs — replaced by Firestore realtime data
@@ -2356,9 +2357,10 @@ const Home: React.FC = () => {
   };
 
   const handleCardClick = (quickCheck: QuickCheck) => {
-    // For in-progress checks, navigate to the Quick Check form to continue editing
-    if (quickCheck.status === 'in_progress') {
-      navigate(`/quick-check?draftId=${quickCheck.id}`);
+    if (quickCheck.status === 'draft' || quickCheck.status === 'in_progress') {
+      const iType = quickCheck.data?.inspection_type || 'quick_check';
+      const route = iType === 'vsi' ? '/vsi' : iType === 'no_check' ? '/no-check' : '/quick-check';
+      navigate(route);
     } else {
       navigate(`/quick-check/${quickCheck.id}`);
     }
