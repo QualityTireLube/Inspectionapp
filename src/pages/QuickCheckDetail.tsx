@@ -31,6 +31,7 @@ import { LocalGasStation as OilIcon, Archive as ArchiveIcon, Info as InfoIcon, E
 import { getInspectionById, archiveInspection } from '../services/firebase/inspections';
 import { onSnapshot, doc } from 'firebase/firestore';
 import { db } from '../services/firebase/config';
+import { getUploadUrl } from '../services/api';
 
 function toDownloadUrl(url: string): string {
   if (!url) return url;

@@ -81,7 +81,7 @@ function App() {
                 <Route path="/history" element={<ProtectedRoute pageId="archivedQuickCheck"><Layout><ErrorBoundary><History /></ErrorBoundary></Layout></ProtectedRoute>} />
                 <Route path="/quick-check-records" element={<ProtectedRoute pageId="quickCheckRecords"><Layout><QuickCheckRecords /></Layout></ProtectedRoute>} />
                 {/* Detail views are always accessible to any authenticated user */}
-                <Route path="/quick-check/:id" element={<ProtectedRoute><Layout><QuickCheckDetail /></Layout></ProtectedRoute>} />
+                <Route path="/quick-check/:id" element={<ProtectedRoute><Layout><ErrorBoundary><QuickCheckDetail /></ErrorBoundary></Layout></ProtectedRoute>} />
                 <Route path="/quick-check-drafts" element={<ProtectedRoute pageId="quickCheckDrafts"><Layout><QuickCheckDrafts /></Layout></ProtectedRoute>} />
                 {/* Profile is always accessible */}
                 <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
