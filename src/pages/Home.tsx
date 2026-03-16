@@ -59,6 +59,7 @@ import {
   Warning as WarningIcon,
 } from '@mui/icons-material';
 import { archiveInspection, deleteInspection } from '../services/firebase/inspections';
+import { deleteDraftById } from '../services/firebase/drafts';
 import { getUploadUrl } from '../services/api';
 import { decodeVinCached } from '../services/vinDecoder';
 import { getUserSettings } from '../services/firebase/users';
@@ -2328,7 +2329,13 @@ const Home: React.FC = () => {
       setDeletingId(id);
       const item = [...inProgressChecks, ...submittedChecks].find(c => c.id === id);
       const fid = item?.firestoreId ?? String(id);
-      await deleteQuickCheck(fid);
+      if (item?.status === 'draft' || item?.status === 'in_progress') {
+        // In-progress inspections live in the 'drafts' collection
+        await deleteDraftById(fid);
+      } else {
+        // Submitted / archived inspections live in the 'inspections' collection
+        await deleteQuickCheck(fid);
+      }
     } catch (err: any) {
       setError('Failed to delete inspection');
     } finally {

@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   saveDraft,
+  saveDraftSafe,
   loadDraft,
   deleteDraft as fbDeleteDraft,
   submitDraftAsInspection,
@@ -175,6 +176,8 @@ export const useDraftForm = ({
   const autosaveDisabledRef = useRef(false);
   const initializationLockRef = useRef(false);
   const savingRef = useRef(false);
+  /** The version number we loaded or last successfully saved. */
+  const versionRef = useRef<number>(0);
 
   const iType = (inspectionType || 'quick_check') as 'quick_check' | 'no_check' | 'vsi';
 
@@ -183,7 +186,8 @@ export const useDraftForm = ({
     setState(prev => ({ ...prev, status: 'creating', error: null }));
     try {
       const prepared = prepareFormForSave({ ...form, inspection_type: iType }, userName);
-      await saveDraft(userId, userName, iType, prepared as QuickCheckForm);
+      const newVersion = await saveDraft(userId, userName, iType, prepared as QuickCheckForm);
+      versionRef.current = newVersion;
       const draftId = getDraftId(userId, iType);
       setState(prev => ({ ...prev, draftId, status: 'idle', lastSave: new Date() }));
       return draftId;
@@ -201,15 +205,19 @@ export const useDraftForm = ({
     setState(prev => ({ ...prev, status: 'updating', error: null }));
     try {
       const prepared = prepareFormForSave({ ...form, inspection_type: iType }, userName);
-      await saveDraft(userId, userName, iType, prepared as QuickCheckForm);
+      const result = await saveDraftSafe(userId, userName, iType, prepared as QuickCheckForm, versionRef.current);
+      versionRef.current = result.version;
       setState(prev => ({ ...prev, status: 'idle', lastSave: new Date() }));
+      if (result.conflictUser) {
+        showError(`⚠️ Conflict: ${result.conflictUser} also saved this draft. Your changes were kept — reload to see theirs.`);
+      }
     } catch {
       setState(prev => ({ ...prev, status: 'error', error: 'Failed to auto-save' }));
     } finally {
       setIsAutoSaving(false);
       savingRef.current = false;
     }
-  }, [userId, userName, iType]);
+  }, [userId, userName, iType, showError]);
 
   const loadForm = useCallback(async (_draftId: string): Promise<QuickCheckForm | null> => {
     if (!userId) return null;
@@ -221,6 +229,7 @@ export const useDraftForm = ({
         return null;
       }
       const formData = convertToForm(draft.data);
+      versionRef.current = draft.version ?? 0;
       const draftId = getDraftId(userId, iType);
       setState(prev => ({ ...prev, draftId, status: 'idle', lastSave: new Date() }));
       onFormLoad?.(formData);
@@ -289,6 +298,7 @@ export const useDraftForm = ({
           formData.vin = vinFromUrl.toUpperCase();
           if (mileageFromUrl) formData.mileage = mileageFromUrl;
         }
+        versionRef.current = existing.version ?? 0;
         const draftId = getDraftId(userId, iType);
         setState(prev => ({ ...prev, draftId, status: 'idle', lastSave: new Date(), isInitialized: true }));
         onFormLoad?.(formData);
@@ -302,7 +312,8 @@ export const useDraftForm = ({
           ...(mileageFromUrl ? { mileage: mileageFromUrl } : {}),
         };
         const prepared = prepareFormForSave(newForm, userName);
-        await saveDraft(userId, userName, iType, prepared as QuickCheckForm);
+        const newVersion = await saveDraft(userId, userName, iType, prepared as QuickCheckForm);
+        versionRef.current = newVersion;
         const draftId = getDraftId(userId, iType);
         setState(prev => ({ ...prev, draftId, status: 'idle', lastSave: new Date(), isInitialized: true }));
       }
