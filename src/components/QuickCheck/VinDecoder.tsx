@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { acquireCamera, releaseCamera } from '../../utils/cameraLock';
 import { 
   Box, 
@@ -16,7 +16,13 @@ import {
   InputAdornment,
   LinearProgress
 } from '@mui/material';
-import { Info as InfoIcon, QrCodeScanner as QrIcon, CameraAlt as CameraAltIcon } from '@mui/icons-material';
+import {
+  Info as InfoIcon,
+  QrCodeScanner as QrIcon,
+  CameraAlt as CameraAltIcon,
+  Close as CloseIcon,
+  PhotoLibrary
+} from '@mui/icons-material';
 import { useVinDecoder } from '../../hooks/useVinDecoder';
 import { extractVinFromImage } from '../../services/vinOcr';
 
@@ -37,12 +43,19 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [ocrProgress, setOcrProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  // ── QR / Barcode scanner state ────────────────────────────────────────────
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const qrVideoRef = useRef<HTMLVideoElement>(null);
   const qrAnimFrameRef = useRef<number>(0);
+
+  // ── In-browser OCR camera state ───────────────────────────────────────────
+  const [ocrCameraOpen, setOcrCameraOpen] = useState(false);
+  const ocrVideoRef = useRef<HTMLVideoElement>(null);
+  const ocrTrackRef = useRef<MediaStreamTrack | null>(null);
+  const ocrPendingStreamRef = useRef<MediaStream | null>(null);
   
-  React.useEffect(() => {
+  useEffect(() => {
     if (vin) {
       vinDecoder.decodeVin(vin);
     }
@@ -50,9 +63,29 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
 
   const vehicleInfo = vinDecoder.getVehicleInfo();
 
-  // ── QR / Barcode scanner using native BarcodeDetector or fallback ────────
+  // ── Shared helper: run OCR on a file ──────────────────────────────────────
+  const runOcr = useCallback(async (file: File) => {
+    try {
+      setIsProcessing(true);
+      setOcrProgress(0);
+      setError(null);
+
+      const result = await extractVinFromImage(file, (pct) => setOcrProgress(pct));
+
+      if (result.success && result.vin) {
+        const syntheticEvent = { target: { name: 'vin', value: result.vin } } as React.ChangeEvent<HTMLInputElement>;
+        onVinChange(syntheticEvent);
+      } else {
+        setError(result.message || 'Could not extract VIN from image. Try a clearer, closer photo.');
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [onVinChange]);
+
+  // ═══ QR / Barcode scanner ═══════════════════════════════════════════════
   const handleQrCodeClick = () => {
-    if (!acquireCamera('vin-decoder')) return;
+    if (!acquireCamera('vin-qr')) return;
     setQrScannerOpen(true);
     setError(null);
   };
@@ -64,10 +97,10 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
       qrVideoRef.current.srcObject = null;
     }
     setQrScannerOpen(false);
-    releaseCamera('vin-decoder');
+    releaseCamera('vin-qr');
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!qrScannerOpen) return;
     let cancelled = false;
 
@@ -100,8 +133,7 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
               for (const b of barcodes) {
                 const raw = (b.rawValue || '').toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
                 if (raw.length === 17) {
-                  const syntheticEvent = { target: { name: 'vin', value: raw } } as React.ChangeEvent<HTMLInputElement>;
-                  onVinChange(syntheticEvent);
+                  onVinChange({ target: { name: 'vin', value: raw } } as React.ChangeEvent<HTMLInputElement>);
                   stopQrScanner();
                   return;
                 }
@@ -120,14 +152,13 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
                 const result = new MultiFormatReader().decode(bitmap);
                 const raw = result.getText().toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
                 if (raw.length === 17) {
-                  const syntheticEvent = { target: { name: 'vin', value: raw } } as React.ChangeEvent<HTMLInputElement>;
-                  onVinChange(syntheticEvent);
+                  onVinChange({ target: { name: 'vin', value: raw } } as React.ChangeEvent<HTMLInputElement>);
                   stopQrScanner();
                   return;
                 }
-              } catch { /* no barcode in frame, keep scanning */ }
+              } catch { /* no barcode in frame */ }
             }
-          } catch { /* frame decode error */ }
+          } catch { /* frame error */ }
 
           if (!cancelled) qrAnimFrameRef.current = requestAnimationFrame(scan);
         };
@@ -141,53 +172,96 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
     return () => { cancelled = true; stopQrScanner(); };
   }, [qrScannerOpen, onVinChange, stopQrScanner]);
 
-  // ── OCR from photo (Tesseract.js — runs in browser) ─────────────────────
-  const handleCameraClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
+  // ═══ In-browser OCR camera ══════════════════════════════════════════════
+  const openOcrCamera = () => {
+    if (!acquireCamera('vin-ocr-camera')) return;
+    setOcrCameraOpen(true);
+    setError(null);
+  };
+
+  const stopOcrCamera = useCallback(() => {
+    if (ocrTrackRef.current) { ocrTrackRef.current.stop(); ocrTrackRef.current = null; }
+    if (ocrPendingStreamRef.current) { ocrPendingStreamRef.current.getTracks().forEach(t => t.stop()); ocrPendingStreamRef.current = null; }
+    if (ocrVideoRef.current) ocrVideoRef.current.srcObject = null;
+  }, []);
+
+  const closeOcrCamera = useCallback(() => {
+    stopOcrCamera();
+    setOcrCameraOpen(false);
+    releaseCamera('vin-ocr-camera');
+  }, [stopOcrCamera]);
+
+  useEffect(() => {
+    if (!ocrCameraOpen) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 } } });
+        if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
+        ocrTrackRef.current = stream.getVideoTracks()[0];
+        if (ocrVideoRef.current) {
+          ocrVideoRef.current.srcObject = stream;
+          ocrVideoRef.current.play().catch(() => {});
+        } else {
+          ocrPendingStreamRef.current = stream;
+        }
+      } catch {
+        if (!cancelled) {
+          closeOcrCamera();
+          openGalleryForOcr();
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [ocrCameraOpen, closeOcrCamera]);
+
+  const ocrVideoRefCallback = (el: HTMLVideoElement | null) => {
+    (ocrVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+    if (el && ocrPendingStreamRef.current) {
+      el.srcObject = ocrPendingStreamRef.current;
+      el.play().catch(() => {});
+      ocrPendingStreamRef.current = null;
     }
   };
 
-  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const captureForOcr = () => {
+    if (!ocrVideoRef.current) return;
+    const video = ocrVideoRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0);
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      const file = new File([blob], `vin-photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      closeOcrCamera();
+      await runOcr(file);
+    }, 'image/jpeg', 0.92);
+  };
 
-    try {
-      setIsProcessing(true);
-      setOcrProgress(0);
-      setError(null);
+  const openGalleryForOcr = () => {
+    closeOcrCamera();
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,image/heic,image/heif,.heic,.heif';
+    input.style.display = 'none';
+    document.body.appendChild(input);
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) await runOcr(file);
+      if (document.body.contains(input)) document.body.removeChild(input);
+    };
+    input.click();
+    setTimeout(() => { if (document.body.contains(input)) document.body.removeChild(input); }, 60000);
+  };
 
-      const result = await extractVinFromImage(file, (pct) => setOcrProgress(pct));
-
-      if (result.success && result.vin) {
-        const syntheticEvent = {
-          target: { name: 'vin', value: result.vin }
-        } as React.ChangeEvent<HTMLInputElement>;
-        onVinChange(syntheticEvent);
-      } else {
-        setError(result.message || 'Could not extract VIN from image. Try a clearer, closer photo.');
-      }
-    } finally {
-      setIsProcessing(false);
-      // Reset the file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  }, [onVinChange]);
+  useEffect(() => { return () => stopOcrCamera(); }, [stopOcrCamera]);
 
   return (
     <Box>
-      {/* Hidden file input for camera */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileSelect}
-        style={{ display: 'none' }}
-      />
-
-      {/* VIN Input Field with Camera Button */}
+      {/* VIN Input Field with Camera Buttons */}
       <TextField
         fullWidth
         label="VIN"
@@ -202,7 +276,7 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
           endAdornment: (
             <InputAdornment position="end">
               <IconButton
-                onClick={handleCameraClick}
+                onClick={openOcrCamera}
                 disabled={isProcessing}
                 edge="end"
                 aria-label="Take photo of VIN"
@@ -255,11 +329,58 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
         </Alert>
       )}
 
-      {/* QR / Barcode Scanner Dialog */}
+      {/* ── In-browser OCR camera dialog ─────────────────────────────────────── */}
+      <Dialog open={ocrCameraOpen} onClose={closeOcrCamera} maxWidth="sm" fullWidth PaperProps={{ sx: { bgcolor: 'black' } }}>
+        <DialogContent sx={{ p: 0, bgcolor: 'black', position: 'relative' }}>
+          <video
+            ref={ocrVideoRefCallback}
+            playsInline
+            autoPlay
+            muted
+            style={{ width: '100%', minHeight: 300, objectFit: 'cover', display: 'block' }}
+          />
+          {/* Guide overlay */}
+          <Box sx={{
+            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            width: '85%', height: 48, border: '2px solid rgba(0,200,255,0.7)', borderRadius: 1,
+            pointerEvents: 'none'
+          }} />
+          <Typography variant="caption" sx={{
+            position: 'absolute', top: 8, left: 0, right: 0, textAlign: 'center',
+            color: 'white', textShadow: '0 1px 3px black'
+          }}>
+            Line up the VIN in the blue box, then tap capture
+          </Typography>
+          <Box sx={{
+            position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
+            display: 'flex', gap: 2, alignItems: 'center'
+          }}>
+            <IconButton onClick={closeOcrCamera} sx={{ bgcolor: 'rgba(255,255,255,0.9)', color: 'black', '&:hover': { bgcolor: 'white' } }}>
+              <CloseIcon />
+            </IconButton>
+            <Button
+              variant="contained"
+              onClick={captureForOcr}
+              sx={{
+                bgcolor: 'white', color: 'black', borderRadius: '50%',
+                width: 64, height: 64, minWidth: 64,
+                '&:hover': { bgcolor: 'grey.100' }
+              }}
+            >
+              <CameraAltIcon sx={{ fontSize: 28 }} />
+            </Button>
+            <IconButton onClick={openGalleryForOcr} sx={{ bgcolor: 'rgba(255,255,255,0.9)', color: 'black', '&:hover': { bgcolor: 'white' } }}>
+              <PhotoLibrary />
+            </IconButton>
+          </Box>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── QR / Barcode Scanner Dialog ──────────────────────────────────────── */}
       <Dialog open={qrScannerOpen} onClose={stopQrScanner} maxWidth="sm" fullWidth PaperProps={{ sx: { bgcolor: 'black' } }}>
         <DialogTitle sx={{ color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 0 }}>
           <Typography variant="h6" sx={{ color: 'white' }}>Scan VIN Barcode / QR</Typography>
-          <IconButton onClick={stopQrScanner} sx={{ color: 'white' }}><CameraAltIcon /></IconButton>
+          <IconButton onClick={stopQrScanner} sx={{ color: 'white' }}><CloseIcon /></IconButton>
         </DialogTitle>
         <DialogContent sx={{ p: 1 }}>
           <Box sx={{ position: 'relative' }}>
