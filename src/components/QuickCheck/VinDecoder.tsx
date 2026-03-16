@@ -42,6 +42,7 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
   const vinDecoder = useVinDecoder();
   const [isProcessing, setIsProcessing] = useState(false);
   const [ocrProgress, setOcrProgress] = useState(0);
+  const [ocrStatus, setOcrStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   // ── QR / Barcode scanner state ────────────────────────────────────────────
@@ -68,9 +69,16 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
     try {
       setIsProcessing(true);
       setOcrProgress(0);
+      setOcrStatus('Preprocessing image…');
       setError(null);
 
-      const result = await extractVinFromImage(file, (pct) => setOcrProgress(pct));
+      const result = await extractVinFromImage(file, (pct) => {
+        setOcrProgress(pct);
+        if (pct < 10) setOcrStatus('Preprocessing image…');
+        else if (pct < 80) setOcrStatus('Running OCR (multiple passes)…');
+        else if (pct < 95) setOcrStatus('Validating VIN check digit…');
+        else setOcrStatus('Confirming with NHTSA…');
+      });
 
       if (result.success && result.vin) {
         const syntheticEvent = { target: { name: 'vin', value: result.vin } } as React.ChangeEvent<HTMLInputElement>;
@@ -80,6 +88,7 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
       }
     } finally {
       setIsProcessing(false);
+      setOcrStatus('');
     }
   }, [onVinChange]);
 
@@ -317,7 +326,7 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
         <Box sx={{ mt: 1 }}>
           <LinearProgress variant="determinate" value={ocrProgress} sx={{ borderRadius: 1 }} />
           <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-            Scanning image for VIN... {ocrProgress}%
+            {ocrStatus || 'Scanning…'} {ocrProgress > 0 ? `${ocrProgress}%` : ''}
           </Typography>
         </Box>
       )}
