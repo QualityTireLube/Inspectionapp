@@ -27,8 +27,18 @@ import {
   AccordionDetails,
   Slider
 } from '@mui/material';
-import { LocalGasStation as OilIcon, Archive as ArchiveIcon, Info as InfoIcon, ExpandMore as ExpandMoreIcon, Close as CloseIcon, AccessTime as TimeIcon } from '@mui/icons-material';
+import { LocalGasStation as OilIcon, Archive as ArchiveIcon, Info as InfoIcon, ExpandMore as ExpandMoreIcon, Close as CloseIcon, AccessTime as TimeIcon, Download as DownloadIcon } from '@mui/icons-material';
 import { getInspectionById, archiveInspection } from '../services/firebase/inspections';
+import { onSnapshot, doc } from 'firebase/firestore';
+import { db } from '../services/firebase/config';
+
+function toDownloadUrl(url: string): string {
+  if (!url) return url;
+  if (url.includes('res.cloudinary.com') && url.includes('/upload/')) {
+    return url.replace('/upload/', '/upload/fl_attachment/');
+  }
+  return url;
+}
 import BrakePadSideView from '../components/BrakePadSideView';
 import BrakePadFrontAxleView from '../components/BrakePadFrontAxleView';
 import TireRepairLayout from '../components/TireRepairLayout';
@@ -100,31 +110,31 @@ const QuickCheckDetail: React.FC = () => {
 
   useEffect(() => {
     if (!id) return;
-    const fetchQuickCheck = async () => {
+    const docRef = doc(db, 'inspections', id);
+    const unsub = onSnapshot(docRef, async (snap) => {
       try {
-        const doc = await getInspectionById(id);
-        if (!doc) {
+        if (!snap.exists()) {
           setError('Inspection not found');
           setLoading(false);
           return;
         }
+        const inspDoc = { id: snap.id, ...snap.data() } as any;
 
-        // Map InspectionDocument to the legacy QuickCheck shape this component expects
         const response: QuickCheck = {
-          id: 0, // legacy numeric id — not used for navigation
-          user_name: doc.userName ?? '',
-          title: doc.data?.vin ?? '',
-          created_at: (doc.createdAt as any)?.toDate ? (doc.createdAt as any).toDate().toISOString() : '',
-          data: doc.data as any,
-          status: doc.status,
+          id: 0,
+          user_name: inspDoc.userName ?? '',
+          title: inspDoc.data?.vin ?? '',
+          created_at: inspDoc.createdAt?.toDate ? inspDoc.createdAt.toDate().toISOString() : '',
+          data: inspDoc.data as any,
+          status: inspDoc.status,
         };
 
         setQuickCheck(response);
         setLoading(false);
 
-        const vin = doc.data?.vin;
-        if (doc.data?.decoded_vin_data) {
-          setVehicleDetails(doc.data.decoded_vin_data);
+        const vin = inspDoc.data?.vin;
+        if (inspDoc.data?.decoded_vin_data) {
+          setVehicleDetails(inspDoc.data.decoded_vin_data);
           setVinDecodeError(null);
         } else if (vin && vin.length === 17) {
           setVinDecodeLoading(true);
@@ -132,7 +142,7 @@ const QuickCheckDetail: React.FC = () => {
             const vehicleData = await VinDecoderService.decodeVin(vin);
             setVehicleDetails(vehicleData);
             setVinDecodeError(null);
-          } catch (err) {
+          } catch {
             setVinDecodeError('Failed to decode VIN');
             setVehicleDetails(null);
           } finally {
@@ -143,9 +153,12 @@ const QuickCheckDetail: React.FC = () => {
         setError('Failed to load quick check details');
         setLoading(false);
       }
-    };
+    }, () => {
+      setError('Failed to load quick check details');
+      setLoading(false);
+    });
 
-    fetchQuickCheck();
+    return unsub;
   }, [id]);
 
   // Load oil types on component mount
@@ -3306,6 +3319,20 @@ const QuickCheckDetail: React.FC = () => {
               {slideshowImages[currentImageIndex]?.title || 'Image'} ({currentImageIndex + 1} of {slideshowImages.length})
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {slideshowImages[currentImageIndex]?.url && (
+                <Tooltip title="Download photo">
+                  <IconButton
+                    component="a"
+                    href={toDownloadUrl(slideshowImages[currentImageIndex].url)}
+                    download="inspection-photo"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{ color: 'white', '&:hover': { backgroundColor: 'rgba(255,255,255,0.15)' } }}
+                  >
+                    <DownloadIcon />
+                  </IconButton>
+                </Tooltip>
+              )}
               <Tooltip title={showSlideshowControls ? "Hide Controls (C)" : "Show Controls (C)"}>
                 <IconButton 
                   onClick={() => setShowSlideshowControls(!showSlideshowControls)} 

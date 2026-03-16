@@ -5,7 +5,9 @@ import Grid from '../components/CustomGrid';
 import { DirectionsCar as CarIcon, PlayArrow as PlayArrowIcon, Schedule as ScheduleIcon, Person as PersonIcon, Speed as SpeedIcon, Label as LabelIcon } from '@mui/icons-material';
 import LabelCreator from '../components/LabelCreator';
 import { useUser } from '../contexts/UserContext';
-import { getDraftInspections, getSubmittedInspections, InspectionDocument } from '../services/firebase/inspections';
+import { InspectionDocument } from '../services/firebase/inspections';
+import { db } from '../services/firebase/config';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 
 function mapDoc(d: InspectionDocument) {
   const ts = (d.createdAt as any)?.toDate ? (d.createdAt as any).toDate().toISOString() : '';
@@ -30,8 +32,7 @@ function mapDoc(d: InspectionDocument) {
   };
 }
 
-const getInProgressQuickChecks = async () => (await getDraftInspections()).map(mapDoc);
-const getSubmittedQuickChecks = async () => (await getSubmittedInspections()).map(mapDoc);
+const INSPECTIONS = 'inspections';
 import { GeneratedLabel } from '../types/labels';
 import { LocationAwareStorageService } from '../services/locationAwareStorage';
 import { GeneratedLabelStorageService } from '../services/generatedLabelStorage';
@@ -92,28 +93,44 @@ const TechDashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    let mounted = true;
-    async function load() {
-      try {
-        setLoading(true);
-        const [inProg, submitted] = await Promise.all([
-          getInProgressQuickChecks(),
-          getSubmittedQuickChecks()
-        ]);
-        if (!mounted) return;
-        setInProgressChecks(inProg || []);
-        setSubmittedChecks(submitted || []);
-        if (!mounted) return;
-        await reloadLabels();
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-    load();
-    return () => {
-      mounted = false;
+    setLoading(true);
+    let loadedDrafts = false;
+    let loadedSubmitted = false;
+
+    const trySetLoaded = () => {
+      if (loadedDrafts && loadedSubmitted) setLoading(false);
     };
-  }, [effectiveLocation?.id]);
+
+    const draftQ = query(
+      collection(db, INSPECTIONS),
+      where('status', '==', 'draft'),
+      orderBy('updatedAt', 'desc')
+    );
+    const submittedQ = query(
+      collection(db, INSPECTIONS),
+      where('status', '==', 'submitted'),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubDrafts = onSnapshot(draftQ, (snap) => {
+      setInProgressChecks(snap.docs.map(d => mapDoc({ id: d.id, ...d.data() } as InspectionDocument)));
+      loadedDrafts = true;
+      trySetLoaded();
+    }, () => { loadedDrafts = true; trySetLoaded(); });
+
+    const unsubSubmitted = onSnapshot(submittedQ, (snap) => {
+      setSubmittedChecks(snap.docs.map(d => mapDoc({ id: d.id, ...d.data() } as InspectionDocument)));
+      loadedSubmitted = true;
+      trySetLoaded();
+    }, () => { loadedSubmitted = true; trySetLoaded(); });
+
+    reloadLabels();
+
+    return () => {
+      unsubDrafts();
+      unsubSubmitted();
+    };
+  }, [effectiveLocation?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Container maxWidth="lg">

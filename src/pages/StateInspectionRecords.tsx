@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { db } from '../services/firebase/config';
 import {
   Container,
   Typography,
@@ -69,6 +71,24 @@ const StateInspectionRecords: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Live-update watcher: when any record is added or modified, reload the current page
+  const isFirstSnapshotRef = useRef(true);
+  useEffect(() => {
+    const q = query(
+      collection(db, 'state_inspection_records'),
+      orderBy('updatedAt', 'desc'),
+      limit(1)
+    );
+    const unsub = onSnapshot(q, () => {
+      if (isFirstSnapshotRef.current) {
+        isFirstSnapshotRef.current = false;
+        return;
+      }
+      loadData();
+    });
+    return unsub;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadData = useCallback(async (page = 1, pageSize = 50) => {
     if (isLoadingRef.current) return;
