@@ -1,5 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import {
+  Box,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  CircularProgress,
+  Alert,
+  IconButton,
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+} from '@mui/material';
+import { Delete as DeleteIcon } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+import {
   getDraftInspections,
   deleteInspection,
   deleteAllDraftInspections,
@@ -9,41 +31,18 @@ import {
 const getDraftQuickChecks = async () => {
   const docs = await getDraftInspections();
   return docs.map((d: InspectionDocument) => ({
-    id: d.id,
+    id: d.id as string,
     user_email: '',
     user_name: d.userName ?? '',
     title: d.data?.vin ?? '',
     created_at: (d.createdAt as any)?.toDate ? (d.createdAt as any).toDate().toISOString() : '',
-    firestoreId: d.id,
   }));
 };
 const deleteQuickCheck = (id: any) => deleteInspection(String(id));
 const deleteAllDrafts = deleteAllDraftInspections;
-import { 
-  Box, 
-  Typography, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  Paper, 
-  CircularProgress, 
-  Alert,
-  IconButton,
-  Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button
-} from '@mui/material';
-import { Delete as DeleteIcon } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
 
 interface QuickCheckDraft {
-  id: number;
+  id: string;
   user_email: string;
   user_name: string;
   title: string;
@@ -54,8 +53,8 @@ const QuickCheckDrafts: React.FC = () => {
   const [drafts, setDrafts] = useState<QuickCheckDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [confirmDeleteDialog, setConfirmDeleteDialog] = useState<{ open: boolean; draftId: number | null }>({ open: false, draftId: null });
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteDialog, setConfirmDeleteDialog] = useState<{ open: boolean; draftId: string | null }>({ open: false, draftId: null });
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [confirmBulkDeleteDialog, setConfirmBulkDeleteDialog] = useState(false);
   const navigate = useNavigate();
@@ -64,17 +63,10 @@ const QuickCheckDrafts: React.FC = () => {
     const fetchDrafts = async () => {
       setLoading(true);
       try {
-        // Debug: Check if token exists
-        const token = localStorage.getItem('token');
-        console.log('Token exists:', !!token);
-        console.log('Token value:', token ? token.substring(0, 20) + '...' : 'none');
-        
         const data = await getDraftQuickChecks();
         setDrafts(data);
       } catch (err: any) {
-        console.error('Full error:', err);
-        console.error('Error response:', err.response);
-        setError('Failed to fetch drafts');
+        setError(err?.message || 'Failed to fetch drafts');
       } finally {
         setLoading(false);
       }
@@ -82,20 +74,19 @@ const QuickCheckDrafts: React.FC = () => {
     fetchDrafts();
   }, []);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     try {
       setDeletingId(id);
       await deleteQuickCheck(id);
-      // Remove the deleted draft from the local state
       setDrafts(drafts.filter(draft => draft.id !== id));
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to delete draft');
+      setError(err?.message || 'Failed to delete draft');
     } finally {
       setDeletingId(null);
     }
   };
 
-  const handleDeleteClick = (draftId: number) => {
+  const handleDeleteClick = (draftId: string) => {
     setConfirmDeleteDialog({ open: true, draftId });
   };
 
@@ -111,17 +102,16 @@ const QuickCheckDrafts: React.FC = () => {
   };
 
   const handleBulkDelete = async () => {
+    const countBefore = drafts.length;
     try {
       setBulkDeleting(true);
-      const result = await deleteAllDrafts();
-      // Refresh the drafts list
+      await deleteAllDrafts();
       const data = await getDraftQuickChecks();
       setDrafts(data);
       setConfirmBulkDeleteDialog(false);
-      // Show success message (you could add a snackbar here)
-      alert(`Successfully deleted ${result.deletedCount} drafts`);
+      alert(`Successfully deleted ${countBefore} drafts`);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to delete all drafts');
+      setError(err?.message || 'Failed to delete all drafts');
     } finally {
       setBulkDeleting(false);
     }
@@ -135,15 +125,8 @@ const QuickCheckDrafts: React.FC = () => {
     setConfirmBulkDeleteDialog(false);
   };
 
-  // Handler to continue a draft
-  const handleContinueDraft = async (draftId: number) => {
-    try {
-      // Navigate to QuickCheck page with draftId URL parameter
-      // This will trigger the URL parameter loading logic in QuickCheck form
-      navigate(`/quick-check?draftId=${draftId}`);
-    } catch (err) {
-      alert('Failed to load draft data.');
-    }
+  const handleContinueDraft = (draftId: string) => {
+    navigate(`/quick-check?draftId=${draftId}`);
   };
 
   return (

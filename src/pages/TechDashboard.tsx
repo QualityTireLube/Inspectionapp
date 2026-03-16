@@ -78,7 +78,8 @@ const TechDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showLabelCreator, setShowLabelCreator] = useState(false);
 
-  const effectiveLocation = user?.role === 'Admin' ? userLocation : userLocation;
+  // Admins see all locations (null = all); other roles are scoped to their assigned location
+  const effectiveLocation = (user?.role === 'admin' || user?.role === 'manager') ? null : userLocation;
 
   const reloadLabels = async () => {
     if (effectiveLocation?.id) {
@@ -260,15 +261,15 @@ const TechDashboard: React.FC = () => {
                 </Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
                   {/* Quick Check group */}
-                  {submittedChecks.some(q => (q?.data?.inspection_type || 'quick_check') !== 'no_check') && (
+                  {submittedChecks.some(q => (q?.data?.inspection_type || 'quick_check') === 'quick_check') && (
                     <>
                       <Typography variant="subtitle1" sx={{ mt: 1 }}>Quick Check</Typography>
                       {submittedChecks
-                        .filter(q => (q?.data?.inspection_type || 'quick_check') !== 'no_check')
+                        .filter(q => (q?.data?.inspection_type || 'quick_check') === 'quick_check')
                         .slice(0, 6)
                         .map((qc) => (
                           <Card key={qc.id} variant="outlined">
-                            <CardActionArea onClick={() => navigate(`/quick-check/${qc.id}`)}>
+                            <CardActionArea onClick={() => navigate(`/quick-check/${qc.firestoreId || qc.id}`)}>
                               <CardContent>
                                 <Typography variant="subtitle1" noWrap sx={{ mb: 0.5 }}>
                                   {qc.data.vehicle_details || `${qc.data.year ?? ''} ${qc.data.make ?? ''} ${qc.data.model ?? ''}`.trim() || 'Vehicle'}
@@ -296,16 +297,16 @@ const TechDashboard: React.FC = () => {
                     </>
                   )}
 
-                  {/* No Check group */}
-                  {submittedChecks.some(q => q?.data?.inspection_type === 'no_check') && (
+                  {/* VSI group */}
+                  {submittedChecks.some(q => q?.data?.inspection_type === 'vsi') && (
                     <>
-                      <Typography variant="subtitle1" sx={{ mt: 2 }}>No Check</Typography>
+                      <Typography variant="subtitle1" sx={{ mt: 2 }}>VSI</Typography>
                       {submittedChecks
-                        .filter(q => q?.data?.inspection_type === 'no_check')
+                        .filter(q => q?.data?.inspection_type === 'vsi')
                         .slice(0, 6)
                         .map((qc) => (
                           <Card key={qc.id} variant="outlined">
-                            <CardActionArea onClick={() => navigate(`/quick-check/${qc.id}`)}>
+                            <CardActionArea onClick={() => navigate(`/quick-check/${qc.firestoreId || qc.id}`)}>
                               <CardContent>
                                 <Typography variant="subtitle1" noWrap sx={{ mb: 0.5 }}>
                                   {qc.data.vehicle_details || `${qc.data.year ?? ''} ${qc.data.make ?? ''} ${qc.data.model ?? ''}`.trim() || 'Vehicle'}
@@ -319,12 +320,37 @@ const TechDashboard: React.FC = () => {
                                     <ScheduleIcon sx={{ fontSize: 18 }} />
                                     <Typography variant="body2">{formatDate(qc.created_at)}</Typography>
                                   </Box>
-                                  {typeof qc.data.technician_duration === 'number' && (
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                      <ScheduleIcon sx={{ fontSize: 18 }} />
-                                      <Typography variant="body2">{formatDuration(qc.data.technician_duration)}</Typography>
-                                    </Box>
-                                  )}
+                                </Box>
+                              </CardContent>
+                            </CardActionArea>
+                          </Card>
+                        ))}
+                    </>
+                  )}
+
+                  {/* No Check group */}
+                  {submittedChecks.some(q => q?.data?.inspection_type === 'no_check') && (
+                    <>
+                      <Typography variant="subtitle1" sx={{ mt: 2 }}>No Check</Typography>
+                      {submittedChecks
+                        .filter(q => q?.data?.inspection_type === 'no_check')
+                        .slice(0, 6)
+                        .map((qc) => (
+                          <Card key={qc.id} variant="outlined">
+                            <CardActionArea onClick={() => navigate(`/quick-check/${qc.firestoreId || qc.id}`)}>
+                              <CardContent>
+                                <Typography variant="subtitle1" noWrap sx={{ mb: 0.5 }}>
+                                  {qc.data.vehicle_details || `${qc.data.year ?? ''} ${qc.data.make ?? ''} ${qc.data.model ?? ''}`.trim() || 'Vehicle'}
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, color: 'text.secondary' }}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <CarIcon sx={{ fontSize: 18 }} />
+                                    <Typography variant="body2">VIN: {qc.data.vin || 'N/A'}</Typography>
+                                  </Box>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <ScheduleIcon sx={{ fontSize: 18 }} />
+                                    <Typography variant="body2">{formatDate(qc.created_at)}</Typography>
+                                  </Box>
                                 </Box>
                               </CardContent>
                             </CardActionArea>

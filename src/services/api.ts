@@ -839,12 +839,22 @@ export const decodeVinNHTSA = async (vin: string): Promise<any> => {
   if (!vin || vin.length !== 17) {
     throw new Error('VIN must be 17 characters');
   }
-  
-  // Use backend proxy endpoint instead of direct NHTSA API call
-  const response = await axiosInstance.get(`/vin/decode/${vin}`);
-  
-  // The backend already processes the results to truncate decimal values
-  return response.data;
+
+  const cleanVin = vin.replace(/\s/g, '').toUpperCase();
+  const res = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/decodevinvaluesextended/${cleanVin}?format=json`);
+  if (!res.ok) throw new Error(`NHTSA VIN decode failed: ${res.status}`);
+  const json = await res.json();
+  const results = json.Results?.[0] ?? {};
+  // Truncate excessive decimal precision (e.g. "1.9999" → "2")
+  const truncate = (v: string) => {
+    if (!v || v === 'Not Applicable' || v === '0') return v;
+    const m = v.match(/^\d+\.\d+/);
+    if (!m) return v;
+    const num = parseFloat(m[0]);
+    const dec = (m[0].split('.')[1] || '').replace(/0+$/, '');
+    return dec.length === 0 ? String(Math.round(num)) : num.toFixed(dec.length);
+  };
+  return Object.fromEntries(Object.entries(results).map(([k, v]) => [k, truncate(String(v ?? ''))]));
 };
 
 /**

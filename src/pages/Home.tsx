@@ -87,8 +87,8 @@ import { useWebSocket, useQuickCheckUpdates, useStaticStickerUpdates, useGenerat
 import LocationIndicator from '../components/LocationIndicator';
 
 interface QuickCheck {
-  id: number;
-  firestoreId?: string; // Firestore document ID for Firebase operations
+  id: string;
+  firestoreId?: string;
   user_name: string;
   title: string;
   created_at: string;
@@ -1093,9 +1093,7 @@ const Home: React.FC = () => {
     const ts = doc.createdAt?.toDate ? doc.createdAt.toDate() : new Date();
     const upd = doc.updatedAt?.toDate ? doc.updatedAt.toDate() : ts;
     return {
-      id: parseInt(doc.id?.replace(/\D/g, '').slice(0, 9) || '0', 10) || Math.abs(
-        doc.id?.split('').reduce((a: number, c: string) => (a * 31 + c.charCodeAt(0)) & 0x7fffffff, 0) ?? 0
-      ),
+      id: doc.id,
       firestoreId: doc.id,
       user_name: doc.userName ?? '',
       title: doc.data?.vin ?? '',

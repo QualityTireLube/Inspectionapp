@@ -77,6 +77,7 @@ const ImageHandling: React.FC<ImageHandlingProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoTrackRef = useRef<MediaStreamTrack | null>(null);
   const tirePhotoInputRef = useRef<HTMLInputElement | null>(null);
+  const capturedFileRef = useRef<File | null>(null);
 
   // Safari detection and capability testing
   useEffect(() => {
@@ -305,7 +306,6 @@ const ImageHandling: React.FC<ImageHandlingProps> = ({
   };
 
   const cleanupCamera = () => {
-    // Stop video stream
     if (videoTrackRef.current) {
       videoTrackRef.current.stop();
       videoTrackRef.current = null;
@@ -313,7 +313,7 @@ const ImageHandling: React.FC<ImageHandlingProps> = ({
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
-    
+    capturedFileRef.current = null;
     setScannerOpen(false);
     setCapturedImage(null);
     setCameraError(null);
@@ -338,31 +338,28 @@ const ImageHandling: React.FC<ImageHandlingProps> = ({
   };
 
   const captureImage = () => {
-    if (videoRef.current) {
-      const canvas = document.createElement('canvas');
-      const video = videoRef.current;
-      
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(video, 0, 0);
-        
-        // Convert canvas to blob and create file
-        canvas.toBlob(async (blob) => {
-          if (blob) {
-            const file = new File([blob], `camera-capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
-            await handleImageUpload(file, cameraType);
-            cleanupCamera();
-          }
-        }, 'image/jpeg', 0.9);
-      }
-    }
+    if (!videoRef.current) return;
+    const canvas = document.createElement('canvas');
+    const video = videoRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const file = new File([blob], `camera-capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      capturedFileRef.current = file;
+      // Show preview — don't upload yet; wait for "Use Photo"
+      setCapturedImage(URL.createObjectURL(blob));
+    }, 'image/jpeg', 0.9);
   };
 
   const handleCapturedImage = async () => {
-    // Handle captured image logic would go here
+    const file = capturedFileRef.current;
+    if (file) {
+      await handleImageUpload(file, cameraType);
+    }
     cleanupCamera();
   };
 
@@ -633,7 +630,7 @@ const ImageHandling: React.FC<ImageHandlingProps> = ({
                 >
                   <Button
                     variant="contained"
-                    onClick={() => setCapturedImage(null)}
+                    onClick={() => { capturedFileRef.current = null; setCapturedImage(null); }}
                     sx={{
                       bgcolor: 'white',
                       color: 'black',

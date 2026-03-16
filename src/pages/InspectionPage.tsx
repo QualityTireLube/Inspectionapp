@@ -9,7 +9,7 @@ import { PullingIntoBayTab } from '../components/QuickCheck/tabs/PullingIntoBayT
 import { UnderhoodTab } from '../components/QuickCheck/tabs/UnderhoodTab';
 import { TiresBrakesTab } from '../components/QuickCheck/tabs/TiresBrakesTab';
 import { SuspensionTab } from '../components/QuickCheck/tabs/SuspensionTab';
-import { getQuickCheckHistory, deleteQuickCheck } from '../services/api';
+import { getSubmittedInspections, deleteInspection } from '../services/firebase/inspections';
 import { useQuickCheckForm } from '../hooks/useQuickCheckForm';
 import { useDraftForm } from '../hooks/useDraftForm';
 import { QuickCheckForm, ImageUpload as QCImageUpload } from '../types/quickCheck';
@@ -101,9 +101,9 @@ const DynamicTabContent: React.FC<DynamicTabContentProps> = ({
 };
 
 const InspectionPage: React.FC<Props> = ({ schema }) => {
-  const { userLocation } = useUser();
-  const userName = localStorage.getItem('userName') || '';
-  const userId = localStorage.getItem('userId') || '';
+  const { userLocation, user, firebaseUid } = useUser();
+  const userName = user?.name || '';
+  const userId = firebaseUid || '';
   // Read URL params early so we can feed them into initial draft state
   const urlParams = new URLSearchParams(window.location.search);
   const vinFromUrl = (urlParams.get('vin') || '').toUpperCase();
@@ -141,7 +141,7 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
       mileage: mileageFromUrl || form.mileage
     } as QuickCheckForm,
     onFormLoad: (loadedForm) => setForm(loadedForm),
-    autoSaveDelay: 100, // Fast debounce since timer controls frequency
+    autoSaveDelay: 8000,
     namespace: schema.submitType === 'no_check' ? 'nocheck' : 
               schema.submitType === 'vsi' ? 'vsi' : 'quickcheck',
     inspectionType: schema.submitType
@@ -153,40 +153,22 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
     formRef.current = form;
   }, [form]);
 
-  // Timer-based auto-save every 1 second (independent of form changes)
+  // Timer-based auto-save every 8 seconds (independent of form changes)
   useEffect(() => {
-    console.log('🚀 Setting up auto-save timer for VSI');
-    
     const autoSaveInterval = setInterval(() => {
-      // Only auto-save if page is visible and not already saving
       if (isPageVisible && draft.status !== 'updating' && draft.status !== 'creating') {
-        console.log('⏰ Timer-based auto-save triggered - Draft Status:', draft.status, 'Draft ID:', draft.draftId);
         draft.scheduleAutoSave(formRef.current);
-      } else if (!isPageVisible) {
-        console.log('👁️ Skipping auto-save - page not visible');
-      } else {
-        console.log('⏸️ Skipping auto-save - operation in progress:', draft.status);
       }
-    }, 1000); // Save every 1 second
+    }, 8000);
 
-    return () => {
-      console.log('🛑 Clearing auto-save timer');
-      clearInterval(autoSaveInterval);
-    };
-  }, [draft.scheduleAutoSave, isPageVisible]); // Include page visibility
+    return () => clearInterval(autoSaveInterval);
+  }, [draft.scheduleAutoSave, isPageVisible]);
 
   // Track page visibility for auto-save optimization
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      const visible = !document.hidden;
-      console.log('👁️ Page visibility changed:', visible ? 'visible' : 'hidden');
-      setIsPageVisible(visible);
-    };
-
+    const handleVisibilityChange = () => setIsPageVisible(!document.hidden);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
   // Initialize defaults based on user/location and submit type
@@ -273,16 +255,14 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
           }));
         };
 
-        const updatedForm = {
+        setForm(prev => ({
           ...prev,
           ...testData,
-          // Preserve critical system values
           inspection_type: schema.submitType,
           location: userLocation?.name || '',
           location_id: userLocation?.id || '',
           vin: vinFromUrl || testData.vin || prev.vin,
           mileage: mileageFromUrl || testData.mileage || prev.mileage,
-          // Convert photo arrays to QCImageUpload format
           dash_lights_photos: restoreImages(testData.dash_lights_photos || []),
           mileage_photos: restoreImages(testData.mileage_photos || []),
           windshield_condition_photos: restoreImages(testData.windshield_condition_photos || []),
@@ -291,17 +271,8 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
           washer_fluid_photo: restoreImages(testData.washer_fluid_photo || []),
           undercarriage_photos: restoreImages(testData.undercarriage_photos || []),
           tire_repair_status_photos: restoreImages(testData.tire_repair_status_photos || []),
-          tpms_type_photos: restoreImages(testData.tpms_type_photos || [])
-        } as QuickCheckForm;
-
-        console.log('🎯 About to update form with test data:', {
-          testDataFields: Object.keys(testData),
-          testDataSample: Object.entries(testData).slice(0, 5),
-          finalFormSample: Object.entries(updatedForm).slice(0, 10),
-          formFieldCount: Object.keys(updatedForm).length
-        });
-
-        setForm(updatedForm);
+          tpms_type_photos: restoreImages(testData.tpms_type_photos || []),
+        } as QuickCheckForm));
         
         setTestDataLoaded(true);
         console.log('✅ Test data successfully loaded and integrated with form');
@@ -335,12 +306,7 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
     } catch {}
   }, [form, draftKey, schema.submitType]);
 
-  // Track page visibility for timer debug
-  useEffect(() => {
-    const handleVisibility = () => setIsPageVisible(!document.hidden);
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, []);
+  // (visibilitychange listener is registered above with the auto-save timer)
 
   // Load debug panel setting (reuse Quick Check setting)
   useEffect(() => {
@@ -517,7 +483,7 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
 
   const openHistory = async () => {
     try {
-      const hist = await getQuickCheckHistory();
+      const hist = await getSubmittedInspections(50);
       setInspectionHistory(hist);
       setShowHistory(true);
     } catch {
@@ -530,11 +496,10 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
     setShowDetailDialog(true);
   };
 
-  const handleDeleteInspection = async (inspectionId: number) => {
+  const handleDeleteInspection = async (inspectionId: string) => {
     try {
-      await deleteQuickCheck(inspectionId);
-      const updated = await getQuickCheckHistory();
-      setInspectionHistory(updated);
+      await deleteInspection(inspectionId);
+      setInspectionHistory(prev => prev.filter((i: any) => i.id !== inspectionId));
     } catch {
       setError('Failed to delete');
     }
@@ -663,8 +628,47 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
                     onTireDateChange={handleTireDateChange}
                     onTireCommentToggle={handleTireCommentToggle}
                     onTireStatusChange={handleTireStatusChange}
-                    onTireImageUpload={async () => {}}
-                    onTireImageDelete={() => {}}
+                    onTireImageUpload={async (position: string, imageType: 'not_repairable' | 'tire_size_brand' | 'repairable_spot', file: File) => {
+                      try {
+                        const { uploadImageToServer } = await import('../services/imageUpload');
+                        const result = await uploadImageToServer(file);
+                        if (!result.success) {
+                          setError(result.error || 'Failed to upload tire photo');
+                          return;
+                        }
+                        const newImage: QCImageUpload = { file, progress: 100, url: result.serverUrl || URL.createObjectURL(file) };
+                        setForm(prev => {
+                          const existing = (prev.tire_repair_images as any)?.[position]?.[imageType] || [];
+                          return {
+                            ...prev,
+                            tire_repair_images: {
+                              ...(prev.tire_repair_images as any),
+                              [position]: {
+                                ...((prev.tire_repair_images as any)?.[position] || {}),
+                                [imageType]: [...existing, newImage],
+                              },
+                            },
+                          } as QuickCheckForm;
+                        });
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : 'Failed to upload tire photo');
+                      }
+                    }}
+                    onTireImageDelete={(position: string, imageType: string, index: number) => {
+                      setForm(prev => {
+                        const existing: QCImageUpload[] = (prev.tire_repair_images as any)?.[position]?.[imageType] || [];
+                        return {
+                          ...prev,
+                          tire_repair_images: {
+                            ...(prev.tire_repair_images as any),
+                            [position]: {
+                              ...((prev.tire_repair_images as any)?.[position] || {}),
+                              [imageType]: existing.filter((_, i) => i !== index),
+                            },
+                          },
+                        } as QuickCheckForm;
+                      });
+                    }}
                     onTPMSStatusChange={handleTPMSStatusChange}
                     onTPMSSensorTypeChange={() => {}}
                     onFieldNotesChange={onFieldNotesChange}
@@ -717,11 +721,11 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
           {inspectionHistory.length > 0 ? (
             <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
               {inspectionHistory.map((inspection: any, index: number) => (
-                <Paper key={index} sx={{ p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Paper key={inspection.id ?? index} sx={{ p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Box>
-                    <Typography variant="subtitle1">VIN: {inspection.vin || inspection.data?.vin}</Typography>
-                    <Typography variant="body2" color="text.secondary">Date: {inspection.date || inspection.data?.date}</Typography>
-                    <Typography variant="body2" color="text.secondary">User: {inspection.user || inspection.data?.user}</Typography>
+                    <Typography variant="subtitle1">VIN: {inspection.data?.vin || 'N/A'}</Typography>
+                    <Typography variant="body2" color="text.secondary">Date: {inspection.data?.date || ''}</Typography>
+                    <Typography variant="body2" color="text.secondary">User: {inspection.userName || inspection.data?.user || ''}</Typography>
                   </Box>
                   <Stack direction="row" spacing={1}>
                     <Button variant="outlined" onClick={() => handleViewInspection(inspection)}>View</Button>

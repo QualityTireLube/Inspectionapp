@@ -28,7 +28,7 @@ import {
   Slider
 } from '@mui/material';
 import { LocalGasStation as OilIcon, Archive as ArchiveIcon, Info as InfoIcon, ExpandMore as ExpandMoreIcon, Close as CloseIcon, AccessTime as TimeIcon } from '@mui/icons-material';
-import api, { QuickCheckData, decodeVinCached, archiveQuickCheck, getUploadUrl } from '../services/api';
+import { getInspectionById, archiveInspection } from '../services/firebase/inspections';
 import BrakePadSideView from '../components/BrakePadSideView';
 import BrakePadFrontAxleView from '../components/BrakePadFrontAxleView';
 import TireRepairLayout from '../components/TireRepairLayout';
@@ -99,60 +99,47 @@ const QuickCheckDetail: React.FC = () => {
   const [showSlideshowControls, setShowSlideshowControls] = useState(false);
 
   useEffect(() => {
+    if (!id) return;
     const fetchQuickCheck = async () => {
       try {
-        const response = await api.quickChecks.getById(Number(id));
-        console.log('Fetched quick check data:', response);
-        console.log('Quick check data structure:', response.data);
-        console.log('Tire repair images data:', response.data.tire_repair_images);
-        console.log('Tire repair status:', response.data.tire_repair_status);
-        
-        // Simple debug: Log what we got vs what we expect
-        if (response.data.tire_repair_images) {
-          console.log('✅ TIRE REPAIR IMAGES FOUND!');
-          console.log('Number of positions:', Object.keys(response.data.tire_repair_images).length);
-          
-          // Type-safe iteration over known tire positions
-          const tirePositions = ['driver_front', 'passenger_front', 'driver_rear_outer', 'driver_rear_inner', 'passenger_rear_inner', 'passenger_rear_outer', 'spare'] as const;
-          tirePositions.forEach(position => {
-            const images = response.data.tire_repair_images?.[position];
-            if (images) {
-              console.log(`Position ${position}:`, {
-                not_repairable: images.not_repairable?.length || 0,
-                tire_size_brand: images.tire_size_brand?.length || 0,
-                repairable_spot: images.repairable_spot?.length || 0
-              });
-            }
-          });
-        } else {
-          console.log('❌ NO TIRE REPAIR IMAGES IN RESPONSE');
-          console.log('Available data keys:', Object.keys(response.data));
+        const doc = await getInspectionById(id);
+        if (!doc) {
+          setError('Inspection not found');
+          setLoading(false);
+          return;
         }
-        
+
+        // Map InspectionDocument to the legacy QuickCheck shape this component expects
+        const response: QuickCheck = {
+          id: 0, // legacy numeric id — not used for navigation
+          user_name: doc.userName ?? '',
+          title: doc.data?.vin ?? '',
+          created_at: (doc.createdAt as any)?.toDate ? (doc.createdAt as any).toDate().toISOString() : '',
+          data: doc.data as any,
+          status: doc.status,
+        };
+
         setQuickCheck(response);
         setLoading(false);
-        
-        // Use saved decoded VIN data if available, otherwise decode VIN if needed
-        if (response.data.decoded_vin_data) {
-          console.log('✅ Using saved decoded VIN data');
-          setVehicleDetails(response.data.decoded_vin_data);
+
+        const vin = doc.data?.vin;
+        if (doc.data?.decoded_vin_data) {
+          setVehicleDetails(doc.data.decoded_vin_data);
           setVinDecodeError(null);
-        } else if (response.data.vin && response.data.vin.length === 17) {
-          console.log('⚠️ No saved decoded VIN data, decoding VIN via API (fallback)');
+        } else if (vin && vin.length === 17) {
           setVinDecodeLoading(true);
           try {
-            const vehicleData = await decodeVinCached(response.data.vin);
+            const vehicleData = await VinDecoderService.decodeVin(vin);
             setVehicleDetails(vehicleData);
             setVinDecodeError(null);
           } catch (err) {
-            console.error('VIN decode error:', err);
             setVinDecodeError('Failed to decode VIN');
             setVehicleDetails(null);
           } finally {
             setVinDecodeLoading(false);
           }
         }
-      } catch (err) {
+      } catch {
         setError('Failed to load quick check details');
         setLoading(false);
       }
@@ -256,16 +243,15 @@ const QuickCheckDetail: React.FC = () => {
   };
 
   const handleConfirmArchive = async () => {
-    if (!quickCheck) return;
-    
+    if (!id) return;
+
     try {
       setArchiving(true);
-      await archiveQuickCheck(quickCheck.id);
+      await archiveInspection(id);
       setConfirmArchiveDialog(false);
-      // Navigate back to the home page or previous page after successful archive
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to archive quick check');
+      setError(err?.message || 'Failed to archive inspection');
     } finally {
       setArchiving(false);
     }

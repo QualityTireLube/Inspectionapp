@@ -21,12 +21,11 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { getSubmittedInspections, getArchivedInspections, deleteInspection, InspectionDocument } from '../services/firebase/inspections';
+import { getSubmittedInspections, getDraftInspections, deleteInspection, InspectionDocument } from '../services/firebase/inspections';
 import PrintButton from '../components/PrintButton';
 
 const mapDoc = (d: InspectionDocument) => ({
-  id: d.id,
-  firestoreId: d.id,
+  id: d.id as string,
   user_email: '',
   user_name: d.userName ?? '',
   title: d.data?.vin ?? '',
@@ -35,7 +34,7 @@ const mapDoc = (d: InspectionDocument) => ({
   data: d.data ?? {},
 });
 
-const getActiveQuickChecks = async () => (await getSubmittedInspections()).map(mapDoc);
+const getActiveQuickChecks = async () => (await getDraftInspections()).map(mapDoc);
 const getSubmittedQuickChecks = async () => (await getSubmittedInspections()).map(mapDoc);
 const quickCheckApi = { delete: (id: any) => deleteInspection(String(id)) };
 const api = { delete: (id: any) => deleteInspection(String(id)) } as any;
@@ -128,7 +127,7 @@ interface QuickCheckData {
 }
 
 interface QuickCheck {
-  id: number;
+  id: string;
   user_name: string;
   created_at: string;
   data: QuickCheckData;
@@ -172,17 +171,17 @@ const QuickCheckRecords: React.FC = () => {
     setPage(0);
   };
 
-  const handleViewRecord = (id: number) => {
+  const handleViewRecord = (id: string) => {
     navigate(`/quick-check/${id}`);
   };
 
-  const handleDeleteRecord = async (id: number) => {
+  const handleDeleteRecord = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this record?')) return;
     try {
       await quickCheckApi.delete(id);
       setInProgressRecords((prev) => prev.filter((record) => record.id !== id));
       setSubmittedRecords((prev) => prev.filter((record) => record.id !== id));
-    } catch (err) {
+    } catch {
       alert('Failed to delete record.');
     }
   };
@@ -206,12 +205,12 @@ const QuickCheckRecords: React.FC = () => {
 
     // Check tire tread conditions
     const tireTreadConditions = [
-      record.data.tire_tread.driver_front,
-      record.data.tire_tread.passenger_front,
-      record.data.tire_tread.driver_rear,
-      record.data.tire_tread.passenger_rear,
-      record.data.tire_tread.spare
-    ].flatMap(tire => [
+      record.data.tire_tread?.driver_front,
+      record.data.tire_tread?.passenger_front,
+      record.data.tire_tread?.driver_rear,
+      record.data.tire_tread?.passenger_rear,
+      record.data.tire_tread?.spare
+    ].filter(Boolean).flatMap(tire => [
       tire.inner_edge_condition,
       tire.inner_condition,
       tire.center_condition,
@@ -289,7 +288,7 @@ const QuickCheckRecords: React.FC = () => {
                     <TableCell>{record.data.date}</TableCell>
                     <TableCell><Chip label="In Progress" color="warning" /></TableCell>
                     <TableCell>
-                      <IconButton onClick={() => navigate(`/quick-check/${record.id}`)}><VisibilityIcon /></IconButton>
+                      <IconButton onClick={() => navigate(`/quick-check?draftId=${record.id}`)}><VisibilityIcon /></IconButton>
                       <IconButton onClick={() => handleDeleteRecord(record.id)}><DeleteIcon /></IconButton>
                     </TableCell>
                   </TableRow>
@@ -322,7 +321,7 @@ const QuickCheckRecords: React.FC = () => {
                     <TableCell>{record.data.date}</TableCell>
                     <TableCell><Chip label="Submitted" color="success" /></TableCell>
                     <TableCell>
-                      <IconButton onClick={() => navigate(`/quick-check/${record.id}`)}><VisibilityIcon /></IconButton>
+                      <IconButton onClick={() => handleViewRecord(record.id)}><VisibilityIcon /></IconButton>
                       <IconButton onClick={() => handleDeleteRecord(record.id)}><DeleteIcon /></IconButton>
                     </TableCell>
                   </TableRow>
