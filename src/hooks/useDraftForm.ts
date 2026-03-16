@@ -45,104 +45,96 @@ interface UseDraftFormReturn extends DraftFormState, DraftFormActions {
   disableAutoSave: () => void;
 }
 
+const IMAGE_ARRAY_KEYS = new Set([
+  'dash_lights_photos', 'mileage_photos', 'windshield_condition_photos',
+  'wiper_blades_photos', 'washer_squirters_photos', 'vin_photos',
+  'state_inspection_status_photos', 'state_inspection_date_code_photos',
+  'battery_date_code_photos', 'tire_repair_status_photos', 'tpms_type_photos',
+  'front_brake_pads_photos', 'rear_brake_pads_photos', 'tpms_placard',
+  'washer_fluid_photo', 'engine_air_filter_photo', 'battery_photos',
+  'battery_positive_terminal_photos', 'battery_negative_terminal_photos',
+  'tpms_tool_photo', 'front_brakes', 'rear_brakes', 'undercarriage_photos',
+  'check_engine_mounts_photos', 'exterior_lights_photos', 'drive_belt_photos',
+  'engine_mounts_photos', 'brake_fluid_photos', 'powersteering_fluid_photos',
+  'coolant_photos', 'radiator_end_caps_photos', 'cooling_hoses_photos',
+  'front_shock_struts_photos', 'rear_shock_struts_photos', 'leaks_photos',
+  'left_control_arm_bushings_photos', 'left_ball_joints_photos',
+  'right_control_arm_bushings_photos', 'right_ball_joints_photos',
+  'sway_bar_photos', 'suspension_type_photos',
+]);
+
+const filterImages = (images: ImageUpload[] | undefined | null) =>
+  (Array.isArray(images) ? images : [])
+    .filter(img => img?.url && !img.url.startsWith('blob:'))
+    .map(img => ({ url: img.url! }));
+
 /** Strip File objects and blob: URLs before saving to Firestore. */
 const prepareFormForSave = (form: QuickCheckForm, userName: string): any => {
-  const filterImages = (images: ImageUpload[] | undefined | null) =>
-    (Array.isArray(images) ? images : [])
-      .filter(img => img?.url && !img.url.startsWith('blob:'))
-      .map(img => ({ url: img.url! }));
-
-  return {
+  const result: any = {
     ...form,
     lastSaved: new Date().toISOString(),
     savedBy: userName,
-    dash_lights_photos: filterImages(form.dash_lights_photos),
-    mileage_photos: filterImages(form.mileage_photos),
-    windshield_condition_photos: filterImages(form.windshield_condition_photos),
-    wiper_blades_photos: filterImages(form.wiper_blades_photos),
-    washer_squirters_photos: filterImages(form.washer_squirters_photos),
-    vin_photos: filterImages(form.vin_photos),
-    state_inspection_status_photos: filterImages(form.state_inspection_status_photos),
-    state_inspection_date_code_photos: filterImages(form.state_inspection_date_code_photos),
-    battery_date_code_photos: filterImages(form.battery_date_code_photos),
-    tire_repair_status_photos: filterImages(form.tire_repair_status_photos),
-    tpms_type_photos: filterImages(form.tpms_type_photos),
-    front_brake_pads_photos: filterImages(form.front_brake_pads_photos),
-    rear_brake_pads_photos: filterImages(form.rear_brake_pads_photos),
-    tpms_placard: filterImages(form.tpms_placard),
-    washer_fluid_photo: filterImages(form.washer_fluid_photo),
-    engine_air_filter_photo: filterImages(form.engine_air_filter_photo),
-    battery_photos: filterImages(form.battery_photos),
-    battery_positive_terminal_photos: filterImages(form.battery_positive_terminal_photos),
-    battery_negative_terminal_photos: filterImages(form.battery_negative_terminal_photos),
-    tpms_tool_photo: filterImages(form.tpms_tool_photo),
-    front_brakes: filterImages(form.front_brakes),
-    rear_brakes: filterImages(form.rear_brakes),
-    tire_photos: (form.tire_photos || []).map(tp => ({
-      type: tp.type,
-      photos: filterImages(tp.photos),
-    })),
-    tire_repair_images: Object.keys(form.tire_repair_images || {}).reduce((acc, pos) => {
-      const posImages = (form.tire_repair_images as any)?.[pos] || {};
-      acc[pos] = {
-        not_repairable: filterImages(posImages.not_repairable || []),
-        tire_size_brand: filterImages(posImages.tire_size_brand || []),
-        repairable_spot: filterImages(posImages.repairable_spot || []),
-      };
-      return acc;
-    }, {} as any),
   };
+
+  for (const key of Object.keys(result)) {
+    if (IMAGE_ARRAY_KEYS.has(key)) {
+      result[key] = filterImages(result[key]);
+    }
+  }
+
+  result.tire_photos = (form.tire_photos || []).map(tp => ({
+    type: tp.type,
+    photos: filterImages(tp.photos),
+  }));
+
+  result.tire_repair_images = Object.keys(form.tire_repair_images || {}).reduce((acc, pos) => {
+    const posImages = (form.tire_repair_images as any)?.[pos] || {};
+    acc[pos] = {
+      not_repairable: filterImages(posImages.not_repairable || []),
+      tire_size_brand: filterImages(posImages.tire_size_brand || []),
+      repairable_spot: filterImages(posImages.repairable_spot || []),
+    };
+    return acc;
+  }, {} as any);
+
+  return result;
+};
+
+const toImageUploads = (items: any[]): ImageUpload[] => {
+  if (!Array.isArray(items)) return [];
+  return items.map((item, idx) => ({
+    file: new File([], `image_${idx}.jpg`, { type: 'image/jpeg' }),
+    progress: 100,
+    url: typeof item === 'string' ? item : item?.url,
+  }));
 };
 
 /** Restore image arrays from plain URL objects back to ImageUpload shape. */
 const convertToForm = (data: any): QuickCheckForm => {
-  const toImageUploads = (items: any[]): ImageUpload[] => {
-    if (!Array.isArray(items)) return [];
-    return items.map((item, idx) => ({
-      file: new File([], `image_${idx}.jpg`, { type: 'image/jpeg' }),
-      progress: 100,
-      url: typeof item === 'string' ? item : item?.url,
-    }));
-  };
+  const result: any = { ...data };
 
-  return {
-    ...data,
-    dash_lights_photos: toImageUploads(data.dash_lights_photos),
-    mileage_photos: toImageUploads(data.mileage_photos),
-    windshield_condition_photos: toImageUploads(data.windshield_condition_photos),
-    wiper_blades_photos: toImageUploads(data.wiper_blades_photos),
-    washer_squirters_photos: toImageUploads(data.washer_squirters_photos),
-    vin_photos: toImageUploads(data.vin_photos),
-    state_inspection_status_photos: toImageUploads(data.state_inspection_status_photos),
-    state_inspection_date_code_photos: toImageUploads(data.state_inspection_date_code_photos),
-    battery_date_code_photos: toImageUploads(data.battery_date_code_photos),
-    tire_repair_status_photos: toImageUploads(data.tire_repair_status_photos),
-    tpms_type_photos: toImageUploads(data.tpms_type_photos),
-    front_brake_pads_photos: toImageUploads(data.front_brake_pads_photos),
-    rear_brake_pads_photos: toImageUploads(data.rear_brake_pads_photos),
-    tpms_placard: toImageUploads(data.tpms_placard),
-    washer_fluid_photo: toImageUploads(data.washer_fluid_photo),
-    engine_air_filter_photo: toImageUploads(data.engine_air_filter_photo),
-    battery_photos: toImageUploads(data.battery_photos),
-    battery_positive_terminal_photos: toImageUploads(data.battery_positive_terminal_photos),
-    battery_negative_terminal_photos: toImageUploads(data.battery_negative_terminal_photos),
-    tpms_tool_photo: toImageUploads(data.tpms_tool_photo),
-    front_brakes: toImageUploads(data.front_brakes),
-    rear_brakes: toImageUploads(data.rear_brakes),
-    tire_photos: (data.tire_photos || []).map((tp: any) => ({
-      type: tp.type,
-      photos: toImageUploads(tp.photos),
-    })),
-    tire_repair_images: Object.keys(data.tire_repair_images || {}).reduce((acc, pos) => {
-      const posImages = data.tire_repair_images[pos];
-      acc[pos] = {
-        not_repairable: toImageUploads(posImages?.not_repairable || []),
-        tire_size_brand: toImageUploads(posImages?.tire_size_brand || []),
-        repairable_spot: toImageUploads(posImages?.repairable_spot || []),
-      };
-      return acc;
-    }, {} as any),
-  };
+  for (const key of IMAGE_ARRAY_KEYS) {
+    if (key in result) {
+      result[key] = toImageUploads(result[key]);
+    }
+  }
+
+  result.tire_photos = (data.tire_photos || []).map((tp: any) => ({
+    type: tp.type,
+    photos: toImageUploads(tp.photos),
+  }));
+
+  result.tire_repair_images = Object.keys(data.tire_repair_images || {}).reduce((acc, pos) => {
+    const posImages = data.tire_repair_images[pos];
+    acc[pos] = {
+      not_repairable: toImageUploads(posImages?.not_repairable || []),
+      tire_size_brand: toImageUploads(posImages?.tire_size_brand || []),
+      repairable_spot: toImageUploads(posImages?.repairable_spot || []),
+    };
+    return acc;
+  }, {} as any);
+
+  return result as QuickCheckForm;
 };
 
 export const useDraftForm = ({

@@ -329,30 +329,60 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
     return () => window.removeEventListener('quickCheckSettingsChanged', handleSettingsChange as EventListener);
   }, []);
 
-  // Generic image handlers
+  // Generic image handlers — maps uploadType → form field name
+  const uploadTypeToField: Record<string, keyof QuickCheckForm> = {
+    dashLights: 'dash_lights_photos',
+    mileage: 'mileage_photos',
+    windshield_condition: 'windshield_condition_photos',
+    wiper_blades: 'wiper_blades_photos',
+    washer_squirters: 'washer_squirters_photos',
+    vin: 'vin_photos',
+    tpms_placard: 'tpms_placard',
+    state_inspection_status: 'state_inspection_status_photos',
+    state_inspection_date_code: 'state_inspection_date_code_photos',
+    battery_date_code: 'battery_date_code_photos',
+    washer_fluid: 'washer_fluid_photo',
+    engine_air_filter: 'engine_air_filter_photo',
+    battery: 'battery_photos',
+    battery_positive_terminal: 'battery_positive_terminal_photos',
+    battery_negative_terminal: 'battery_negative_terminal_photos',
+    tpms_tool: 'tpms_tool_photo',
+    front_brakes: 'front_brakes',
+    rear_brakes: 'rear_brakes',
+    undercarriage_photos: 'undercarriage_photos',
+    tire_repair_status: 'tire_repair_status_photos',
+    tpms_type: 'tpms_type_photos',
+    front_brake_pads: 'front_brake_pads_photos',
+    rear_brake_pads: 'rear_brake_pads_photos',
+    check_engine_mounts_photos: 'check_engine_mounts_photos',
+    exterior_lights_photos: 'exterior_lights_photos',
+    drive_belt_photos: 'drive_belt_photos',
+    engine_mounts_photos: 'engine_mounts_photos',
+    brake_fluid_photos: 'brake_fluid_photos',
+    powersteering_fluid_photos: 'powersteering_fluid_photos',
+    coolant_photos: 'coolant_photos',
+    radiator_end_caps_photos: 'radiator_end_caps_photos',
+    cooling_hoses_photos: 'cooling_hoses_photos',
+    front_shock_struts_photos: 'front_shock_struts_photos',
+    rear_shock_struts_photos: 'rear_shock_struts_photos',
+    leaks_photos: 'leaks_photos',
+    left_control_arm_bushings_photos: 'left_control_arm_bushings_photos',
+    left_ball_joints_photos: 'left_ball_joints_photos',
+    right_control_arm_bushings_photos: 'right_control_arm_bushings_photos',
+    right_ball_joints_photos: 'right_ball_joints_photos',
+    sway_bar_photos: 'sway_bar_photos',
+    suspension_type_photos: 'suspension_type_photos',
+  };
+
   const getPhotosArrayByType = (f: QuickCheckForm, type: string): QCImageUpload[] => {
-    const map: Record<string, keyof QuickCheckForm> = {
-      dashLights: 'dash_lights_photos',
-      mileage: 'mileage_photos',
-      windshield_condition: 'windshield_condition_photos',
-      tpms_placard: 'tpms_placard',
-      state_inspection_status: 'state_inspection_status_photos',
-      washer_fluid: 'washer_fluid_photo',
-      undercarriage_photos: 'undercarriage_photos',
-      tire_repair_status: 'tire_repair_status_photos',
-      tpms_type: 'tpms_type_photos',
-    };
-    const key = map[type];
+    const key = uploadTypeToField[type] || (type.endsWith('_photos') || type.endsWith('_photo') ? type as keyof QuickCheckForm : undefined);
     if (!key) return [];
     return (f as any)[key] || [];
   };
 
   const onImageUpload = async (file: File, type: string) => {
     try {
-      // Import the upload service
       const { uploadImageToServer } = await import('../services/imageUpload');
-      
-      // Upload to server and get result
       const uploadResult = await uploadImageToServer(file);
       
       if (!uploadResult.success) {
@@ -361,7 +391,6 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
         return;
       }
       
-      // Create image object with server URL
       const newImage: QCImageUpload = { 
         file, 
         progress: 100, 
@@ -369,14 +398,18 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
       };
       
       const existing = getPhotosArrayByType(form, type);
-      updatePhotoField(type as any, [...existing, newImage]);
+      const updatedPhotos = [...existing, newImage];
+      updatePhotoField(type as any, updatedPhotos);
       
-      console.log(`✅ Successfully uploaded ${file.name} to server:`, uploadResult.serverUrl);
+      // Immediately persist to Firestore so images are saved live
+      const fieldKey = uploadTypeToField[type] || type;
+      const updatedForm = { ...formRef.current, [fieldKey]: updatedPhotos };
+      formRef.current = updatedForm;
+      draft.scheduleAutoSave(updatedForm);
     } catch (error) {
       console.error('Upload error:', error);
       setError(error instanceof Error ? error.message : 'Upload failed');
       
-      // Fallback to local blob URL if upload fails
       const newImage: QCImageUpload = { file, progress: 100, url: URL.createObjectURL(file) };
       const existing = getPhotosArrayByType(form, type);
       updatePhotoField(type as any, [...existing, newImage]);
@@ -384,19 +417,8 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
   };
   const onImageClick = (_photos: QCImageUpload[], _photoType?: string) => {};
   const onDeleteImage = (photoType: string, index: number) => {
-    const key = {
-      dash_lights_photos: 'dash_lights_photos',
-      mileage_photos: 'mileage_photos',
-      windshield_condition_photos: 'windshield_condition_photos',
-      state_inspection_status_photos: 'state_inspection_status_photos',
-      washer_fluid_photo: 'washer_fluid_photo',
-      undercarriage_photos: 'undercarriage_photos',
-      tire_repair_status_photos: 'tire_repair_status_photos',
-      tpms_type_photos: 'tpms_type_photos',
-      tpms_placard: 'tpms_placard',
-    } as const;
-    const k = (key as any)[photoType];
-    if (!k) return;
+    const k = uploadTypeToField[photoType] || photoType;
+    if (!(k in form)) return;
     setForm(prev => ({ ...prev, [k]: ((prev as any)[k] || []).filter((_: any, i: number) => i !== index) }) as QuickCheckForm);
   };
 
