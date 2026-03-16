@@ -7,6 +7,69 @@
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined;
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string | undefined;
 
+/** Compression settings — 1920px max keeps documents legible; 82% JPEG cuts ~75% of file size. */
+const COMPRESS_MAX_DIMENSION = 1920;
+const COMPRESS_QUALITY = 0.82;
+/** Files already under this size are left untouched. */
+const COMPRESS_SKIP_THRESHOLD_BYTES = 300 * 1024; // 300 KB
+
+/**
+ * Resize + JPEG-compress an image file in the browser using Canvas.
+ * Returns the original file unchanged if it is already small, not an image,
+ * or if the Canvas API is unavailable.
+ */
+async function compressImage(file: File): Promise<File> {
+  if (
+    !file.type.startsWith('image/') ||
+    file.size < COMPRESS_SKIP_THRESHOLD_BYTES ||
+    typeof document === 'undefined'
+  ) {
+    return file;
+  }
+
+  return new Promise<File>((resolve) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+
+      let { width, height } = img;
+      if (width > COMPRESS_MAX_DIMENSION || height > COMPRESS_MAX_DIMENSION) {
+        if (width >= height) {
+          height = Math.round((height * COMPRESS_MAX_DIMENSION) / width);
+          width = COMPRESS_MAX_DIMENSION;
+        } else {
+          width = Math.round((width * COMPRESS_MAX_DIMENSION) / height);
+          height = COMPRESS_MAX_DIMENSION;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve(file); return; }
+
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) { resolve(file); return; }
+          // Keep a .jpg extension so the filename stays recognisable.
+          const name = file.name.replace(/\.[^.]+$/, '.jpg');
+          resolve(new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() }));
+        },
+        'image/jpeg',
+        COMPRESS_QUALITY
+      );
+    };
+
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
+    img.src = objectUrl;
+  });
+}
+
 export interface CloudinaryUploadResult {
   success: boolean;
   url?: string;        // CDN URL (secure_url)
@@ -27,8 +90,10 @@ export async function uploadImageToCloudinary(
     return { success: false, previewUrl, error: 'Cloudinary not configured' };
   }
 
+  const compressed = await compressImage(file);
+
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append('file', compressed);
   formData.append('upload_preset', UPLOAD_PRESET);
   formData.append('folder', folder);
 
