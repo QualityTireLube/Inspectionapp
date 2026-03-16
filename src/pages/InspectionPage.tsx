@@ -141,7 +141,7 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
       mileage: mileageFromUrl || form.mileage
     } as QuickCheckForm,
     onFormLoad: (loadedForm) => setForm(loadedForm),
-    autoSaveDelay: 8000,
+    autoSaveDelay: 3000,
     namespace: schema.submitType === 'no_check' ? 'nocheck' : 
               schema.submitType === 'vsi' ? 'vsi' : 'quickcheck',
     inspectionType: schema.submitType
@@ -159,7 +159,7 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
       if (isPageVisible && draft.status !== 'updating' && draft.status !== 'creating') {
         draft.scheduleAutoSave(formRef.current);
       }
-    }, 8000);
+    }, 3000);
 
     return () => clearInterval(autoSaveInterval);
   }, [draft.scheduleAutoSave, isPageVisible]);

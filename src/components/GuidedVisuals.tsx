@@ -111,6 +111,8 @@ const GuidedVisuals = forwardRef<GuidedVisualsRef, GuidedVisualsProps>(({
     currentStep: number;
   }>({ active: false, currentStep: 0 }); // Track brake photo sequence
 
+  const dismissedFieldsRef = useRef<Set<string>>(new Set());
+
   // Track user interaction and page load state
   useEffect(() => {
     const loadTimer = setTimeout(() => {
@@ -142,18 +144,25 @@ const GuidedVisuals = forwardRef<GuidedVisualsRef, GuidedVisualsProps>(({
     };
   }, []);
 
+  // Reset dismissed fields when the tab changes so triggers can fire again on a new tab
+  const prevTabRef = useRef(currentTab);
+  useEffect(() => {
+    if (currentTab !== prevTabRef.current) {
+      dismissedFieldsRef.current.clear();
+      prevTabRef.current = currentTab;
+    }
+  }, [currentTab]);
+
   // Check for trigger conditions when tab or form data changes (with debounce)
   useEffect(() => {
     if (isPageLoaded && hasUserInteracted && !cameraOpen && !activeField) {
-      // Clear any existing timeout
       if (triggerCheckTimeoutRef.current) {
         clearTimeout(triggerCheckTimeoutRef.current);
       }
       
-      // Debounce trigger checks to prevent rapid re-triggering from WebSocket updates
       triggerCheckTimeoutRef.current = setTimeout(() => {
         checkTriggers();
-      }, 500); // Wait 500ms after last update before checking triggers
+      }, 500);
     }
     
     return () => {
@@ -226,9 +235,11 @@ const GuidedVisuals = forwardRef<GuidedVisualsRef, GuidedVisualsProps>(({
       });
       
       if (shouldTrigger) {
-        console.log('🚀 TRIGGERING:', field.fieldName);
+        if (dismissedFieldsRef.current.has(field.fieldName)) {
+          continue;
+        }
         triggerGuidedVisual(field);
-        break; // Only trigger one at a time
+        break;
       }
     }
     console.log('✅ GuidedVisuals: Trigger check complete');
@@ -966,6 +977,9 @@ const GuidedVisuals = forwardRef<GuidedVisualsRef, GuidedVisualsProps>(({
   };
 
   const closeAll = () => {
+    if (activeField) {
+      dismissedFieldsRef.current.add(activeField.fieldName);
+    }
     setCameraOpen(false);
     setActiveField(null);
     setError(null);

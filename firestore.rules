@@ -77,8 +77,7 @@ service cloud.firestore {
     // ─────────────────────────────────────────────────────────────
     match /drafts/{draftId} {
 
-      allow read: if isSignedIn() &&
-        (isManagerOrAbove() || draftId.matches(request.auth.uid + '-.*'));
+      allow read: if isSignedIn();
 
       // Only the owner can write their own draft.
       allow create, update: if isKnownUser() &&

@@ -12,11 +12,12 @@ import {
   Button, 
   Typography,
   IconButton,
-  InputAdornment
+  InputAdornment,
+  LinearProgress
 } from '@mui/material';
 import { Info as InfoIcon, QrCodeScanner as QrIcon, CameraAlt as CameraAltIcon } from '@mui/icons-material';
 import { useVinDecoder } from '../../hooks/useVinDecoder';
-import { extractVinFromImage } from '../../services/api';
+import { extractVinFromImage } from '../../services/vinOcr';
 
 interface VinDecoderProps {
   vin: string;
@@ -33,10 +34,13 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
 }) => {
   const vinDecoder = useVinDecoder();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [qrScannerOpen, setQrScannerOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const qrVideoRef = useRef<HTMLVideoElement>(null);
+  const qrAnimFrameRef = useRef<number>(0);
   
-  // Decode VIN when it changes
   React.useEffect(() => {
     if (vin) {
       vinDecoder.decodeVin(vin);
@@ -45,13 +49,96 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
 
   const vehicleInfo = vinDecoder.getVehicleInfo();
 
+  // ── QR / Barcode scanner using native BarcodeDetector or fallback ────────
   const handleQrCodeClick = () => {
-    // TODO: Implement QR code scanning functionality
-    console.log('QR Code scanner clicked');
-    // For now, just show an alert
-    alert('QR Code scanner functionality to be implemented');
+    setQrScannerOpen(true);
+    setError(null);
   };
 
+  const stopQrScanner = useCallback(() => {
+    if (qrAnimFrameRef.current) cancelAnimationFrame(qrAnimFrameRef.current);
+    if (qrVideoRef.current?.srcObject) {
+      (qrVideoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+      qrVideoRef.current.srcObject = null;
+    }
+    setQrScannerOpen(false);
+  }, []);
+
+  React.useEffect(() => {
+    if (!qrScannerOpen) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
+        if (qrVideoRef.current) {
+          qrVideoRef.current.srcObject = stream;
+          await qrVideoRef.current.play();
+        }
+
+        const hasBarcodeAPI = 'BarcodeDetector' in window;
+        let detector: any = null;
+        let zxingReader: any = null;
+
+        if (hasBarcodeAPI) {
+          detector = new (window as any).BarcodeDetector({ formats: ['qr_code', 'code_128', 'code_39', 'data_matrix'] });
+        } else {
+          const { BrowserMultiFormatReader } = await import('@zxing/browser');
+          zxingReader = new BrowserMultiFormatReader();
+        }
+
+        const scan = async () => {
+          if (cancelled || !qrVideoRef.current) return;
+
+          try {
+            if (detector) {
+              const barcodes = await detector.detect(qrVideoRef.current);
+              for (const b of barcodes) {
+                const raw = (b.rawValue || '').toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
+                if (raw.length === 17) {
+                  const syntheticEvent = { target: { name: 'vin', value: raw } } as React.ChangeEvent<HTMLInputElement>;
+                  onVinChange(syntheticEvent);
+                  stopQrScanner();
+                  return;
+                }
+              }
+            } else if (zxingReader && qrVideoRef.current) {
+              try {
+                const canvas = document.createElement('canvas');
+                canvas.width = qrVideoRef.current.videoWidth || 640;
+                canvas.height = qrVideoRef.current.videoHeight || 480;
+                const ctx = canvas.getContext('2d')!;
+                ctx.drawImage(qrVideoRef.current, 0, 0, canvas.width, canvas.height);
+                const luminance = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const { BinaryBitmap, HybridBinarizer, RGBLuminanceSource, MultiFormatReader } = await import('@zxing/library');
+                const source = new RGBLuminanceSource(new Uint8ClampedArray(luminance.data.buffer), canvas.width, canvas.height);
+                const bitmap = new BinaryBitmap(new HybridBinarizer(source));
+                const result = new MultiFormatReader().decode(bitmap);
+                const raw = result.getText().toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '');
+                if (raw.length === 17) {
+                  const syntheticEvent = { target: { name: 'vin', value: raw } } as React.ChangeEvent<HTMLInputElement>;
+                  onVinChange(syntheticEvent);
+                  stopQrScanner();
+                  return;
+                }
+              } catch { /* no barcode in frame, keep scanning */ }
+            }
+          } catch { /* frame decode error */ }
+
+          if (!cancelled) qrAnimFrameRef.current = requestAnimationFrame(scan);
+        };
+
+        qrAnimFrameRef.current = requestAnimationFrame(scan);
+      } catch {
+        if (!cancelled) setError('Camera access denied');
+      }
+    })();
+
+    return () => { cancelled = true; stopQrScanner(); };
+  }, [qrScannerOpen, onVinChange, stopQrScanner]);
+
+  // ── OCR from photo (Tesseract.js — runs in browser) ─────────────────────
   const handleCameraClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
@@ -64,40 +151,19 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
 
     try {
       setIsProcessing(true);
+      setOcrProgress(0);
       setError(null);
 
-      // Read the file as base64
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const imageData = e.target?.result as string;
+      const result = await extractVinFromImage(file, (pct) => setOcrProgress(pct));
 
-        // Extract VIN using ChatGPT Vision API
-        const result = await extractVinFromImage(imageData);
-
-        if (result.success && result.vin) {
-          // Create a synthetic event to update the VIN input
-          const syntheticEvent = {
-            target: {
-              name: 'vin',
-              value: result.vin
-            }
-          } as React.ChangeEvent<HTMLInputElement>;
-          
-          onVinChange(syntheticEvent);
-        } else {
-          setError(result.message || 'Failed to extract VIN from image');
-        }
-      };
-
-      reader.onerror = () => {
-        setError('Failed to read image file');
-        setIsProcessing(false);
-      };
-
-      reader.readAsDataURL(file);
-    } catch (err) {
-      console.error('File processing error:', err);
-      setError('Failed to process image. Please try again.');
+      if (result.success && result.vin) {
+        const syntheticEvent = {
+          target: { name: 'vin', value: result.vin }
+        } as React.ChangeEvent<HTMLInputElement>;
+        onVinChange(syntheticEvent);
+      } else {
+        setError(result.message || 'Could not extract VIN from image. Try a clearer, closer photo.');
+      }
     } finally {
       setIsProcessing(false);
       // Reset the file input
@@ -170,12 +236,43 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
         }}
       />
 
+      {/* OCR progress */}
+      {isProcessing && (
+        <Box sx={{ mt: 1 }}>
+          <LinearProgress variant="determinate" value={ocrProgress} sx={{ borderRadius: 1 }} />
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+            Scanning image for VIN... {ocrProgress}%
+          </Typography>
+        </Box>
+      )}
+
       {/* Error Message */}
       {error && (
-        <Alert severity="error" sx={{ mt: 1, fontSize: '14px', py: 0.5 }}>
+        <Alert severity="error" sx={{ mt: 1, fontSize: '14px', py: 0.5 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
+
+      {/* QR / Barcode Scanner Dialog */}
+      <Dialog open={qrScannerOpen} onClose={stopQrScanner} maxWidth="sm" fullWidth PaperProps={{ sx: { bgcolor: 'black' } }}>
+        <DialogTitle sx={{ color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 0 }}>
+          <Typography variant="h6" sx={{ color: 'white' }}>Scan VIN Barcode / QR</Typography>
+          <IconButton onClick={stopQrScanner} sx={{ color: 'white' }}><CameraAltIcon /></IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 1 }}>
+          <Box sx={{ position: 'relative' }}>
+            <video ref={qrVideoRef} playsInline muted style={{ width: '100%', borderRadius: 4 }} />
+            <Box sx={{
+              position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+              width: '80%', height: '30%', border: '2px solid rgba(0,255,0,0.6)', borderRadius: 1,
+              pointerEvents: 'none'
+            }} />
+          </Box>
+          <Typography variant="caption" sx={{ color: 'grey.400', mt: 1, display: 'block', textAlign: 'center' }}>
+            Point camera at the VIN barcode or QR code on the inspection sticker
+          </Typography>
+        </DialogContent>
+      </Dialog>
 
       {/* VIN Decoding Results */}
       <Box sx={{ mt: 1 }}>

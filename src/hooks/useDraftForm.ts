@@ -150,7 +150,7 @@ export const useDraftForm = ({
   userName,
   initialForm,
   onFormLoad,
-  autoSaveDelay = 8000,
+  autoSaveDelay = 3000,
   inspectionType,
 }: UseDraftFormProps): UseDraftFormReturn => {
   const location = useLocation();

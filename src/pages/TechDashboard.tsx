@@ -6,8 +6,9 @@ import { DirectionsCar as CarIcon, PlayArrow as PlayArrowIcon, Schedule as Sched
 import LabelCreator from '../components/LabelCreator';
 import { useUser } from '../contexts/UserContext';
 import { InspectionDocument } from '../services/firebase/inspections';
+import { DraftDocument } from '../services/firebase/drafts';
 import { db } from '../services/firebase/config';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
 
 function mapDoc(d: InspectionDocument) {
   const ts = (d.createdAt as any)?.toDate ? (d.createdAt as any).toDate().toISOString() : '';
@@ -101,19 +102,26 @@ const TechDashboard: React.FC = () => {
       if (loadedDrafts && loadedSubmitted) setLoading(false);
     };
 
-    const draftQ = query(
-      collection(db, INSPECTIONS),
-      where('status', '==', 'draft'),
-      orderBy('updatedAt', 'desc')
-    );
     const submittedQ = query(
       collection(db, INSPECTIONS),
       where('status', '==', 'submitted'),
       orderBy('createdAt', 'desc')
     );
 
-    const unsubDrafts = onSnapshot(draftQ, (snap) => {
-      setInProgressChecks(snap.docs.map(d => mapDoc({ id: d.id, ...d.data() } as InspectionDocument)));
+    const unsubDrafts = onSnapshot(collection(db, 'drafts'), (snap) => {
+      setInProgressChecks(snap.docs.map(d => {
+        const raw = d.data() as DraftDocument;
+        return mapDoc({
+          id: d.id,
+          userId: raw.userId,
+          userName: raw.userName,
+          inspectionType: raw.inspectionType,
+          data: raw.data,
+          status: 'draft',
+          createdAt: raw.lastUpdated ?? Timestamp.now(),
+          updatedAt: raw.lastUpdated ?? Timestamp.now(),
+        } as InspectionDocument);
+      }));
       loadedDrafts = true;
       trySetLoaded();
     }, () => { loadedDrafts = true; trySetLoaded(); });

@@ -189,16 +189,22 @@ export const getSubmittedInspections = async (limitCount = 100): Promise<Inspect
   return snap.docs.map(d => ({ id: d.id, ...d.data() } as InspectionDocument));
 };
 
-/** Get all draft inspections. */
-export const getDraftInspections = async (limitCount = 200): Promise<InspectionDocument[]> => {
-  const q = query(
-    collection(db, INSPECTIONS_COLLECTION),
-    where('status', '==', 'draft'),
-    orderBy('updatedAt', 'desc'),
-    limit(limitCount)
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as InspectionDocument));
+/** Get all active drafts (reads from the `drafts` collection). */
+export const getDraftInspections = async (_limitCount = 200): Promise<InspectionDocument[]> => {
+  const snap = await getDocs(collection(db, 'drafts'));
+  return snap.docs.map(d => {
+    const raw = d.data();
+    return {
+      id: d.id,
+      userId: raw.userId,
+      userName: raw.userName,
+      inspectionType: raw.inspectionType,
+      data: raw.data,
+      status: 'draft' as const,
+      createdAt: raw.lastUpdated ?? Timestamp.now(),
+      updatedAt: raw.lastUpdated ?? Timestamp.now(),
+    } as InspectionDocument;
+  });
 };
 
 /** Get all archived inspections. */
@@ -215,6 +221,6 @@ export const getArchivedInspections = async (limitCount = 200): Promise<Inspecti
 
 /** Delete all draft inspections in batch. */
 export const deleteAllDraftInspections = async (): Promise<void> => {
-  const drafts = await getDraftInspections(500);
-  await Promise.all(drafts.map(d => deleteInspection(d.id!)));
+  const snap = await getDocs(collection(db, 'drafts'));
+  await Promise.all(snap.docs.map(d => deleteDoc(doc(db, 'drafts', d.id))));
 };

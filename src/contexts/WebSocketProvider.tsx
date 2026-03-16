@@ -8,11 +8,12 @@ import React, {
   createContext, useContext, useEffect, useState, useCallback, ReactNode
 } from 'react';
 import {
-  collection, query, where, orderBy, onSnapshot, Timestamp
+  collection, doc, query, where, orderBy, onSnapshot, Timestamp
 } from 'firebase/firestore';
 import { db } from '../services/firebase/config';
 import { onAuthChange } from '../services/firebase/auth';
 import { InspectionDocument } from '../services/firebase/inspections';
+import { DraftDocument } from '../services/firebase/drafts';
 
 // ── Legacy type stubs kept for consumer compatibility ─────────────────────────
 
@@ -80,18 +81,29 @@ export const WebSocketProvider: React.FC<Props> = ({ children }) => {
     return unsub;
   }, []);
 
-  // Subscribe to in-progress (draft) inspections
+  // Subscribe to all active drafts from the `drafts` collection so the Home
+  // dashboard shows every in-progress inspection across all technicians.
   useEffect(() => {
     if (!userId) return;
-    const q = query(
-      collection(db, 'inspections'),
-      where('status', '==', 'draft'),
-      orderBy('updatedAt', 'desc')
-    );
-    const unsub = onSnapshot(q, (snap) => {
-      setInProgress(snap.docs.map(d => ({ id: d.id, ...d.data() } as InspectionDocument)));
+
+    const unsub = onSnapshot(collection(db, 'drafts'), (snap) => {
+      const docs: InspectionDocument[] = snap.docs.map(d => {
+        const raw = d.data() as DraftDocument;
+        return {
+          id: d.id,
+          userId: raw.userId,
+          userName: raw.userName,
+          inspectionType: raw.inspectionType,
+          data: raw.data,
+          status: 'draft' as const,
+          createdAt: raw.lastUpdated ?? Timestamp.now(),
+          updatedAt: raw.lastUpdated ?? Timestamp.now(),
+        };
+      });
+      setInProgress(docs);
       setLastUpdate(new Date());
-    }, (err) => console.error('Realtime in-progress error:', err));
+    }, (err) => console.error('Realtime drafts error:', err));
+
     return unsub;
   }, [userId]);
 
