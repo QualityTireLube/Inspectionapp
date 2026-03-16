@@ -119,7 +119,6 @@ const ImageFieldRectangle: React.FC<ImageFieldRectangleProps> = ({
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         style={{ display: 'none' }}
         onChange={handleFileChange}
         multiple={multiple}

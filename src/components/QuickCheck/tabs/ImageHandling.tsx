@@ -213,26 +213,7 @@ const ImageHandling: React.FC<ImageHandlingProps> = ({
       
     } catch (error) {
       console.log('Camera access denied, fallback to file picker');
-      setCameraError('Camera access denied. Using file picker instead.');
-      
-      // Fallback to direct file picker if camera access is denied
-      setTimeout(() => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.capture = 'environment';
-        input.multiple = true;
-        input.onchange = async (e) => {
-          const files = (e.target as HTMLInputElement).files;
-          if (files) {
-            for (let i = 0; i < files.length; i++) {
-              await handleImageUpload(files[i], type);
-            }
-          }
-          setScannerOpen(false);
-        };
-        input.click();
-      }, 1000);
+      setCameraError('Camera access denied. Use the gallery button to select photos.');
     }
   };
 
@@ -240,7 +221,6 @@ const ImageHandling: React.FC<ImageHandlingProps> = ({
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.capture = 'environment';
     input.multiple = true;
     input.onchange = async (e) => {
       const files = Array.from((e.target as HTMLInputElement).files || []);

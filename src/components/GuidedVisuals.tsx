@@ -936,7 +936,6 @@ const GuidedVisuals = forwardRef<GuidedVisualsRef, GuidedVisualsProps>(({
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*,image/heic,image/heif,.heic,.heif';
-    input.capture = cameraFacing;
     input.multiple = multiple;
     
     input.style.position = 'absolute';

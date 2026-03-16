@@ -148,7 +148,6 @@ const AiVinScanner: React.FC<AiVinScannerProps> = ({ open, onClose, onVinExtract
           ref={fileInputRef}
           type="file"
           accept="image/*"
-          capture="environment"
           onChange={handleFileSelect}
           style={{ display: 'none' }}
         />
