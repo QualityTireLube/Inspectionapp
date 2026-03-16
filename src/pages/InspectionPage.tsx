@@ -206,21 +206,43 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
           if (!Array.isArray(items)) return [];
           return items.map((item: any, idx: number) => ({ file: new File([], `image_${idx}.jpg`, { type: 'image/jpeg' }), progress: 100, url: typeof item === 'string' ? item : item.url }));
         };
-        setForm(prev => ({
-          ...prev,
-          ...parsed,
-          dash_lights_photos: restoreImages(parsed.dash_lights_photos),
-          mileage_photos: restoreImages(parsed.mileage_photos),
-          windshield_condition_photos: restoreImages(parsed.windshield_condition_photos),
-          tpms_placard: restoreImages(parsed.tpms_placard),
-          state_inspection_status_photos: restoreImages(parsed.state_inspection_status_photos),
-          washer_fluid_photo: restoreImages(parsed.washer_fluid_photo),
-          undercarriage_photos: restoreImages(parsed.undercarriage_photos),
-          tire_repair_status_photos: restoreImages(parsed.tire_repair_status_photos),
-          tpms_type_photos: restoreImages(parsed.tpms_type_photos)
-        } as QuickCheckForm));
+        const ALL_IMG_KEYS = [
+          'dash_lights_photos', 'mileage_photos', 'windshield_condition_photos',
+          'wiper_blades_photos', 'washer_squirters_photos', 'vin_photos',
+          'state_inspection_status_photos', 'state_inspection_date_code_photos',
+          'battery_date_code_photos', 'tire_repair_status_photos', 'tpms_type_photos',
+          'front_brake_pads_photos', 'rear_brake_pads_photos', 'tpms_placard',
+          'washer_fluid_photo', 'engine_air_filter_photo', 'battery_photos',
+          'battery_positive_terminal_photos', 'battery_negative_terminal_photos',
+          'tpms_tool_photo', 'front_brakes', 'rear_brakes', 'undercarriage_photos',
+          'check_engine_mounts_photos', 'exterior_lights_photos', 'drive_belt_photos',
+          'engine_mounts_photos', 'brake_fluid_photos', 'powersteering_fluid_photos',
+          'coolant_photos', 'radiator_end_caps_photos', 'cooling_hoses_photos',
+          'front_shock_struts_photos', 'rear_shock_struts_photos', 'leaks_photos',
+          'left_control_arm_bushings_photos', 'left_ball_joints_photos',
+          'right_control_arm_bushings_photos', 'right_ball_joints_photos',
+          'sway_bar_photos', 'suspension_type_photos',
+        ];
+        const restored: any = { ...parsed };
+        for (const key of ALL_IMG_KEYS) {
+          restored[key] = restoreImages(parsed[key]);
+        }
+        restored.tire_photos = (parsed.tire_photos || []).map((tp: any) => ({
+          type: tp.type,
+          photos: restoreImages(tp.photos),
+        }));
+        restored.tire_repair_images = Object.keys(parsed.tire_repair_images || {}).reduce((acc: any, pos: string) => {
+          const p = parsed.tire_repair_images[pos] || {};
+          acc[pos] = {
+            not_repairable: restoreImages(p.not_repairable || []),
+            tire_size_brand: restoreImages(p.tire_size_brand || []),
+            repairable_spot: restoreImages(p.repairable_spot || []),
+          };
+          return acc;
+        }, {});
+        setForm(prev => ({ ...prev, ...restored } as QuickCheckForm));
         dataLoaded = true;
-        setTestDataLoaded(true); // Mark that data is loaded
+        setTestDataLoaded(true);
       }
     } catch {}
 
@@ -286,25 +308,49 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
     localStorage.setItem(`${schema.draftKeyPrefix}ActiveTab`, String(tabValue));
   }, [schema.draftKeyPrefix, tabValue]);
 
+  // All known image-array field names on the form
+  const IMAGE_FIELDS = useMemo(() => new Set([
+    'dash_lights_photos', 'mileage_photos', 'windshield_condition_photos',
+    'wiper_blades_photos', 'washer_squirters_photos', 'vin_photos',
+    'state_inspection_status_photos', 'state_inspection_date_code_photos',
+    'battery_date_code_photos', 'tire_repair_status_photos', 'tpms_type_photos',
+    'front_brake_pads_photos', 'rear_brake_pads_photos', 'tpms_placard',
+    'washer_fluid_photo', 'engine_air_filter_photo', 'battery_photos',
+    'battery_positive_terminal_photos', 'battery_negative_terminal_photos',
+    'tpms_tool_photo', 'front_brakes', 'rear_brakes', 'undercarriage_photos',
+    'check_engine_mounts_photos', 'exterior_lights_photos', 'drive_belt_photos',
+    'engine_mounts_photos', 'brake_fluid_photos', 'powersteering_fluid_photos',
+    'coolant_photos', 'radiator_end_caps_photos', 'cooling_hoses_photos',
+    'front_shock_struts_photos', 'rear_shock_struts_photos', 'leaks_photos',
+    'left_control_arm_bushings_photos', 'left_ball_joints_photos',
+    'right_control_arm_bushings_photos', 'right_ball_joints_photos',
+    'sway_bar_photos', 'suspension_type_photos',
+  ]), []);
+
   useEffect(() => {
-    const filterImages = (images: QCImageUpload[]) => (images || []).filter(i => i.url && !i.url.startsWith('blob:')).map(i => ({ url: i.url! }));
+    const filterImages = (images: QCImageUpload[]) =>
+      (images || []).filter(i => i.url && !i.url.startsWith('blob:')).map(i => ({ url: i.url! }));
     try {
-      const toSave = {
-        ...form,
-        inspection_type: schema.submitType,
-        dash_lights_photos: filterImages(form.dash_lights_photos),
-        mileage_photos: filterImages(form.mileage_photos),
-        windshield_condition_photos: filterImages(form.windshield_condition_photos),
-        tpms_placard: filterImages(form.tpms_placard),
-        state_inspection_status_photos: filterImages(form.state_inspection_status_photos),
-        washer_fluid_photo: filterImages(form.washer_fluid_photo),
-        undercarriage_photos: filterImages(form.undercarriage_photos),
-        tire_repair_status_photos: filterImages(form.tire_repair_status_photos),
-        tpms_type_photos: filterImages(form.tpms_type_photos)
-      };
+      const toSave: any = { ...form, inspection_type: schema.submitType };
+      for (const key of IMAGE_FIELDS) {
+        toSave[key] = filterImages((form as any)[key]);
+      }
+      toSave.tire_photos = (form.tire_photos || []).map(tp => ({
+        type: tp.type,
+        photos: filterImages(tp.photos as any),
+      }));
+      toSave.tire_repair_images = Object.keys(form.tire_repair_images || {}).reduce((acc: any, pos: string) => {
+        const p = (form.tire_repair_images as any)?.[pos] || {};
+        acc[pos] = {
+          not_repairable: filterImages(p.not_repairable || []),
+          tire_size_brand: filterImages(p.tire_size_brand || []),
+          repairable_spot: filterImages(p.repairable_spot || []),
+        };
+        return acc;
+      }, {});
       localStorage.setItem(draftKey, JSON.stringify(toSave));
     } catch {}
-  }, [form, draftKey, schema.submitType]);
+  }, [form, draftKey, schema.submitType, IMAGE_FIELDS]);
 
   // (visibilitychange listener is registered above with the auto-save timer)
 
