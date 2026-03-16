@@ -5,6 +5,7 @@ import {
 import {
   PhotoCamera, PhotoLibrary, Close as CloseIcon
 } from '@mui/icons-material';
+import { acquireCamera, releaseCamera } from '../../utils/cameraLock';
 import {
   logImageUploadAttempt,
   detectBrowser,
@@ -128,13 +129,17 @@ const SafariImageUpload = forwardRef<SafariImageUploadRef, SafariImageUploadProp
     }
   };
 
+  const cameraOwnerId = `safari-upload-${uploadType}`;
+
   const openCamera = () => {
+    if (!acquireCamera(cameraOwnerId)) return;
     setCameraOpen(true);
   };
 
   const closeCamera = () => {
     stopCamera();
     setCameraOpen(false);
+    releaseCamera(cameraOwnerId);
   };
 
   useEffect(() => {

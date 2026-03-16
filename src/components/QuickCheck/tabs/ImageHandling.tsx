@@ -22,6 +22,7 @@ import {
   Delete as DeleteIcon,
   PhotoLibrary as PhotoLibraryIcon
 } from '@mui/icons-material';
+import { acquireCamera, releaseCamera } from '../../../utils/cameraLock';
 import heic2any from 'heic2any';
 import { 
   logImageUploadAttempt, 
@@ -191,6 +192,7 @@ const ImageHandling: React.FC<ImageHandlingProps> = ({
 
   // Camera handling functions
   const handleCameraOpen = async (type: CameraType) => {
+    if (!acquireCamera('image-handling')) return;
     setCameraType(type);
     setScannerOpen(true);
     setCameraError(null);
@@ -286,6 +288,7 @@ const ImageHandling: React.FC<ImageHandlingProps> = ({
   };
 
   const cleanupCamera = () => {
+    releaseCamera('image-handling');
     if (videoTrackRef.current) {
       videoTrackRef.current.stop();
       videoTrackRef.current = null;

@@ -10,6 +10,7 @@ import {
   Paper 
 } from '@mui/material';
 import { PhotoCamera, PhotoLibrary, Close as CloseIcon } from '@mui/icons-material';
+import { acquireCamera, releaseCamera } from '../utils/cameraLock';
 import { 
   logImageUploadAttempt, 
   showSafariImageAlert, 
@@ -827,6 +828,7 @@ const GuidedVisuals = forwardRef<GuidedVisualsRef, GuidedVisualsProps>(({
   };
 
   const openCamera = () => {
+    if (!acquireCamera('guided-visuals')) return;
     setCameraOpen(true);
     setError(null);
   };
@@ -1000,6 +1002,7 @@ const GuidedVisuals = forwardRef<GuidedVisualsRef, GuidedVisualsProps>(({
     setCameraOpen(false);
     setActiveField(null);
     setError(null);
+    releaseCamera('guided-visuals');
     
     // Clean up camera
     if (videoTrackRef.current) {

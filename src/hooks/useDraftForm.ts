@@ -68,6 +68,20 @@ const filterImages = (images: ImageUpload[] | undefined | null) =>
     .filter(img => img?.url && !img.url.startsWith('blob:'))
     .map(img => ({ url: img.url! }));
 
+/** Recursively remove undefined values (Firestore rejects them). */
+const stripUndefined = (obj: any): any => {
+  if (obj === null || obj === undefined) return null;
+  if (Array.isArray(obj)) return obj.map(stripUndefined);
+  if (typeof obj === 'object' && !(obj instanceof Date) && !(obj instanceof File)) {
+    const clean: any = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (v !== undefined) clean[k] = stripUndefined(v);
+    }
+    return clean;
+  }
+  return obj;
+};
+
 /** Strip File objects and blob: URLs before saving to Firestore. */
 const prepareFormForSave = (form: QuickCheckForm, userName: string): any => {
   const result: any = {
@@ -97,7 +111,7 @@ const prepareFormForSave = (form: QuickCheckForm, userName: string): any => {
     return acc;
   }, {} as any);
 
-  return result;
+  return stripUndefined(result);
 };
 
 const toImageUploads = (items: any[]): ImageUpload[] => {

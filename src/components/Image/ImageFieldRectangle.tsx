@@ -5,6 +5,7 @@ import {
 import {
   PhotoCamera, Delete, Close as CloseIcon, PhotoLibrary
 } from '@mui/icons-material';
+import { acquireCamera, releaseCamera } from '../../utils/cameraLock';
 
 interface ImageFieldRectangleProps {
   label: string;
@@ -75,13 +76,17 @@ const ImageFieldRectangle: React.FC<ImageFieldRectangleProps> = ({
     }
   };
 
+  const cameraOwnerId = `img-field-${uploadType}`;
+
   const openCamera = () => {
+    if (!acquireCamera(cameraOwnerId)) return;
     setCameraOpen(true);
   };
 
   const closeCamera = () => {
     stopCamera();
     setCameraOpen(false);
+    releaseCamera(cameraOwnerId);
   };
 
   useEffect(() => {

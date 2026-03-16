@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
+import { acquireCamera, releaseCamera } from '../../utils/cameraLock';
 import { 
   Box, 
   TextField,
@@ -51,6 +52,7 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
 
   // ── QR / Barcode scanner using native BarcodeDetector or fallback ────────
   const handleQrCodeClick = () => {
+    if (!acquireCamera('vin-decoder')) return;
     setQrScannerOpen(true);
     setError(null);
   };
@@ -62,6 +64,7 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
       qrVideoRef.current.srcObject = null;
     }
     setQrScannerOpen(false);
+    releaseCamera('vin-decoder');
   }, []);
 
   React.useEffect(() => {

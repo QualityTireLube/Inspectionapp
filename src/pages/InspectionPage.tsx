@@ -140,7 +140,36 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
       vin: vinFromUrl || form.vin,
       mileage: mileageFromUrl || form.mileage
     } as QuickCheckForm,
-    onFormLoad: (loadedForm) => setForm(loadedForm),
+    onFormLoad: (loadedForm) => setForm(prev => {
+      const merged: any = { ...prev, ...loadedForm };
+      // Preserve localStorage-restored images when Firestore has empty arrays
+      // (can happen if Firestore auto-save was missed before the last refresh)
+      const imgKeys = [
+        'dash_lights_photos', 'mileage_photos', 'windshield_condition_photos',
+        'wiper_blades_photos', 'washer_squirters_photos', 'vin_photos',
+        'state_inspection_status_photos', 'state_inspection_date_code_photos',
+        'battery_date_code_photos', 'tire_repair_status_photos', 'tpms_type_photos',
+        'front_brake_pads_photos', 'rear_brake_pads_photos', 'tpms_placard',
+        'washer_fluid_photo', 'engine_air_filter_photo', 'battery_photos',
+        'battery_positive_terminal_photos', 'battery_negative_terminal_photos',
+        'tpms_tool_photo', 'front_brakes', 'rear_brakes', 'undercarriage_photos',
+        'check_engine_mounts_photos', 'exterior_lights_photos', 'drive_belt_photos',
+        'engine_mounts_photos', 'brake_fluid_photos', 'powersteering_fluid_photos',
+        'coolant_photos', 'radiator_end_caps_photos', 'cooling_hoses_photos',
+        'front_shock_struts_photos', 'rear_shock_struts_photos', 'leaks_photos',
+        'left_control_arm_bushings_photos', 'left_ball_joints_photos',
+        'right_control_arm_bushings_photos', 'right_ball_joints_photos',
+        'sway_bar_photos', 'suspension_type_photos',
+      ];
+      for (const k of imgKeys) {
+        const loaded = (loadedForm as any)[k];
+        const existing = (prev as any)[k];
+        if ((!Array.isArray(loaded) || loaded.length === 0) && Array.isArray(existing) && existing.length > 0) {
+          merged[k] = existing;
+        }
+      }
+      return merged as QuickCheckForm;
+    }),
     autoSaveDelay: 3000,
     namespace: schema.submitType === 'no_check' ? 'nocheck' : 
               schema.submitType === 'vsi' ? 'vsi' : 'quickcheck',
@@ -153,16 +182,18 @@ const InspectionPage: React.FC<Props> = ({ schema }) => {
     formRef.current = form;
   }, [form]);
 
-  // Timer-based auto-save every 8 seconds (independent of form changes)
+  // Periodic auto-save — calls updateDraft directly to avoid the debounce
+  // race condition where scheduleAutoSave's timeout is perpetually cleared
+  // by the next interval tick.
   useEffect(() => {
     const autoSaveInterval = setInterval(() => {
       if (isPageVisible && draft.status !== 'updating' && draft.status !== 'creating') {
-        draft.scheduleAutoSave(formRef.current);
+        draft.updateDraft(formRef.current);
       }
-    }, 3000);
+    }, 4000);
 
     return () => clearInterval(autoSaveInterval);
-  }, [draft.scheduleAutoSave, isPageVisible]);
+  }, [draft.updateDraft, isPageVisible, draft.status]);
 
   // Track page visibility for auto-save optimization
   useEffect(() => {
