@@ -1,6 +1,10 @@
-import React, { useState, useRef } from 'react';
-import { Box, Typography, IconButton } from '@mui/material';
-import { PhotoCamera, Delete } from '@mui/icons-material';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  Box, Typography, IconButton, Dialog, DialogContent, Button, CircularProgress
+} from '@mui/material';
+import {
+  PhotoCamera, Delete, Close as CloseIcon, PhotoLibrary
+} from '@mui/icons-material';
 
 interface ImageFieldRectangleProps {
   label: string;
@@ -12,6 +16,7 @@ interface ImageFieldRectangleProps {
   disabled?: boolean;
   multiple?: boolean;
   maxFiles?: number;
+  cameraFacing?: 'user' | 'environment';
 }
 
 const ImageFieldRectangle: React.FC<ImageFieldRectangleProps> = ({
@@ -23,56 +28,104 @@ const ImageFieldRectangle: React.FC<ImageFieldRectangleProps> = ({
   uploadType,
   disabled = false,
   multiple = true,
-  maxFiles = 5
+  maxFiles = 5,
+  cameraFacing = 'environment'
 }) => {
   const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const trackRef = useRef<MediaStreamTrack | null>(null);
 
-  const handleImageUpload = async (file: File, type: any) => {
+  const handleUpload = async (file: File) => {
     try {
       setIsUploading(true);
-      await onImageUpload(file, type);
+      await onImageUpload(file, uploadType);
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handleCameraClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
+  const stopCamera = () => {
+    if (trackRef.current) { trackRef.current.stop(); trackRef.current = null; }
+    if (videoRef.current) videoRef.current.srcObject = null;
+  };
+
+  const openCamera = async () => {
+    setCameraOpen(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: cameraFacing }
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        trackRef.current = stream.getVideoTracks()[0];
+      }
+    } catch {
+      stopCamera();
+      setCameraOpen(false);
+      openGallery();
     }
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      Array.from(files).forEach(file => {
-        handleImageUpload(file, uploadType);
-      });
-    }
-    // Reset the input value so the same file can be selected again
-    event.target.value = '';
+  const closeCamera = () => {
+    stopCamera();
+    setCameraOpen(false);
   };
+
+  const capturePhoto = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0);
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      const file = new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      closeCamera();
+      await handleUpload(file);
+    }, 'image/jpeg', 0.9);
+  };
+
+  const openGallery = () => {
+    closeCamera();
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,image/heic,image/heif,.heic,.heif';
+    input.multiple = multiple;
+    input.style.display = 'none';
+    document.body.appendChild(input);
+    input.onchange = async (e) => {
+      const files = Array.from((e.target as HTMLInputElement).files || []);
+      for (const file of files) {
+        await handleUpload(file);
+      }
+      if (document.body.contains(input)) document.body.removeChild(input);
+    };
+    input.click();
+    setTimeout(() => { if (document.body.contains(input)) document.body.removeChild(input); }, 60000);
+  };
+
+  useEffect(() => { return () => stopCamera(); }, []);
 
   const hasImages = images && Array.isArray(images) && images.length > 0;
-  const canUploadMore = !maxFiles || (images && images.length < maxFiles);
 
   return (
     <Box sx={{ mb: 3 }}>
-      {/* Label */}
       {label && (
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
           {label}
         </Typography>
       )}
 
-      {/* Main Rectangle Upload Area */}
       {!hasImages && (
         <Box
-          onClick={handleCameraClick}
+          onClick={() => { if (!disabled && !isUploading) openCamera(); }}
           sx={{
             width: '100%',
-            aspectRatio: '3 / 1', // 3:1 ratio - 3 units wide, 1 unit tall
+            aspectRatio: '3 / 1',
             border: '2px dashed #ccc',
             borderRadius: 2,
             display: 'flex',
@@ -89,7 +142,6 @@ const ImageFieldRectangle: React.FC<ImageFieldRectangleProps> = ({
             minHeight: 120,
           }}
         >
-          {/* Camera Icon in Center */}
           <Box
             sx={{
               display: 'flex',
@@ -100,12 +152,12 @@ const ImageFieldRectangle: React.FC<ImageFieldRectangleProps> = ({
               opacity: isUploading ? 0.5 : 1,
             }}
           >
-            <PhotoCamera 
-              sx={{ 
-                fontSize: 48, 
+            <PhotoCamera
+              sx={{
+                fontSize: 48,
                 color: 'text.secondary',
                 transition: 'color 0.3s ease',
-              }} 
+              }}
             />
             <Typography variant="body2" color="text.secondary">
               {isUploading ? 'Uploading...' : 'Tap to take photo'}
@@ -114,18 +166,6 @@ const ImageFieldRectangle: React.FC<ImageFieldRectangleProps> = ({
         </Box>
       )}
 
-      {/* Hidden file input for camera */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        style={{ display: 'none' }}
-        onChange={handleFileChange}
-        multiple={multiple}
-        disabled={disabled || isUploading}
-      />
-
-      {/* Show first image in place of dashed box when images exist */}
       {hasImages && (
         <Box
           sx={{
@@ -150,7 +190,6 @@ const ImageFieldRectangle: React.FC<ImageFieldRectangleProps> = ({
               objectFit: 'cover',
             }}
           />
-          {/* Delete button for main image */}
           <IconButton
             className="delete-main"
             onClick={(e) => {
@@ -173,7 +212,6 @@ const ImageFieldRectangle: React.FC<ImageFieldRectangleProps> = ({
           >
             <Delete fontSize="small" />
           </IconButton>
-          {/* Overlay for additional images count */}
           {images && images.length > 1 && (
             <Box
               className="overlay"
@@ -197,17 +235,14 @@ const ImageFieldRectangle: React.FC<ImageFieldRectangleProps> = ({
         </Box>
       )}
 
-
-
-      {/* Additional Images Display - Show remaining images as thumbnails */}
       {hasImages && images && images.length > 1 && (
         <Box sx={{ mt: 2 }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             Additional images ({images && images.length ? images.length - 1 : 0}):
           </Typography>
-          <Box 
-            sx={{ 
-              display: 'grid', 
+          <Box
+            sx={{
+              display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
               gap: 1
             }}
@@ -265,14 +300,55 @@ const ImageFieldRectangle: React.FC<ImageFieldRectangleProps> = ({
         </Box>
       )}
 
-      {/* Max Files Reached Message */}
       {maxFiles && images && images.length >= maxFiles && (
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           Maximum {maxFiles} images uploaded
         </Typography>
       )}
+
+      {/* In-browser camera dialog */}
+      <Dialog open={cameraOpen} onClose={closeCamera} maxWidth="sm" fullWidth PaperProps={{ sx: { bgcolor: 'black' } }}>
+        <DialogContent sx={{ p: 0, bgcolor: 'black', position: 'relative' }}>
+          <video
+            ref={videoRef}
+            playsInline
+            autoPlay
+            muted
+            style={{ width: '100%', minHeight: 300, objectFit: 'cover', display: 'block' }}
+          />
+          <Box sx={{
+            position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
+            display: 'flex', gap: 2, alignItems: 'center'
+          }}>
+            <IconButton
+              onClick={closeCamera}
+              sx={{ bgcolor: 'rgba(255,255,255,0.9)', color: 'black', '&:hover': { bgcolor: 'white' } }}
+            >
+              <CloseIcon />
+            </IconButton>
+            <Button
+              variant="contained"
+              onClick={capturePhoto}
+              disabled={isUploading}
+              sx={{
+                bgcolor: 'white', color: 'black', borderRadius: '50%',
+                width: 64, height: 64, minWidth: 64,
+                '&:hover': { bgcolor: 'grey.100' }
+              }}
+            >
+              {isUploading ? <CircularProgress size={28} /> : <PhotoCamera sx={{ fontSize: 28 }} />}
+            </Button>
+            <IconButton
+              onClick={openGallery}
+              sx={{ bgcolor: 'rgba(255,255,255,0.9)', color: 'black', '&:hover': { bgcolor: 'white' } }}
+            >
+              <PhotoLibrary />
+            </IconButton>
+          </Box>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };
 
-export default ImageFieldRectangle; 
+export default ImageFieldRectangle;

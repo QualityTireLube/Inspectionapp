@@ -300,6 +300,8 @@ const ImageHandling: React.FC<ImageHandlingProps> = ({
   };
 
   const openPhotoLibrary = () => {
+    cleanupCamera();
+
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -312,7 +314,6 @@ const ImageHandling: React.FC<ImageHandlingProps> = ({
           await handleImageUpload(files[i], cameraType);
         }
       }
-      cleanupCamera();
     };
     input.click();
   };

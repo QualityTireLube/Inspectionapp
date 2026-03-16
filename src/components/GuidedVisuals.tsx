@@ -933,6 +933,16 @@ const GuidedVisuals = forwardRef<GuidedVisualsRef, GuidedVisualsProps>(({
   const handleFilePickerClick = () => {
     if (!activeField) return;
     
+    // Close the camera first so pickers don't overlap on iOS
+    if (videoTrackRef.current) {
+      videoTrackRef.current.stop();
+      videoTrackRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setCameraOpen(false);
+
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*,image/heic,image/heif,.heic,.heif';
