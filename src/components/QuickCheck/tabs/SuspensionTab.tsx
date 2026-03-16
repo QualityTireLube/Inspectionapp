@@ -58,7 +58,7 @@ export const SuspensionTab: React.FC<SuspensionTabProps> = ({
       {/* Left Control Arm Bushings */}
       {isEnabled('left_control_arm_bushings') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="left_control_arm_bushings_photos"
@@ -178,7 +178,7 @@ export const SuspensionTab: React.FC<SuspensionTabProps> = ({
       {/* Left Ball Joints */}
       {isEnabled('left_ball_joints') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="left_ball_joints_photos"
@@ -286,7 +286,7 @@ export const SuspensionTab: React.FC<SuspensionTabProps> = ({
       {/* Right Control Arm Bushings */}
       {isEnabled('right_control_arm_bushings') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="right_control_arm_bushings_photos"
@@ -406,7 +406,7 @@ export const SuspensionTab: React.FC<SuspensionTabProps> = ({
       {/* Right Ball Joints */}
       {isEnabled('right_ball_joints') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="right_ball_joints_photos"
@@ -514,7 +514,7 @@ export const SuspensionTab: React.FC<SuspensionTabProps> = ({
       {/* Sway Bar */}
       {isEnabled('sway_bar') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="sway_bar_photos"
@@ -634,7 +634,7 @@ export const SuspensionTab: React.FC<SuspensionTabProps> = ({
       {/* Suspension Type */}
       {isEnabled('suspension_type') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="suspension_type_photos"
@@ -869,7 +869,7 @@ export const SuspensionTab: React.FC<SuspensionTabProps> = ({
       {/* Wheel Bearing */}
       {isEnabled('wheel_bearing') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <Typography variant="body1" sx={{ flexGrow: 1 }}>
             Wheel Bearing
           </Typography>
@@ -978,7 +978,7 @@ export const SuspensionTab: React.FC<SuspensionTabProps> = ({
       {/* CV Axles */}
       {isEnabled('cv_axles') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <Typography variant="body1" sx={{ flexGrow: 1 }}>
             CV Axles
           </Typography>
@@ -1113,7 +1113,7 @@ export const SuspensionTab: React.FC<SuspensionTabProps> = ({
       {/* Rear Suspension */}
       {isEnabled('rear_suspension') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <Typography variant="body1" sx={{ flexGrow: 1 }}>
             Rear Suspension
           </Typography>

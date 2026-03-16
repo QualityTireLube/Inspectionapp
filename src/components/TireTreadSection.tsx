@@ -72,7 +72,7 @@ const TireTreadSection: React.FC<TireTreadSectionProps> = ({
       {label && <Typography variant="h6">{label}</Typography>}
 
       {/* Tire Tread Inputs */}
-      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+      <Box sx={{ display: 'flex', gap: { xs: 0.5, sm: 2 }, justifyContent: 'center', flexWrap: 'wrap' }}>
         {parts.map((part, index) => (
           <Box key={part} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <TextField
@@ -136,7 +136,7 @@ const TireTreadSection: React.FC<TireTreadSectionProps> = ({
       />
 
       {/* Tire Comments and Date - Date on the left side */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, mt: 2 }}>
         {/* Tire Date Input - moved to the left side */}
         <TextField
           label="Tire Date"

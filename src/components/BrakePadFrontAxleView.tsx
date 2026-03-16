@@ -384,7 +384,7 @@ const BrakePadFrontAxleView: React.FC<BrakePadFrontAxleViewProps> = ({
   };
 
   return (
-    <Box sx={{ width, height }}>
+    <Box sx={{ width: '100%', maxWidth: width, height: 'auto', aspectRatio: `${650} / ${350}` }}>
       <svg width="100%" height="100%" viewBox={`0 0 ${svgW} ${svgH}`} preserveAspectRatio="xMidYMid meet">
         <defs>
           <linearGradient id="rotorGradient" x1="0%" y1="0%" x2="0%" y2="100%">

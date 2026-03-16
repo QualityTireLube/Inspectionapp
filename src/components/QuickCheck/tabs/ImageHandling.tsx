@@ -422,13 +422,13 @@ const ImageHandling: React.FC<ImageHandlingProps> = ({
               style={{ width: '100%', height: 'auto' }}
             />
           )}
-          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
-            <Button onClick={handlePrevious} disabled={photos.length <= 1}>Previous</Button>
-            <Typography variant="body2" color="text.secondary">
+          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+            <Button size="small" onClick={handlePrevious} disabled={photos.length <= 1}>Previous</Button>
+            <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
               {safeCurrentIndex + 1} of {photos.length}
             </Typography>
-            <Button onClick={() => onDelete(safeCurrentIndex)} color="error">Delete</Button>
-            <Button onClick={handleNext} disabled={photos.length <= 1}>Next</Button>
+            <Button size="small" onClick={() => onDelete(safeCurrentIndex)} color="error">Delete</Button>
+            <Button size="small" onClick={handleNext} disabled={photos.length <= 1}>Next</Button>
           </Box>
         </DialogContent>
         <DialogActions>

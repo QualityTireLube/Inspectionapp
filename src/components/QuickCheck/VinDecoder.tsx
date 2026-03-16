@@ -281,7 +281,7 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
             return (
               <Box sx={{ pt: 1 }}>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                  <Box sx={{ minWidth: '250px', flex: 1 }}>
+                  <Box sx={{ minWidth: { xs: '100%', sm: '250px' }, flex: 1 }}>
                     <Typography variant="h6" gutterBottom color="primary">
                       Basic Information
                     </Typography>
@@ -297,7 +297,7 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
                     ))}
                   </Box>
 
-                  <Box sx={{ minWidth: '250px', flex: 1 }}>
+                  <Box sx={{ minWidth: { xs: '100%', sm: '250px' }, flex: 1 }}>
                     <Typography variant="h6" gutterBottom color="primary">
                       Engine Details
                     </Typography>
@@ -313,7 +313,7 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
                     ))}
                   </Box>
 
-                  <Box sx={{ minWidth: '250px', flex: 1 }}>
+                  <Box sx={{ minWidth: { xs: '100%', sm: '250px' }, flex: 1 }}>
                     <Typography variant="h6" gutterBottom color="primary">
                       Vehicle Details
                     </Typography>
@@ -329,7 +329,7 @@ export const VinDecoder: React.FC<VinDecoderProps> = ({
                     ))}
                   </Box>
 
-                  <Box sx={{ minWidth: '250px', flex: 1 }}>
+                  <Box sx={{ minWidth: { xs: '100%', sm: '250px' }, flex: 1 }}>
                     <Typography variant="h6" gutterBottom color="primary">
                       Manufacturing
                     </Typography>

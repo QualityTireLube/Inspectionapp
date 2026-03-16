@@ -86,8 +86,8 @@ const InspectionLayout: React.FC<InspectionLayoutProps> = ({
   return (
     <Box sx={{ width: '100%' }}>
       {/* Sticky blue top bar (Quick Check style) */}
-      <Box sx={{ backgroundColor: '#024FFF', color: 'white', py: 2, px: 3, position: 'sticky', top: 0, zIndex: 1000, boxShadow: 2, mb: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <Box sx={{ backgroundColor: '#024FFF', color: 'white', py: { xs: 1.5, sm: 2 }, px: { xs: 1.5, sm: 3 }, position: 'sticky', top: 0, zIndex: 1000, boxShadow: 2, mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 0.5 }}>
           <Typography variant="h6" component="h1">{title}</Typography>
           <Stack direction="row" spacing={1} alignItems="center">
             {/* Timer icon - click to show timing details dropdown */}
@@ -188,7 +188,7 @@ const InspectionLayout: React.FC<InspectionLayoutProps> = ({
             position: 'fixed',
             left: 0,
             bottom: 0,
-            width: '100vw',
+            width: '100%',
             zIndex: 1200,
             bgcolor: 'background.paper',
             borderTop: 1,

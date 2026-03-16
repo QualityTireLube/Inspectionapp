@@ -375,7 +375,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
     
     return (
       <Box sx={{ mt: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
             {label} Photos
           </Typography>
@@ -395,7 +395,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
             display: 'grid', 
             gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
             gap: 2,
-            maxWidth: '400px'
+            maxWidth: { xs: '100%', sm: '400px' }
           }}>
             {tirePhotos.map((photo, index) => (
               <Box
@@ -515,7 +515,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
 
     return (
       <Box sx={{ mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType={photoType}
@@ -548,7 +548,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
         </Box>
 
         {/* Driver and Passenger Sections - Side by Side */}
-        <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3 }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 2, sm: 3 } }}>
           {/* Passenger Section - Left Side */}
           <Box sx={{ flex: 1 }}>
             {renderSideSection('passenger', frontBrakePadData.passenger || { inner: '', outer: '', rotor_condition: '' })}
@@ -578,7 +578,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
             display: 'grid', 
             gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
             gap: 2,
-            maxWidth: '400px'
+            maxWidth: { xs: '100%', sm: '400px' }
           }}>
             {photos.map((photo, index) => (
               <Box
@@ -721,7 +721,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
 
     return (
       <Box sx={{ mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
           <FormLabel component="legend" sx={{ flexGrow: 1, fontWeight: 'normal' }}>
             {title}
           </FormLabel>
@@ -743,7 +743,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
         </Box>
 
         {/* Driver and Passenger Sections - Side by Side (Mirrored for Rear) */}
-        <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3 }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 2, sm: 3 } }}>
           {/* Driver Section - Left Side */}
           <Box sx={{ flex: 1 }}>
             {renderSideSection('driver', rearBrakePadData.driver || { inner: '', outer: '', rotor_condition: '' })}
@@ -775,7 +775,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
             display: 'grid', 
             gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
             gap: 2,
-            maxWidth: '400px'
+            maxWidth: { xs: '100%', sm: '400px' }
           }}>
             {photos.map((photo, index) => (
               <Box
@@ -849,7 +849,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
 
     return (
     <Box sx={{ mb: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
         <FormLabel component="legend" sx={{ flexGrow: 1, fontWeight: 'normal' }}>
           {title}
         </FormLabel>
@@ -872,7 +872,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
       
       {/* Brake Pad Measurements */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid size={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
             label="Inner Pad (mm)"
@@ -900,7 +900,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
             size="small"
           />
         </Grid>
-        <Grid size={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <TextField
             fullWidth
             label="Outer Pad (mm)"
@@ -959,7 +959,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
           display: 'grid', 
           gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
           gap: 2,
-          maxWidth: '400px'
+          maxWidth: { xs: '100%', sm: '400px' }
         }}>
           {photos.map((photo, index) => (
             <Box
@@ -1046,7 +1046,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
         {isEnabled('tire_rotation') && (
           <Box>
             <FormControl component="fieldset">
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
                 <FormLabel component="legend" sx={{ fontWeight: 'normal' }}>Tire Rotation</FormLabel>
                 <NotesField
                   fieldName="tire_rotation"
@@ -1067,7 +1067,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
         {isEnabled('drain_plug_type') && (
           <Box>
             <FormControl component="fieldset">
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
                 <FormLabel component="legend" sx={{ fontWeight: 'normal' }}>Drain Plug Type</FormLabel>
                 <NotesField fieldName="drain_plug_type" fieldLabel="Drain Plug Type" notes={form.field_notes} onNotesChange={onFieldNotesChange} />
               </Box>
@@ -1082,7 +1082,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
         {/* Undercarriage */}
         {isEnabled('undercarriage_photo') && (
           <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
               <Typography variant="body1" sx={{ flexGrow: 1 }}>Undercarriage</Typography>
               <Box sx={{ display: 'flex', gap: 1, marginLeft: 'auto' }}>
                 <SafariImageUpload onImageUpload={onImageUpload} uploadType="undercarriage_photos" disabled={loading} multiple={true} size="small" />
@@ -1107,7 +1107,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
         {isEnabled('static_sticker') && (
           <Box>
             <FormControl component="fieldset">
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
                 <FormLabel component="legend" sx={{ fontWeight: 'normal' }}>Static Sticker</FormLabel>
                 <NotesField fieldName="static_sticker" fieldLabel="Static Sticker" notes={form.field_notes} onNotesChange={onFieldNotesChange} />
               </Box>
@@ -1123,7 +1123,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
         {/* Tire Repair */}
         {isEnabled('tire_repair') && (
           <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
               <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>Tire Repair</Typography>
               <Box sx={{ display: 'flex', gap: 1, marginLeft: 'auto' }}>
                 <SafariImageUpload onImageUpload={onImageUpload} uploadType="tire_repair_status" disabled={loading} multiple={true} size="small" />
@@ -1136,7 +1136,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
                 <Chip label="Tire Repair" color="success" variant={form.tire_repair_status === 'repairable' ? 'filled' : 'outlined'} clickable onClick={() => onRadioChange('tire_repair_status', 'repairable')} sx={{ fontWeight: form.tire_repair_status === 'repairable' ? 'bold' : 'normal', mb: 1 }} />
               </Stack>
               {form.tire_repair_status_photos.length > 0 && (
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 2, maxWidth: '400px', mt: 2 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 2, maxWidth: { xs: '100%', sm: '400px' }, mt: 2 }}>
                   {(form.tire_repair_status_photos || []).map((photo, index) => (
                     <Box key={index} sx={{ position: 'relative', aspectRatio: '1', borderRadius: 1, overflow: 'hidden', border: '1px solid #ddd', cursor: 'pointer', '&:hover .delete-button': { opacity: 1 } }}>
                       <img src={getDisplayUrl(photo)} alt={`Tire Repair Status ${index + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={() => onImageClick(form.tire_repair_status_photos, 'tire_repair_status')} />
@@ -1182,7 +1182,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
         {/* Check TPMS */}
         {isEnabled('check_tpms') && (
           <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
               <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>Check TPMS</Typography>
               <Box sx={{ display: 'flex', gap: 1, marginLeft: 'auto' }}>
                 <SafariImageUpload onImageUpload={onImageUpload} uploadType="tpms_type" disabled={loading} multiple={true} size="small" />
@@ -1198,7 +1198,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
                 <>
                   {/* TPMS Tool Photos */}
                   {form.tpms_tool_photo.length > 0 && (
-                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 2, maxWidth: '400px', mt: 2 }}>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 2, maxWidth: { xs: '100%', sm: '400px' }, mt: 2 }}>
                       {(form.tpms_tool_photo || []).map((photo, index) => (
                         <Box key={index} sx={{ position: 'relative', aspectRatio: '1', borderRadius: 1, overflow: 'hidden', border: '1px solid #ddd', cursor: 'pointer', '&:hover .delete-button': { opacity: 1 } }}>
                           <img src={getDisplayUrl(photo)} alt={`TPMS Tool ${index + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={() => onImageClick(form.tpms_tool_photo, 'tpms_tool_photo')} />
@@ -1228,7 +1228,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
         {/* Notes */}
         {isEnabled('notes') && (
           <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
               <Typography variant="body1" sx={{ flexGrow: 1 }}>Notes</Typography>
               <IconButton size="small" onClick={(e) => onInfoClick(e, 'Add any additional notes or observations about the vehicle inspection.')} sx={{ ml: 1 }}>
                 <InfoIcon fontSize="small" />
@@ -1272,7 +1272,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
       <Box>
         <Box>
           {/* Title with inline camera, photo library, and notes icons */}
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
               <SafariImageUpload
                 onImageUpload={onImageUpload}
                 uploadType="passenger_front"
@@ -1327,7 +1327,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
                 gap: 2,
-                maxWidth: '400px',
+                maxWidth: { xs: '100%', sm: '400px' },
                 mt: 2
               }}>
                 {tirePhotos.map((photo, index) => (
@@ -1416,7 +1416,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
       {/* Front Shock/Struts - VSI Field */}
       {isEnabled('front_shock_struts') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="front_shock_struts_photos"
@@ -1500,7 +1500,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
       <Box>
                 <Box>
           {/* Title with camera, photo library, and notes icons */}
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
             <SafariImageUpload
               onImageUpload={onImageUpload}
               uploadType="driver_front"
@@ -1555,7 +1555,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
                 gap: 2,
-                maxWidth: '400px',
+                maxWidth: { xs: '100%', sm: '400px' },
                 mt: 2
               }}>
                 {tirePhotos.map((photo, index) => (
@@ -1617,7 +1617,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
       {/* Rear Axle Section */}
       {isEnabled('tire_tread_rear') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 4, mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2, mt: 4, mb: 2 }}>
           <Typography variant="h6">
             Rear Axle
           </Typography>
@@ -1638,7 +1638,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
       <Box>
         <Box>
           {/* Title with camera, photo library, and notes icons */}
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
               <FormLabel component="legend" sx={{ flexGrow: 1, fontWeight: 'normal' }}>
                 Driver Rear Tire Tread
               </FormLabel>
@@ -1682,7 +1682,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
                 gap: 2,
-                maxWidth: '400px',
+                maxWidth: { xs: '100%', sm: '400px' },
                 mt: 2
               }}>
                 {tirePhotos.map((photo, index) => (
@@ -1746,7 +1746,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
         <Box>
           <Box>
             {/* Title with camera, photo library, and notes icons */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
                              <FormLabel component="legend" sx={{ flexGrow: 1, fontWeight: 'normal' }}>
                  Driver Rear Inner Tire Tread
                </FormLabel>
@@ -1790,7 +1790,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
                   display: 'grid', 
                   gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
                   gap: 2,
-                  maxWidth: '400px',
+                  maxWidth: { xs: '100%', sm: '400px' },
                   mt: 2
                 }}>
                   {tirePhotos.map((photo, index) => (
@@ -1854,7 +1854,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
       <Box>
         <Box>
           {/* Title with camera, photo library, and notes icons */}
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
               <FormLabel component="legend" sx={{ flexGrow: 1, fontWeight: 'normal' }}>
                 Spare Tire Tread
               </FormLabel>
@@ -1898,7 +1898,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
                 gap: 2,
-                maxWidth: '400px',
+                maxWidth: { xs: '100%', sm: '400px' },
                 mt: 2
               }}>
                 {tirePhotos.map((photo, index) => (
@@ -1987,7 +1987,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
       {/* Rear Shock/Struts - VSI Field */}
       {isEnabled('rear_shock_struts') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="rear_shock_struts_photos"
@@ -2072,7 +2072,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
         <Box>
           <Box>
             {/* Title with camera, photo library, and notes icons */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
                              <FormLabel component="legend" sx={{ flexGrow: 1, fontWeight: 'normal' }}>
                  Passenger Rear Inner Tire Tread
                </FormLabel>
@@ -2116,7 +2116,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
                   display: 'grid', 
                   gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
                   gap: 2,
-                  maxWidth: '400px',
+                  maxWidth: { xs: '100%', sm: '400px' },
                   mt: 2
                 }}>
                   {tirePhotos.map((photo, index) => (
@@ -2180,7 +2180,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
       <Box>
         <Box>
           {/* Title with camera, photo library, and notes icons */}
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
               <FormLabel component="legend" sx={{ flexGrow: 1, fontWeight: 'normal' }}>
                 Passenger Rear Tire Tread
               </FormLabel>
@@ -2224,7 +2224,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
                 gap: 2,
-                maxWidth: '400px',
+                maxWidth: { xs: '100%', sm: '400px' },
                 mt: 2
               }}>
                 {tirePhotos.map((photo, index) => (
@@ -2287,7 +2287,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
       {isEnabled('tire_rotation') && (
       <Box>
         <FormControl component="fieldset">
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
             <FormLabel component="legend" sx={{ fontWeight: 'normal' }}>Tire Rotation</FormLabel>
             <NotesField
               fieldName="tire_rotation"
@@ -2322,7 +2322,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
       {isEnabled('drain_plug_type') && (
       <Box>
         <FormControl component="fieldset">
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
             <FormLabel component="legend" sx={{ fontWeight: 'normal' }}>Drain Plug Type</FormLabel>
             <NotesField
               fieldName="drain_plug_type"
@@ -2356,7 +2356,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
       {/* Undercarriage */}
       {isEnabled('undercarriage_photo') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <Typography variant="body1" sx={{ flexGrow: 1 }}>
             Undercarriage
           </Typography>
@@ -2400,7 +2400,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
       {isEnabled('static_sticker') && (
       <Box>
         <FormControl component="fieldset">
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
             <FormLabel component="legend" sx={{ fontWeight: 'normal' }}>Static Sticker</FormLabel>
             <NotesField
               fieldName="static_sticker"
@@ -2443,7 +2443,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
       {/* Tire Repair */}
       {isEnabled('tire_repair') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
             Tire Repair
           </Typography>
@@ -2489,7 +2489,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
               display: 'grid', 
               gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
               gap: 2,
-              maxWidth: '400px',
+              maxWidth: { xs: '100%', sm: '400px' },
               mt: 2
             }}>
               {(form.tire_repair_status_photos || []).map((photo, index) => (
@@ -2579,7 +2579,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
       {/* TPMS Check */}
       {isEnabled('check_tpms') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
             Check TPMS
           </Typography>
@@ -2625,7 +2625,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
               display: 'grid', 
               gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
               gap: 2,
-              maxWidth: '400px',
+              maxWidth: { xs: '100%', sm: '400px' },
               mt: 2
             }}>
               {(form.tpms_type_photos || []).map((photo, index) => (
@@ -2687,7 +2687,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
       {/* TPMS Tool Bad Sensors Photo */}
       {isEnabled('check_tpms') && form.tpms_type === 'bad_sensor' && (
         <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
             <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
               TPMS Tool Photos
             </Typography>
@@ -2714,7 +2714,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
                 gap: 2,
-                maxWidth: '400px'
+                maxWidth: { xs: '100%', sm: '400px' }
               }}>
                 {(form.tpms_tool_photo || []).map((photo, index) => (
                   <Box
@@ -2794,7 +2794,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
       {/* Notes */}
       {isEnabled('notes') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <Typography variant="body1" sx={{ flexGrow: 1 }}>
             Notes
           </Typography>
@@ -2823,7 +2823,7 @@ export const TiresBrakesTab: React.FC<TiresBrakesTabProps> = ({
       {/* Leaks - VSI Field */}
       {isEnabled('leaks') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="leaks_photos"

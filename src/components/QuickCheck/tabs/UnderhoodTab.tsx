@@ -211,7 +211,7 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
       {/* TPMS Placard */}
       {isEnabled('tpms_placard') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="tpms_placard"
@@ -270,7 +270,7 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
 
       {isEnabled('state_inspection') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="state_inspection_status"
@@ -308,8 +308,8 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
           </Box>
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
             <TextField
               size="small"
               label="State Inspection Date"
@@ -333,7 +333,7 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
                 style: { textAlign: 'center' }
               }}
               sx={{
-                width: '120px',
+                width: { xs: '100%', sm: '120px' },
                 '& .MuiInputBase-input::placeholder': {
                   opacity: 1,
                   color: 'text.secondary'
@@ -453,7 +453,7 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
 
       {isEnabled('washer_fluid') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="washer_fluid"
@@ -541,7 +541,7 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
             display: 'grid', 
             gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', 
             gap: 1,
-            maxWidth: '300px'
+            maxWidth: { xs: '100%', sm: '300px' }
           }}>
             {form.washer_fluid_photo.map((photo, index) => (
               <Box
@@ -602,7 +602,7 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
 
       {isEnabled('engine_air_filter') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="engine_air_filter"
@@ -696,7 +696,7 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
             display: 'grid', 
             gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', 
             gap: 1,
-            maxWidth: '300px'
+            maxWidth: { xs: '100%', sm: '300px' }
           }}>
             {form.engine_air_filter_photo.map((photo, index) => (
               <Box
@@ -757,7 +757,7 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
 
       {isEnabled('battery_condition') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="battery"
@@ -842,8 +842,8 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
           </Stack>
           
           {/* Battery Date Code - moved here under Battery sub-field */}
-          <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
               <TextField
                 size="small"
                 label="Battery Date Code"
@@ -867,7 +867,7 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
                   style: { textAlign: 'center' }
                 }}
                 sx={{
-                  width: '100px',
+                  width: { xs: '100%', sm: '100px' },
                   '& .MuiInputBase-input::placeholder': {
                     opacity: 1,
                     color: 'text.secondary'
@@ -955,7 +955,7 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', 
                 gap: 1,
-                maxWidth: '300px'
+                maxWidth: { xs: '100%', sm: '300px' }
               }}>
                 {/* General Battery Photos */}
                 {form.battery_photos.map((photo, index) => (
@@ -1185,7 +1185,7 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
       {/* Drive Belt */}
       {isEnabled('drive_belt') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="drive_belt_photos"
@@ -1254,7 +1254,7 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
       {/* Engine Mounts */}
       {isEnabled('engine_mounts') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="engine_mounts_photos"
@@ -1391,7 +1391,7 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
       {/* Brake Fluid */}
       {isEnabled('brake_fluid') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="brake_fluid_photos"
@@ -1467,7 +1467,7 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
       {/* Power Steering Fluid */}
       {isEnabled('powersteering_fluid') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="powersteering_fluid_photos"
@@ -1543,7 +1543,7 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
       {/* Coolant */}
       {isEnabled('coolant') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="coolant_photos"
@@ -1619,7 +1619,7 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
       {/* Radiator End Caps */}
       {isEnabled('radiator_end_caps') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="radiator_end_caps_photos"
@@ -1695,7 +1695,7 @@ export const UnderhoodTab: React.FC<UnderhoodTabProps> = ({
       {/* Cooling Hoses */}
       {isEnabled('cooling_hoses') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="cooling_hoses_photos"

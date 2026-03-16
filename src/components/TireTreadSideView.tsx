@@ -82,7 +82,7 @@ const TireTreadSideView: React.FC<TireTreadSideViewProps> = ({
   const tireColor = getTireColor(depths);
 
   return (
-    <Box sx={{ width, height }}>
+    <Box sx={{ width: '100%', maxWidth: width, height: 'auto', aspectRatio: `${300} / ${120}` }}>
       <svg width="100%" height="100%" viewBox="0 0 300 120" preserveAspectRatio="xMidYMid meet">
         <defs>
           <radialGradient id="sidewallGradient" cx="50%" cy="80%" r="80%">

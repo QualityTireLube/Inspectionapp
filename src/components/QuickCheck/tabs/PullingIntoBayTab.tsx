@@ -100,7 +100,7 @@ export const PullingIntoBayTab: React.FC<PullingIntoBayTabProps> = ({
       {/* Dash Lights */}
       {isEnabled('dash_lights_photos') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="dashLights"
@@ -162,7 +162,7 @@ export const PullingIntoBayTab: React.FC<PullingIntoBayTabProps> = ({
       {/* Mileage */}
       {isEnabled('mileage') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="mileage"
@@ -278,7 +278,7 @@ export const PullingIntoBayTab: React.FC<PullingIntoBayTabProps> = ({
       {/* Windshield Condition */}
       {isEnabled('windshield_condition') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="windshield_condition"
@@ -317,7 +317,7 @@ export const PullingIntoBayTab: React.FC<PullingIntoBayTabProps> = ({
             </IconButton>
           </Box>
         </Box>
-        <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+        <Stack direction="row" spacing={2} sx={{ mt: 1, flexWrap: 'wrap' }}>
           <Chip
             label="✅ Good"
             color="success"
@@ -402,7 +402,7 @@ export const PullingIntoBayTab: React.FC<PullingIntoBayTabProps> = ({
       {/* Wiper Blades */}
       {isEnabled('wiper_blades') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="wiper_blades"
@@ -590,7 +590,7 @@ export const PullingIntoBayTab: React.FC<PullingIntoBayTabProps> = ({
       {/* Washer Squirters */}
       {isEnabled('washer_squirters') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="washer_squirters"
@@ -730,7 +730,7 @@ export const PullingIntoBayTab: React.FC<PullingIntoBayTabProps> = ({
       {/* Check Engine Mounts - VSI Field */}
       {isEnabled('check_engine_mounts') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="check_engine_mounts_photos"
@@ -792,7 +792,7 @@ export const PullingIntoBayTab: React.FC<PullingIntoBayTabProps> = ({
       {/* Exterior Lights Front - VSI Field */}
       {isEnabled('exterior_lights_front') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <SafariImageUpload
             onImageUpload={onImageUpload}
             uploadType="exterior_lights_photos"
@@ -980,7 +980,7 @@ export const PullingIntoBayTab: React.FC<PullingIntoBayTabProps> = ({
       {/* Exterior Lights Rear - VSI Field */}
       {isEnabled('exterior_lights_rear') && (
       <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           <Typography variant="body1" sx={{ flexGrow: 1, ml: 1 }}>
             Exterior Lights (Rear)
           </Typography>
