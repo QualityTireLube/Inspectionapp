@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../contexts/UserContext';
 import ConnectionStatusIndicator from './ConnectionStatusIndicator';
 import {
   AppBar,
@@ -67,6 +68,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
+  const { user, visiblePages, roleHomePageId } = useUser();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null);
   const [archivedExpanded, setArchivedExpanded] = useState(false);
@@ -199,26 +201,35 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
   };
 
-  const getUserRole = () => {
-    // Try to get role from localStorage first
-    const role = localStorage.getItem('userRole');
-    if (role) return role;
-    
-    // If not in localStorage, try to decode from JWT token
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        return payload.role || 'Technician';
-      } catch (e) {
-        return 'Technician';
-      }
-    }
-    return 'Technician';
-  };
+  const getUserRole = () => user?.role || localStorage.getItem('userRole') || 'technician';
 
   const isAdmin = () => {
-    return getUserRole() === 'Admin';
+    const role = getUserRole().toLowerCase();
+    return role === 'admin' || role === 'manager';
+  };
+
+  /**
+   * Returns true if the user's role can see the given page.
+   * When visiblePages is empty the role has no restrictions (all pages visible).
+   */
+  const canSee = useCallback((pageId: string) => {
+    if (!visiblePages || visiblePages.length === 0) return true;
+    return visiblePages.includes(pageId);
+  }, [visiblePages]);
+
+  /** Maps a route path to a pageRegistry page ID for visibility checks. */
+  const pathToPageId = (path: string): string => {
+    const map: Record<string, string> = {
+      '/': 'home',
+      '/tech-dashboard': 'techDashboard',
+      '/labels': 'labels',
+      '/quick-check': 'quickCheck',
+      '/no-check': 'noCheck',
+      '/vsi': 'vsi',
+      '/state-inspection-records': 'stateInspections',
+      '/settings': 'settings',
+    };
+    return map[path] ?? path;
   };
 
   const handleDrawerToggle = () => {
@@ -305,35 +316,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   ];
 
   const getHomeRedirectPath = () => {
-    const roleName = localStorage.getItem('userRole') || '';
-    // Admin defaults to dashboard; otherwise find role home page
-    return getRoleHomePathSync(roleName) || '/';
+    if (roleHomePageId) {
+      const page = appPages.find(p => p.id === roleHomePageId);
+      if (page) return page.path;
+    }
+    return '/';
   };
-
-  const getRoleHomePathSync = (roleName: string): string | null => {
-    try {
-      const raw = localStorage.getItem('roles.cache');
-      if (raw) {
-        const roles: UserRole[] = JSON.parse(raw);
-        const role = roles.find(r => r.name === roleName);
-        if (role?.homePageId) {
-          const page = appPages.find(p => p.id === role.homePageId);
-          return page?.path || null;
-        }
-      }
-    } catch {}
-    return null;
-  };
-
-  // Cache roles in localStorage occasionally for quick sync redirect
-  useEffect(() => {
-    (async () => {
-      try {
-        const roles = await getRoles();
-        localStorage.setItem('roles.cache', JSON.stringify(roles));
-      } catch {}
-    })();
-  }, []);
 
   const drawer = (
     <Box sx={{ width: 250 }} role="presentation">
@@ -344,44 +332,41 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </Box>
       <Divider />
       <List>
-        <ListItem disablePadding>
-          <ListItemButton onClick={() => handleNavigation(getHomeRedirectPath())}>
-            <ListItemIcon>
-              <HomeIcon />
-            </ListItemIcon>
-            <ListItemText primary="Home" />
-          </ListItemButton>
-        </ListItem>
+        {canSee('home') && (
+          <ListItem disablePadding>
+            <ListItemButton onClick={() => handleNavigation(getHomeRedirectPath())}>
+              <ListItemIcon><HomeIcon /></ListItemIcon>
+              <ListItemText primary="Home" />
+            </ListItemButton>
+          </ListItem>
+        )}
 
-        <ListItem disablePadding>
-          <ListItemButton onClick={() => handleNavigation('/tech-dashboard')}>
-            <ListItemIcon>
-              <DashboardIcon />
-            </ListItemIcon>
-            <ListItemText primary="Tech Dashboard" />
-          </ListItemButton>
-        </ListItem>
+        {canSee('techDashboard') && (
+          <ListItem disablePadding>
+            <ListItemButton onClick={() => handleNavigation('/tech-dashboard')}>
+              <ListItemIcon><DashboardIcon /></ListItemIcon>
+              <ListItemText primary="Tech Dashboard" />
+            </ListItemButton>
+          </ListItem>
+        )}
 
-        {/* Labels sub-navigation under Home */}
-        <ListItem disablePadding>
-          <ListItemButton onClick={() => handleNavigation('/labels')}>
-            <ListItemIcon>
-              <LabelIcon />
-            </ListItemIcon>
-            <ListItemText primary="Labels" />
-          </ListItemButton>
-        </ListItem>
+        {canSee('labels') && (
+          <ListItem disablePadding>
+            <ListItemButton onClick={() => handleNavigation('/labels')}>
+              <ListItemIcon><LabelIcon /></ListItemIcon>
+              <ListItemText primary="Labels" />
+            </ListItemButton>
+          </ListItem>
+        )}
 
-
-
-        <ListItem disablePadding>
-          <ListItemButton onClick={() => handleNavigation('/state-inspection-records')}>
-            <ListItemIcon>
-              <LocalPoliceIcon />
-            </ListItemIcon>
-            <ListItemText primary="State Inspections" />
-          </ListItemButton>
-        </ListItem>
+        {canSee('stateInspections') && (
+          <ListItem disablePadding>
+            <ListItemButton onClick={() => handleNavigation('/state-inspection-records')}>
+              <ListItemIcon><LocalPoliceIcon /></ListItemIcon>
+              <ListItemText primary="State Inspections" />
+            </ListItemButton>
+          </ListItem>
+        )}
 
 
         {/* Archived section with sub-navigation */}
@@ -404,29 +389,31 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </Collapse>
         
         {/* DVI section with sub-navigation */}
-        <ListItem disablePadding>
-          <ListItemButton onClick={handleDviToggle}>
-            <ListItemIcon>
-              <CarRepairIcon />
-            </ListItemIcon>
-            <ListItemText primary="DVI" />
-            {dviExpanded ? <ExpandLess /> : <ExpandMore />}
-          </ListItemButton>
-        </ListItem>
-        <Collapse in={dviExpanded} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            {dviMenuItems.map((item) => (
-              <ListItem key={item.text} disablePadding>
-                <ListItemButton sx={{ pl: 4 }} onClick={() => handleNavigation(item.path)}>
-                  <ListItemIcon sx={{ minWidth: 36 }}>
-                    {item.icon}
-                  </ListItemIcon>
-                  <ListItemText primary={item.text} />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-        </Collapse>
+        {dviMenuItems.filter(item => canSee(pathToPageId(item.path))).length > 0 && (
+          <>
+            <ListItem disablePadding>
+              <ListItemButton onClick={handleDviToggle}>
+                <ListItemIcon><CarRepairIcon /></ListItemIcon>
+                <ListItemText primary="DVI" />
+                {dviExpanded ? <ExpandLess /> : <ExpandMore />}
+              </ListItemButton>
+            </ListItem>
+            <Collapse in={dviExpanded} timeout="auto" unmountOnExit>
+              <List component="div" disablePadding>
+                {dviMenuItems
+                  .filter(item => canSee(pathToPageId(item.path)))
+                  .map((item) => (
+                    <ListItem key={item.text} disablePadding>
+                      <ListItemButton sx={{ pl: 4 }} onClick={() => handleNavigation(item.path)}>
+                        <ListItemIcon sx={{ minWidth: 36 }}>{item.icon}</ListItemIcon>
+                        <ListItemText primary={item.text} />
+                      </ListItemButton>
+                    </ListItem>
+                  ))}
+              </List>
+            </Collapse>
+          </>
+        )}
         
         {/* Admin section with sub-navigation (only show for admins) */}
         {isAdmin() && (
@@ -650,11 +637,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               },
             }}
           >
-              <BottomNavigationAction label="Dashboard" icon={<DashboardIcon />} />
-              {dviMenuItems.map((item, idx) => (
-                <BottomNavigationAction key={idx} label={item.text} icon={item.icon} />
-              ))}
-              <BottomNavigationAction label="Settings" icon={<SettingsIcon />} />
+              {canSee('techDashboard') && <BottomNavigationAction label="Dashboard" icon={<DashboardIcon />} />}
+              {dviMenuItems
+                .filter(item => canSee(pathToPageId(item.path)))
+                .map((item, idx) => (
+                  <BottomNavigationAction key={idx} label={item.text} icon={item.icon} />
+                ))}
+              {canSee('settings') && <BottomNavigationAction label="Settings" icon={<SettingsIcon />} />}
           </BottomNavigation>
         </Paper>
       )}

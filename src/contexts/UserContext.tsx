@@ -4,6 +4,8 @@ import { db } from '../services/firebase/config';
 import { LocationService } from '../services/locationService';
 import { Location } from '../types/locations';
 import { onAuthChange } from '../services/firebase/auth';
+import { getRoleById, seedDefaultRolesIfEmpty } from '../services/firebase/users';
+import { seedDefaultSchemasIfEmpty } from '../services/firebase/schemas';
 import { User } from 'firebase/auth';
 
 export interface UserProfile {
@@ -24,6 +26,8 @@ export interface UserContextType {
   roleHomePageId?: string;
   needsProfileSetup: boolean;
   firebaseUid: string | null;
+  /** Page IDs the current user's role can access. Empty = all pages. */
+  visiblePages: string[];
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -39,6 +43,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
+  const [visiblePages, setVisiblePages] = useState<string[]>([]);
+  const [roleHomePageId, setRoleHomePageId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const unsubscribe = onAuthChange((fbUser) => {
@@ -94,6 +100,19 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
       setUser(profile);
 
+      // Seed Firestore collections on first boot (safe no-op if already seeded)
+      seedDefaultRolesIfEmpty().catch(() => {});
+      seedDefaultSchemasIfEmpty().catch(() => {});
+
+      // Load role config to get visiblePages and homePageId
+      try {
+        const roleConfig = await getRoleById(profile.role || 'technician');
+        setVisiblePages(roleConfig?.visiblePages ?? []);
+        setRoleHomePageId(roleConfig?.homePageId);
+      } catch {
+        setVisiblePages([]);
+      }
+
       if (profile.location) {
         const locations = LocationService.getLocations();
         const location =
@@ -124,10 +143,11 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     error,
     refreshUser,
     isAuthenticated: !!firebaseUser,
-    roleHomePageId: undefined,
+    roleHomePageId,
     needsProfileSetup,
     firebaseUid: firebaseUser?.uid ?? null,
-  }), [user, userLocation, loading, error, refreshUser, firebaseUser, needsProfileSetup]);
+    visiblePages,
+  }), [user, userLocation, loading, error, refreshUser, firebaseUser, needsProfileSetup, visiblePages, roleHomePageId]);
 
   return (
     <UserContext.Provider value={value}>

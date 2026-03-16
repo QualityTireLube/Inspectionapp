@@ -68,7 +68,57 @@ export async function renameInspectionType(oldType: string, newType: string): Pr
   await deleteDoc(doc(db, SCHEMAS, oldType));
 }
 
+// ── Default schemas seeded on first boot ───────────────────────────────────────
+
+export const DEFAULT_SCHEMAS: Record<string, Omit<InspectionSchema, 'id'>> = {
+  quick_check: {
+    title: 'Quick Check',
+    enabled: true,
+    showInBottomNav: true,
+    navOrder: 1,
+    navIcon: 'question_answer',
+    tabs: ['Vehicle Info', 'Tires', 'Brakes', 'Fluid', 'Lights', 'Notes'],
+    fieldsByTab: {},
+  },
+  no_check: {
+    title: 'No Check',
+    enabled: true,
+    showInBottomNav: true,
+    navOrder: 2,
+    navIcon: 'assignment',
+    tabs: ['Vehicle Info', 'Notes'],
+    fieldsByTab: {},
+  },
+  vsi: {
+    title: 'VSI',
+    enabled: true,
+    showInBottomNav: true,
+    navOrder: 3,
+    navIcon: 'security',
+    tabs: ['Vehicle Info', 'Safety', 'Emissions', 'Notes'],
+    fieldsByTab: {},
+  },
+};
+
+/**
+ * Seeds the `inspection_schemas` Firestore collection with DEFAULT_SCHEMAS
+ * if it is currently empty. Safe to call on every app boot.
+ */
+export async function seedDefaultSchemasIfEmpty(): Promise<void> {
+  const snap = await getDocs(collection(db, SCHEMAS));
+  if (!snap.empty) return; // already seeded
+  await Promise.all(
+    Object.entries(DEFAULT_SCHEMAS).map(([id, data]) =>
+      setDoc(doc(db, SCHEMAS, id), data)
+    )
+  );
+}
+
 export async function restoreSchemaDefaults(_type: string): Promise<void> {
-  // Defaults can be re-seeded from a local constant if needed
-  console.warn('restoreSchemaDefaults: not implemented for Firebase');
+  // Re-seed all defaults (used by admin reset button)
+  await Promise.all(
+    Object.entries(DEFAULT_SCHEMAS).map(([id, data]) =>
+      setDoc(doc(db, SCHEMAS, id), data)
+    )
+  );
 }

@@ -9,5 +9,7 @@ export {
   deleteInspectionType,
   renameInspectionType,
   restoreSchemaDefaults,
+  seedDefaultSchemasIfEmpty,
+  DEFAULT_SCHEMAS,
 } from './firebase/schemas';
 export type { InspectionSchema, SchemasResponse } from './firebase/schemas';

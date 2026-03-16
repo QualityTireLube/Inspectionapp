@@ -72,24 +72,24 @@ function App() {
                 <Route path="/register" element={<Register />} />
 
                 {/* Protected */}
-                <Route path="/" element={<ProtectedRoute><Layout><Home /></Layout></ProtectedRoute>} />
-                <Route path="/tech-dashboard" element={<ProtectedRoute><Layout><TechDashboard /></Layout></ProtectedRoute>} />
-                <Route path="/quick-check" element={<ProtectedRoute><QuickCheck /></ProtectedRoute>} />
-                <Route path="/no-check" element={<ProtectedRoute><NoCheck /></ProtectedRoute>} />
-                <Route path="/vsi" element={<ProtectedRoute><VSI /></ProtectedRoute>} />
-                <Route path="/history" element={<ProtectedRoute><Layout><ErrorBoundary><History /></ErrorBoundary></Layout></ProtectedRoute>} />
+                <Route path="/" element={<ProtectedRoute pageId="home"><Layout><Home /></Layout></ProtectedRoute>} />
+                <Route path="/tech-dashboard" element={<ProtectedRoute pageId="techDashboard"><Layout><TechDashboard /></Layout></ProtectedRoute>} />
+                <Route path="/quick-check" element={<ProtectedRoute pageId="quickCheck"><QuickCheck /></ProtectedRoute>} />
+                <Route path="/no-check" element={<ProtectedRoute pageId="noCheck"><NoCheck /></ProtectedRoute>} />
+                <Route path="/vsi" element={<ProtectedRoute pageId="vsi"><VSI /></ProtectedRoute>} />
+                <Route path="/history" element={<ProtectedRoute pageId="archivedQuickCheck"><Layout><ErrorBoundary><History /></ErrorBoundary></Layout></ProtectedRoute>} />
                 <Route path="/quick-check-records" element={<ProtectedRoute><Layout><QuickCheckRecords /></Layout></ProtectedRoute>} />
-                <Route path="/quick-check/:id" element={<ProtectedRoute><Layout><QuickCheckDetail /></Layout></ProtectedRoute>} />
-                <Route path="/quick-check-drafts" element={<ProtectedRoute><Layout><QuickCheckDrafts /></Layout></ProtectedRoute>} />
+                <Route path="/quick-check/:id" element={<ProtectedRoute pageId="quickCheck"><Layout><QuickCheckDetail /></Layout></ProtectedRoute>} />
+                <Route path="/quick-check-drafts" element={<ProtectedRoute pageId="quickCheckDrafts"><Layout><QuickCheckDrafts /></Layout></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute pageId="settings"><Layout><Settings /></Layout></ProtectedRoute>} />
                 <Route path="/oil-change-stickers" element={<ProtectedRoute><Layout><ActiveStickers /></Layout></ProtectedRoute>} />
-                <Route path="/oil-change-stickers/archived" element={<ProtectedRoute><Layout><ArchivedStickers /></Layout></ProtectedRoute>} />
-                <Route path="/label-manager" element={<ProtectedRoute><LabelManager /></ProtectedRoute>} />
-                <Route path="/labels" element={<ProtectedRoute><Layout><Labels /></Layout></ProtectedRoute>} />
-                <Route path="/state-inspection-records" element={<ProtectedRoute><Layout><StateInspectionRecords /></Layout></ProtectedRoute>} />
-                <Route path="/databases" element={<ProtectedRoute><Layout><Databases /></Layout></ProtectedRoute>} />
-                <Route path="/print-token-manager" element={<ProtectedRoute><Layout><PrintTokenManager /></Layout></ProtectedRoute>} />
+                <Route path="/oil-change-stickers/archived" element={<ProtectedRoute pageId="archivedStaticStickers"><Layout><ArchivedStickers /></Layout></ProtectedRoute>} />
+                <Route path="/label-manager" element={<ProtectedRoute pageId="labelManager"><LabelManager /></ProtectedRoute>} />
+                <Route path="/labels" element={<ProtectedRoute pageId="labels"><Layout><Labels /></Layout></ProtectedRoute>} />
+                <Route path="/state-inspection-records" element={<ProtectedRoute pageId="stateInspections"><Layout><StateInspectionRecords /></Layout></ProtectedRoute>} />
+                <Route path="/databases" element={<ProtectedRoute pageId="databases"><Layout><Databases /></Layout></ProtectedRoute>} />
+                <Route path="/print-token-manager" element={<ProtectedRoute pageId="printTokenManager"><Layout><PrintTokenManager /></Layout></ProtectedRoute>} />
                 <Route path="/print-queue-archive" element={<ProtectedRoute><Layout><PrintQueueArchive /></Layout></ProtectedRoute>} />
 
                 {/* Dev/debug */}

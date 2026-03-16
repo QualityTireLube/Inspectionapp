@@ -4,7 +4,7 @@
  */
 
 import {
-  collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, orderBy, where
+  collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, orderBy, where, writeBatch
 } from 'firebase/firestore';
 import { updateEmail, updatePassword as fbUpdatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { db, auth } from './config';
@@ -113,26 +113,70 @@ export async function updateUserSettings(settings: Record<string, any>): Promise
   await updateDoc(doc(db, USERS, uid), { settings });
 }
 
-// ── Roles (simplified — stored as `role` field on user docs) ──────────────────
+// ── Roles — stored in Firestore `roles` collection ────────────────────────────
 
 export type UserRole = {
   id: string;
   name: string;
   homePageId?: string;
-  pages?: string[];
+  visiblePages?: string[]; // empty = all pages visible
+  pages?: string[];        // legacy alias
 };
 
-const ROLE_PRESETS: UserRole[] = [
-  { id: 'admin', name: 'Admin', homePageId: 'home' },
-  { id: 'manager', name: 'Manager', homePageId: 'home' },
-  { id: 'service_advisor', name: 'Service Advisor', homePageId: 'home' },
-  { id: 'technician', name: 'Technician', homePageId: 'quickCheck' },
+const ROLES_COLLECTION = 'roles';
+
+const DEFAULT_ROLES: UserRole[] = [
+  { id: 'admin',           name: 'Admin',           homePageId: 'home',       visiblePages: [] },
+  { id: 'manager',         name: 'Manager',         homePageId: 'home',       visiblePages: [] },
+  { id: 'service_advisor', name: 'Service Advisor', homePageId: 'home',       visiblePages: [] },
+  { id: 'technician',      name: 'Technician',      homePageId: 'quickCheck', visiblePages: ['techDashboard', 'quickCheck', 'noCheck', 'vsi'] },
 ];
 
-export async function getRoles(): Promise<UserRole[]> {
-  return ROLE_PRESETS;
+/** Seed default roles if collection is empty. */
+export async function seedDefaultRolesIfEmpty(): Promise<void> {
+  const snap = await getDocs(collection(db, ROLES_COLLECTION));
+  if (!snap.empty) return;
+  const batch = writeBatch(db);
+  DEFAULT_ROLES.forEach(role => {
+    batch.set(doc(db, ROLES_COLLECTION, role.id), {
+      name: role.name,
+      homePageId: role.homePageId ?? 'home',
+      visiblePages: role.visiblePages ?? [],
+    });
+  });
+  await batch.commit();
 }
 
-export async function getRolePages(): Promise<{ roleId: string; pages: string[] }[]> {
+export async function getRoles(): Promise<UserRole[]> {
+  try {
+    const snap = await getDocs(collection(db, ROLES_COLLECTION));
+    if (snap.empty) {
+      await seedDefaultRolesIfEmpty();
+      return DEFAULT_ROLES;
+    }
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as UserRole));
+  } catch {
+    return DEFAULT_ROLES;
+  }
+}
+
+export async function getRoleById(roleId: string): Promise<UserRole | null> {
+  try {
+    const snap = await getDoc(doc(db, ROLES_COLLECTION, roleId));
+    if (!snap.exists()) {
+      return DEFAULT_ROLES.find(r => r.id === roleId) ?? null;
+    }
+    return { id: snap.id, ...snap.data() } as UserRole;
+  } catch {
+    return DEFAULT_ROLES.find(r => r.id === roleId) ?? null;
+  }
+}
+
+export async function updateRole(roleId: string, updates: Partial<UserRole>): Promise<void> {
+  const { id: _id, ...data } = updates as any;
+  await setDoc(doc(db, ROLES_COLLECTION, roleId), data, { merge: true });
+}
+
+export async function getRolePages(): Promise<string[]> {
   return [];
 }

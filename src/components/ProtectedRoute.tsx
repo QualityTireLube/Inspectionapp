@@ -3,22 +3,29 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { CircularProgress, Box, Typography } from '@mui/material';
 import { onAuthChange } from '../services/firebase/auth';
 import { firebaseInitError } from '../services/firebase/config';
+import { useUser } from '../contexts/UserContext';
+import { appPages } from '../pages/pageRegistry';
 import { User } from 'firebase/auth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  /**
+   * Optional page ID from pageRegistry.
+   * If provided and the user's role does NOT include this page in visiblePages,
+   * the user is redirected to their role's home page (or "/" as fallback).
+   */
+  pageId?: string;
 }
 
 // If Firebase auth hasn't resolved after this many ms, assume logged out.
 const AUTH_TIMEOUT_MS = 8000;
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, pageId }) => {
   const location = useLocation();
-  // undefined = still checking, null = not logged in, User = logged in
   const [firebaseUser, setFirebaseUser] = useState<User | null | undefined>(undefined);
   const [timedOut, setTimedOut] = useState(false);
+  const { visiblePages, roleHomePageId, loading: userLoading } = useUser();
 
-  // If Firebase failed to initialise entirely, go straight to login.
   if (firebaseInitError) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
@@ -27,10 +34,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     const unsubscribe = onAuthChange((user) => {
       setFirebaseUser(user);
     });
-
-    // Safety net: if auth state never fires, send to login after timeout.
     const timer = setTimeout(() => setTimedOut(true), AUTH_TIMEOUT_MS);
-
     return () => {
       unsubscribe();
       clearTimeout(timer);
@@ -48,6 +52,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   if (!firebaseUser) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Role-based page access check
+  if (pageId && !userLoading && visiblePages.length > 0 && !visiblePages.includes(pageId)) {
+    const homePage = roleHomePageId ? appPages.find(p => p.id === roleHomePageId) : null;
+    return <Navigate to={homePage?.path ?? '/'} replace />;
   }
 
   return <>{children}</>;
