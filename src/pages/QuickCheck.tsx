@@ -17,12 +17,20 @@ const QuickCheck: React.FC = () => {
         if (!mounted) return;
         const live = data.schemas?.quick_check;
         if (live) {
+          const staticSchema = INSPECTION_SCHEMAS.quick_check;
           setSchema({
-            title: live.title || 'Quick Check',
-            tabOrder: live.tabOrder || [],
-            fieldsByTab: live.fieldsByTab || {},
-            draftKeyPrefix: INSPECTION_SCHEMAS.quick_check.draftKeyPrefix,
-            submitType: INSPECTION_SCHEMAS.quick_check.submitType
+            title: live.title || staticSchema.title,
+            // Only use Firestore tabOrder/fieldsByTab if they are actually populated;
+            // otherwise keep the static definition which has the real form tabs.
+            tabOrder: (live.tabOrder && live.tabOrder.length > 0)
+              ? live.tabOrder
+              : staticSchema.tabOrder,
+            fieldsByTab: (live.fieldsByTab && Object.keys(live.fieldsByTab).length > 0)
+              ? live.fieldsByTab
+              : staticSchema.fieldsByTab,
+            draftKeyPrefix: staticSchema.draftKeyPrefix,
+            submitType: staticSchema.submitType,
+            showBottomNav: live.showBottomNav ?? staticSchema.showBottomNav,
           });
         }
       } catch {
