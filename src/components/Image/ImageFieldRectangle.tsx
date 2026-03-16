@@ -45,20 +45,28 @@ const ImageFieldRectangle: React.FC<ImageFieldRectangleProps> = ({
     }
   };
 
+  const pendingStreamRef = useRef<MediaStream | null>(null);
+
   const stopCamera = () => {
     if (trackRef.current) { trackRef.current.stop(); trackRef.current = null; }
+    if (pendingStreamRef.current) {
+      pendingStreamRef.current.getTracks().forEach(t => t.stop());
+      pendingStreamRef.current = null;
+    }
     if (videoRef.current) videoRef.current.srcObject = null;
   };
 
-  const openCamera = async () => {
-    setCameraOpen(true);
+  const initCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: cameraFacing }
       });
+      trackRef.current = stream.getVideoTracks()[0];
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        trackRef.current = stream.getVideoTracks()[0];
+        videoRef.current.play().catch(() => {});
+      } else {
+        pendingStreamRef.current = stream;
       }
     } catch {
       stopCamera();
@@ -67,9 +75,28 @@ const ImageFieldRectangle: React.FC<ImageFieldRectangleProps> = ({
     }
   };
 
+  const openCamera = () => {
+    setCameraOpen(true);
+  };
+
   const closeCamera = () => {
     stopCamera();
     setCameraOpen(false);
+  };
+
+  useEffect(() => {
+    if (cameraOpen) {
+      initCamera();
+    }
+  }, [cameraOpen]);
+
+  const videoRefCallback = (el: HTMLVideoElement | null) => {
+    videoRef.current = el;
+    if (el && pendingStreamRef.current) {
+      el.srcObject = pendingStreamRef.current;
+      el.play().catch(() => {});
+      pendingStreamRef.current = null;
+    }
   };
 
   const capturePhoto = () => {
@@ -310,7 +337,7 @@ const ImageFieldRectangle: React.FC<ImageFieldRectangleProps> = ({
       <Dialog open={cameraOpen} onClose={closeCamera} maxWidth="sm" fullWidth PaperProps={{ sx: { bgcolor: 'black' } }}>
         <DialogContent sx={{ p: 0, bgcolor: 'black', position: 'relative' }}>
           <video
-            ref={videoRef}
+            ref={videoRefCallback}
             playsInline
             autoPlay
             muted

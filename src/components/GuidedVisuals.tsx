@@ -89,6 +89,7 @@ const GuidedVisuals = forwardRef<GuidedVisualsRef, GuidedVisualsProps>(({
   const [cameraOpen, setCameraOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoTrackRef = useRef<MediaStreamTrack | null>(null);
+  const pendingStreamRef = useRef<MediaStream | null>(null);
   const currentCameraInputRef = useRef<HTMLInputElement | null>(null);
   const triggerCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const vinTriggeredRef = useRef<Set<string>>(new Set()); // Track which fields have been triggered by VIN
@@ -825,26 +826,20 @@ const GuidedVisuals = forwardRef<GuidedVisualsRef, GuidedVisualsProps>(({
     }
   };
 
-  const openCamera = async () => {
-    // Always open the camera modal first
+  const openCamera = () => {
     setCameraOpen(true);
     setError(null);
-    
+  };
+
+  const initCameraStream = async () => {
     try {
       let stream: MediaStream;
       
-      // Use ultra-wide camera for undercarriage photos
       if (activeField?.fieldName === 'undercarriage_photo') {
-        console.log('🎯 Attempting to use ultra-wide camera for undercarriage photo');
-        
         try {
-          // Try to get devices and find ultra-wide camera
           const devices = await navigator.mediaDevices.enumerateDevices();
           const videoDevices = devices.filter(device => device.kind === 'videoinput');
           
-          console.log('📱 Available cameras:', videoDevices.length);
-          
-          // Try to find ultra-wide camera (often has "ultra" or "wide" in label)
           const ultraWideDevice = videoDevices.find(device => 
             device.label.toLowerCase().includes('ultra') || 
             device.label.toLowerCase().includes('wide') ||
@@ -852,7 +847,6 @@ const GuidedVisuals = forwardRef<GuidedVisualsRef, GuidedVisualsProps>(({
           );
           
           if (ultraWideDevice) {
-            console.log('📐 Found ultra-wide camera:', ultraWideDevice.label);
             stream = await navigator.mediaDevices.getUserMedia({
               video: {
                 deviceId: { exact: ultraWideDevice.deviceId },
@@ -861,8 +855,6 @@ const GuidedVisuals = forwardRef<GuidedVisualsRef, GuidedVisualsProps>(({
               }
             });
           } else {
-            // Fallback: Use environment camera with wide settings
-            console.log('📐 No ultra-wide found, using environment camera with wide settings');
             stream = await navigator.mediaDevices.getUserMedia({
               video: {
                 facingMode: cameraFacing,
@@ -872,36 +864,48 @@ const GuidedVisuals = forwardRef<GuidedVisualsRef, GuidedVisualsProps>(({
               }
             });
           }
-        } catch (ultraWideError) {
-          console.log('⚠️ Ultra-wide camera setup failed, using standard camera');
+        } catch {
           stream = await navigator.mediaDevices.getUserMedia({ 
             video: { facingMode: cameraFacing } 
           });
         }
       } else {
-        // Standard camera for other fields
         stream = await navigator.mediaDevices.getUserMedia({ 
           video: { facingMode: cameraFacing } 
         });
       }
       
+      videoTrackRef.current = stream.getVideoTracks()[0];
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoTrackRef.current = stream.getVideoTracks()[0];
-        
-        // Log the actual camera settings being used
-        const track = stream.getVideoTracks()[0];
-        const settings = track.getSettings();
-        console.log('📱 Camera settings:', settings);
-        
-        if (activeField?.fieldName === 'undercarriage_photo') {
-          console.log('📐 Undercarriage camera configured:', settings.width, 'x', settings.height);
-        }
+        videoRef.current.play().catch(() => {});
+      } else {
+        pendingStreamRef.current = stream;
       }
     } catch (error) {
       console.error('Camera access error:', error);
       setError('Camera access denied. You can still use the file picker or try camera access again.');
-      // Don't fall back to file picker automatically - let user choose
+    }
+  };
+
+  useEffect(() => {
+    if (cameraOpen) {
+      initCameraStream();
+    }
+    return () => {
+      if (pendingStreamRef.current) {
+        pendingStreamRef.current.getTracks().forEach(t => t.stop());
+        pendingStreamRef.current = null;
+      }
+    };
+  }, [cameraOpen]);
+
+  const videoRefCallback = (el: HTMLVideoElement | null) => {
+    videoRef.current = el;
+    if (el && pendingStreamRef.current) {
+      el.srcObject = pendingStreamRef.current;
+      el.play().catch(() => {});
+      pendingStreamRef.current = null;
     }
   };
 
@@ -937,6 +941,10 @@ const GuidedVisuals = forwardRef<GuidedVisualsRef, GuidedVisualsProps>(({
     if (videoTrackRef.current) {
       videoTrackRef.current.stop();
       videoTrackRef.current = null;
+    }
+    if (pendingStreamRef.current) {
+      pendingStreamRef.current.getTracks().forEach(t => t.stop());
+      pendingStreamRef.current = null;
     }
     if (videoRef.current) {
       videoRef.current.srcObject = null;
@@ -997,6 +1005,10 @@ const GuidedVisuals = forwardRef<GuidedVisualsRef, GuidedVisualsProps>(({
     if (videoTrackRef.current) {
       videoTrackRef.current.stop();
       videoTrackRef.current = null;
+    }
+    if (pendingStreamRef.current) {
+      pendingStreamRef.current.getTracks().forEach(t => t.stop());
+      pendingStreamRef.current = null;
     }
     if (videoRef.current) {
       videoRef.current.srcObject = null;
@@ -1158,7 +1170,7 @@ const GuidedVisuals = forwardRef<GuidedVisualsRef, GuidedVisualsProps>(({
 
               {/* Video stream */}
               <video
-                ref={videoRef}
+                ref={videoRefCallback}
                 style={{
                   width: '100%',
                   height: 'auto',
