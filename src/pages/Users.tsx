@@ -295,7 +295,7 @@ const Users: React.FC = () => {
                         }}
                       >
                         {roles.map(r => (
-                          <MenuItem key={r.id} value={r.name}>{r.name}</MenuItem>
+                          <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>
                         ))}
                       </Select>
                     </FormControl>
@@ -411,7 +411,7 @@ const Users: React.FC = () => {
                   label="Role"
                 >
                   {roles.map(r => (
-                    <MenuItem key={r.id} value={r.name}>{r.name}</MenuItem>
+                    <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>
                   ))}
                 </Select>
               </FormControl>

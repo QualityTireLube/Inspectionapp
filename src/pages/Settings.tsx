@@ -39,7 +39,7 @@ import { useUser } from '../contexts/UserContext';
 import LocationAwareStickerSettings from '../components/LocationAwareStickerSettings';
 
 import LocationAwarePrinterSettings from '../components/LocationAwarePrinterSettings';
-import RolesSettings from '../components/RolesSettings';
+import RolePermissionsManager from '../components/RolePermissionsManager';
 import DebugSettings from '../components/DebugSettings';
 // Removed Parts Tech and NexPart settings
 
@@ -85,9 +85,9 @@ const Settings: React.FC = () => {
       icon: <PeopleIcon />,
     },
     // Admin-only Roles management
-    ...(user?.role === 'Admin' ? [{
+    ...(user?.role === 'admin' ? [{
       id: 'roles' as SettingsSection,
-      label: 'Roles',
+      label: 'Role Permissions',
       icon: <ArchitectureIcon />,
     }] : []),
     // Show location-specific settings for regular users, or location management for admins
@@ -105,7 +105,7 @@ const Settings: React.FC = () => {
       },
     ] : []),
     // Admin-only location management
-    ...(user?.role === 'Admin' ? [{
+    ...(user?.role === 'admin' ? [{
       id: 'locations' as SettingsSection,
       label: 'Location Management',
       icon: <LocationIcon />,
@@ -117,7 +117,7 @@ const Settings: React.FC = () => {
     },
     // Removed Parts Tech and NexPart settings
     // Admin-only debug settings
-    ...(user?.role === 'Admin' ? [{
+    ...(user?.role === 'admin' ? [{
       id: 'debug' as SettingsSection,
       label: 'Debug Settings',
       icon: <DebugIcon />,
@@ -218,7 +218,7 @@ const Settings: React.FC = () => {
       case 'tokens':
         return <TokenGenerator />;
       case 'roles':
-        return <RolesSettings />;
+        return <RolePermissionsManager />;
       // Removed Parts Tech and NexPart content
       case 'debug':
         return <DebugSettings />;

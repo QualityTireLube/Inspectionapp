@@ -4,9 +4,23 @@ import { db } from '../services/firebase/config';
 import { LocationService } from '../services/locationService';
 import { Location } from '../types/locations';
 import { onAuthChange } from '../services/firebase/auth';
-import { getRoleById, seedDefaultRolesIfEmpty } from '../services/firebase/users';
+import { getRoleConfig, getRoleHomePath } from '../services/firebase/users';
 import { seedDefaultSchemasIfEmpty } from '../services/firebase/schemas';
 import { User } from 'firebase/auth';
+
+const VALID_ROLE_IDS = ['admin', 'manager', 'service_advisor', 'technician'] as const;
+
+/**
+ * Converts any stored role string to a canonical lowercase role ID.
+ * Handles legacy title-case values written by older UI code that stored
+ * the display name instead of the ID (e.g. "Admin" → "admin",
+ * "Service Advisor" → "service_advisor").
+ */
+function normalizeRole(raw: string | undefined): string {
+  if (!raw) return 'technician';
+  const normalized = raw.trim().toLowerCase().replace(/\s+/g, '_');
+  return (VALID_ROLE_IDS as readonly string[]).includes(normalized) ? normalized : 'technician';
+}
 
 export interface UserProfile {
   name: string;
@@ -19,6 +33,10 @@ export interface UserProfile {
 export interface UserContextType {
   user: UserProfile | null;
   userLocation: Location | null;
+  /** Page IDs the current user's role is allowed to access. null = still loading. */
+  allowedPageIds: string[] | null;
+  /** The React Router path that is the home page for the current user's role (e.g. '/quick-check' for technicians). */
+  roleHomePath: string;
   loading: boolean;
   error: string | null;
   refreshUser: () => Promise<void>;
@@ -26,8 +44,6 @@ export interface UserContextType {
   roleHomePageId?: string;
   needsProfileSetup: boolean;
   firebaseUid: string | null;
-  /** Page IDs the current user's role can access. Empty = all pages. */
-  visiblePages: string[];
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -40,11 +56,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [userLocation, setUserLocation] = useState<Location | null>(null);
+  const [allowedPageIds, setAllowedPageIds] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
-  const [visiblePages, setVisiblePages] = useState<string[]>([]);
-  const [roleHomePageId, setRoleHomePageId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const unsubscribe = onAuthChange((fbUser) => {
@@ -57,6 +72,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     if (!fbUser) {
       setUser(null);
       setUserLocation(null);
+      setAllowedPageIds(null);
       setNeedsProfileSetup(false);
       setLoading(false);
       return;
@@ -77,7 +93,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           profile = {
             name:     data.name     || fbUser.displayName || fbUser.email || 'User',
             email:    data.email    || fbUser.email || '',
-            role:     data.role     || 'technician',
+            role:     normalizeRole(data.role),
             pin:      data.pin,
             location: data.location,
           };
@@ -100,20 +116,15 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
       setUser(profile);
 
-      // Seed Firestore collections on first boot (safe no-op if already seeded)
-      seedDefaultRolesIfEmpty().catch(() => {});
+      // Seed default inspection schemas on first boot (no-op if already seeded)
       seedDefaultSchemasIfEmpty().catch(() => {});
 
-      // Load role config to get visiblePages and homePageId
-      try {
-        const roleConfig = await getRoleById(profile.role || 'technician');
-        setVisiblePages(roleConfig?.visiblePages ?? []);
-        setRoleHomePageId(roleConfig?.homePageId);
-      } catch {
-        setVisiblePages([]);
-      }
+      // Load page-access permissions for this role from Firestore (falls back to defaults)
+      const roleId = profile?.role || 'technician';
+      const pages = await getRoleConfig(roleId);
+      setAllowedPageIds(pages);
 
-      if (profile.location) {
+      if (profile?.location) {
         const locations = LocationService.getLocations();
         const location =
           locations.find(loc => loc.name === profile!.location) ||
@@ -139,15 +150,16 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const value: UserContextType = useMemo(() => ({
     user,
     userLocation,
+    allowedPageIds,
+    roleHomePath: getRoleHomePath(user?.role ?? ''),
     loading,
     error,
     refreshUser,
     isAuthenticated: !!firebaseUser,
-    roleHomePageId,
+    roleHomePageId: undefined,
     needsProfileSetup,
     firebaseUid: firebaseUser?.uid ?? null,
-    visiblePages,
-  }), [user, userLocation, loading, error, refreshUser, firebaseUser, needsProfileSetup, visiblePages, roleHomePageId]);
+  }), [user, userLocation, allowedPageIds, loading, error, refreshUser, firebaseUser, needsProfileSetup]);
 
   return (
     <UserContext.Provider value={value}>

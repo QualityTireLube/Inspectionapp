@@ -1,4 +1,9 @@
 version: 1
+# SPA rewrite: serve index.html for all non-asset paths so React Router handles routing.
+customRules:
+  - source: /<*>
+    target: /index.html
+    status: 200
 frontend:
   phases:
     preBuild:

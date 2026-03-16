@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link, useLocation, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -22,11 +22,7 @@ const Login: React.FC = () => {
   const [expiredMessage, setExpiredMessage] = useState('');
   const [storageClearedBanner, setStorageClearedBanner] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams] = useSearchParams();
-
-  // Get the return URL from location state, or default to '/'
-  const from = (location.state as any)?.from?.pathname || '/';
 
   // Check for expired session parameter
   useEffect(() => {
@@ -97,10 +93,13 @@ const Login: React.FC = () => {
 
       safariSetItem('userName', firebaseUser.displayName || normalizedEmail);
       safariSetItem('userEmail', firebaseUser.email || normalizedEmail);
-      safariSetItem('userRole', 'user');
       safariSetItem('userId', firebaseUser.uid);
 
-      navigate(from, { replace: true });
+      // Always navigate to root so ProtectedRoute's RBAC logic routes each
+      // user to their role-specific home page (e.g. technicians → /quick-check).
+      // Navigating back to `from` caused admins to land on /quick-check when
+      // that was the last page visited before session expiry.
+      navigate('/', { replace: true });
       
     } catch (err: any) {
       let errorMessage = 'Invalid email or password';

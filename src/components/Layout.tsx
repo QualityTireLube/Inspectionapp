@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '../contexts/UserContext';
 import ConnectionStatusIndicator from './ConnectionStatusIndicator';
 import {
   AppBar,
@@ -61,6 +60,7 @@ import { signOutUser as logout } from '../services/firebase/auth';
 import { getRoles, getUserSettings, UserRole } from '../services/firebase/users';
 import { appPages } from '../pages/pageRegistry';
 import { fetchSchemas } from '../services/inspectionSchemasApi';
+import { useUser } from '../contexts/UserContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -68,7 +68,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
-  const { user, visiblePages, roleHomePageId } = useUser();
+  const { user, allowedPageIds } = useUser();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null);
   const [archivedExpanded, setArchivedExpanded] = useState(false);
@@ -201,35 +201,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
   };
 
-  const getUserRole = () => user?.role || localStorage.getItem('userRole') || 'technician';
+  const isAdmin = () => user?.role === 'admin';
 
-  const isAdmin = () => {
-    const role = getUserRole().toLowerCase();
-    return role === 'admin' || role === 'manager';
-  };
-
-  /**
-   * Returns true if the user's role can see the given page.
-   * When visiblePages is empty the role has no restrictions (all pages visible).
-   */
-  const canSee = useCallback((pageId: string) => {
-    if (!visiblePages || visiblePages.length === 0) return true;
-    return visiblePages.includes(pageId);
-  }, [visiblePages]);
-
-  /** Maps a route path to a pageRegistry page ID for visibility checks. */
-  const pathToPageId = (path: string): string => {
-    const map: Record<string, string> = {
-      '/': 'home',
-      '/tech-dashboard': 'techDashboard',
-      '/labels': 'labels',
-      '/quick-check': 'quickCheck',
-      '/no-check': 'noCheck',
-      '/vsi': 'vsi',
-      '/state-inspection-records': 'stateInspections',
-      '/settings': 'settings',
-    };
-    return map[path] ?? path;
+  /** Returns true if the current user's role is allowed to access the given pageId. */
+  const canAccessPage = (pageId: string) => {
+    if (isAdmin()) return true;
+    if (!allowedPageIds) return false;
+    return allowedPageIds.includes(pageId);
   };
 
   const handleDrawerToggle = () => {
@@ -303,25 +281,31 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // Legacy static definition kept for reference; dynamic items are loaded above.
 
-  const adminMenuItems = [
-    { text: 'Quick Check Drafts', path: '/quick-check-drafts' },
-    { text: 'Database', path: '/databases' },
-    { text: 'Label Manager', path: '/label-manager' },
-    { text: 'Print Queue Archive', path: '/print-queue-archive' },
-    { text: 'State Inspection Analytics', path: '/state-inspection-records?tab=2' }
-  ];
-
-  const regularMenuItems = [
-    // Removed Oil Change Stickers
-  ];
 
   const getHomeRedirectPath = () => {
-    if (roleHomePageId) {
-      const page = appPages.find(p => p.id === roleHomePageId);
-      if (page) return page.path;
-    }
+    try {
+      const raw = localStorage.getItem('roles.cache');
+      if (raw && user?.role) {
+        const roles: UserRole[] = JSON.parse(raw);
+        const role = roles.find(r => r.id === user.role);
+        if (role?.homePageId) {
+          const page = appPages.find(p => p.id === role.homePageId);
+          if (page) return page.path;
+        }
+      }
+    } catch {}
     return '/';
   };
+
+  // Cache roles in localStorage occasionally for quick sync redirect
+  useEffect(() => {
+    (async () => {
+      try {
+        const roles = await getRoles();
+        localStorage.setItem('roles.cache', JSON.stringify(roles));
+      } catch {}
+    })();
+  }, []);
 
   const drawer = (
     <Box sx={{ width: 250 }} role="presentation">
@@ -332,80 +316,70 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </Box>
       <Divider />
       <List>
-        {canSee('home') && (
+        {canAccessPage('home') && (
           <ListItem disablePadding>
             <ListItemButton onClick={() => handleNavigation(getHomeRedirectPath())}>
-              <ListItemIcon><HomeIcon /></ListItemIcon>
+              <ListItemIcon>
+                <HomeIcon />
+              </ListItemIcon>
               <ListItemText primary="Home" />
             </ListItemButton>
           </ListItem>
         )}
 
-        {canSee('techDashboard') && (
+        {canAccessPage('techDashboard') && (
           <ListItem disablePadding>
             <ListItemButton onClick={() => handleNavigation('/tech-dashboard')}>
-              <ListItemIcon><DashboardIcon /></ListItemIcon>
+              <ListItemIcon>
+                <DashboardIcon />
+              </ListItemIcon>
               <ListItemText primary="Tech Dashboard" />
             </ListItemButton>
           </ListItem>
         )}
 
-        {canSee('labels') && (
+        {canAccessPage('labels') && (
           <ListItem disablePadding>
             <ListItemButton onClick={() => handleNavigation('/labels')}>
-              <ListItemIcon><LabelIcon /></ListItemIcon>
+              <ListItemIcon>
+                <LabelIcon />
+              </ListItemIcon>
               <ListItemText primary="Labels" />
             </ListItemButton>
           </ListItem>
         )}
 
-        {canSee('stateInspections') && (
+        {canAccessPage('stateInspections') && (
           <ListItem disablePadding>
             <ListItemButton onClick={() => handleNavigation('/state-inspection-records')}>
-              <ListItemIcon><LocalPoliceIcon /></ListItemIcon>
+              <ListItemIcon>
+                <LocalPoliceIcon />
+              </ListItemIcon>
               <ListItemText primary="State Inspections" />
             </ListItemButton>
           </ListItem>
         )}
 
-
-        {/* Archived section with sub-navigation */}
-        <ListItem disablePadding>
-          <ListItemButton onClick={handleArchivedToggle}>
-            <ListItemText primary="Archived" />
-            {archivedExpanded ? <ExpandLess /> : <ExpandMore />}
-          </ListItemButton>
-        </ListItem>
-        <Collapse in={archivedExpanded} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            {archivedMenuItems.map((item) => (
-              <ListItem key={item.text} disablePadding>
-                <ListItemButton sx={{ pl: 4 }} onClick={() => handleNavigation(item.path)}>
-                  <ListItemText primary={item.text} />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-        </Collapse>
-        
-        {/* DVI section with sub-navigation */}
-        {dviMenuItems.filter(item => canSee(pathToPageId(item.path))).length > 0 && (
+        {/* Archived section — only show if user can access at least one archived page */}
+        {(canAccessPage('archivedStaticStickers') || canAccessPage('archivedQuickCheck')) && (
           <>
             <ListItem disablePadding>
-              <ListItemButton onClick={handleDviToggle}>
-                <ListItemIcon><CarRepairIcon /></ListItemIcon>
-                <ListItemText primary="DVI" />
-                {dviExpanded ? <ExpandLess /> : <ExpandMore />}
+              <ListItemButton onClick={handleArchivedToggle}>
+                <ListItemText primary="Archived" />
+                {archivedExpanded ? <ExpandLess /> : <ExpandMore />}
               </ListItemButton>
             </ListItem>
-            <Collapse in={dviExpanded} timeout="auto" unmountOnExit>
+            <Collapse in={archivedExpanded} timeout="auto" unmountOnExit>
               <List component="div" disablePadding>
-                {dviMenuItems
-                  .filter(item => canSee(pathToPageId(item.path)))
+                {archivedMenuItems
+                  .filter(item => {
+                    if (item.path === '/oil-change-stickers/archived') return canAccessPage('archivedStaticStickers');
+                    if (item.path === '/history') return canAccessPage('archivedQuickCheck');
+                    return true;
+                  })
                   .map((item) => (
                     <ListItem key={item.text} disablePadding>
                       <ListItemButton sx={{ pl: 4 }} onClick={() => handleNavigation(item.path)}>
-                        <ListItemIcon sx={{ minWidth: 36 }}>{item.icon}</ListItemIcon>
                         <ListItemText primary={item.text} />
                       </ListItemButton>
                     </ListItem>
@@ -415,8 +389,46 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </>
         )}
         
-        {/* Admin section with sub-navigation (only show for admins) */}
-        {isAdmin() && (
+        {/* DVI section — filter individual DVI items by their page IDs */}
+        {dviMenuItems.length > 0 && (
+          <>
+            <ListItem disablePadding>
+              <ListItemButton onClick={handleDviToggle}>
+                <ListItemIcon>
+                  <CarRepairIcon />
+                </ListItemIcon>
+                <ListItemText primary="DVI" />
+                {dviExpanded ? <ExpandLess /> : <ExpandMore />}
+              </ListItemButton>
+            </ListItem>
+            <Collapse in={dviExpanded} timeout="auto" unmountOnExit>
+              <List component="div" disablePadding>
+                {dviMenuItems
+                  .filter(item => {
+                    if (item.path === '/quick-check') return canAccessPage('quickCheck');
+                    if (item.path === '/no-check') return canAccessPage('noCheck');
+                    if (item.path === '/vsi') return canAccessPage('vsi');
+                    return true;
+                  })
+                  .map((item) => (
+                    <ListItem key={item.text} disablePadding>
+                      <ListItemButton sx={{ pl: 4 }} onClick={() => handleNavigation(item.path)}>
+                        <ListItemIcon sx={{ minWidth: 36 }}>
+                          {item.icon}
+                        </ListItemIcon>
+                        <ListItemText primary={item.text} />
+                      </ListItemButton>
+                    </ListItem>
+                  ))}
+              </List>
+            </Collapse>
+          </>
+        )}
+        
+        {/* Admin section — only show for roles that can access admin pages */}
+        {(canAccessPage('quickCheckDrafts') || canAccessPage('databases') || canAccessPage('labelManager') ||
+          canAccessPage('printQueueArchive') || canAccessPage('stateInspectionAnalytics') ||
+          canAccessPage('printTokenManager') || canAccessPage('roleManager')) && (
           <>
             <ListItem disablePadding>
               <ListItemButton onClick={handleAdminToggle}>
@@ -426,13 +438,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </ListItem>
             <Collapse in={adminExpanded} timeout="auto" unmountOnExit>
               <List component="div" disablePadding>
-                {adminMenuItems.map((item) => (
-                  <ListItem key={item.text} disablePadding>
-                    <ListItemButton sx={{ pl: 4 }} onClick={() => handleNavigation(item.path)}>
-                      <ListItemText primary={item.text} />
-                    </ListItemButton>
-                  </ListItem>
-                ))}
+                {[
+                  { text: 'Quick Check Drafts',        path: '/quick-check-drafts',          pageId: 'quickCheckDrafts' },
+                  { text: 'Database',                   path: '/databases',                   pageId: 'databases' },
+                  { text: 'Label Manager',              path: '/label-manager',               pageId: 'labelManager' },
+                  { text: 'Print Queue Archive',        path: '/print-queue-archive',         pageId: 'printQueueArchive' },
+                  { text: 'State Inspection Analytics', path: '/state-inspection-records?tab=2', pageId: 'stateInspectionAnalytics' },
+                  { text: 'Print Token Manager',        path: '/print-token-manager',         pageId: 'printTokenManager' },
+                  { text: 'Role Manager',               path: '/role-manager',                pageId: 'roleManager' },
+                ]
+                  .filter(item => canAccessPage(item.pageId))
+                  .map((item) => (
+                    <ListItem key={item.text} disablePadding>
+                      <ListItemButton sx={{ pl: 4 }} onClick={() => handleNavigation(item.path)}>
+                        <ListItemText primary={item.text} />
+                      </ListItemButton>
+                    </ListItem>
+                  ))}
               </List>
             </Collapse>
           </>
@@ -637,13 +659,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               },
             }}
           >
-              {canSee('techDashboard') && <BottomNavigationAction label="Dashboard" icon={<DashboardIcon />} />}
-              {dviMenuItems
-                .filter(item => canSee(pathToPageId(item.path)))
-                .map((item, idx) => (
-                  <BottomNavigationAction key={idx} label={item.text} icon={item.icon} />
-                ))}
-              {canSee('settings') && <BottomNavigationAction label="Settings" icon={<SettingsIcon />} />}
+              <BottomNavigationAction label="Dashboard" icon={<DashboardIcon />} />
+              {dviMenuItems.map((item, idx) => (
+                <BottomNavigationAction key={idx} label={item.text} icon={item.icon} />
+              ))}
+              <BottomNavigationAction label="Settings" icon={<SettingsIcon />} />
           </BottomNavigation>
         </Paper>
       )}
