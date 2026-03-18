@@ -19,7 +19,7 @@ function docToTemplate(id: string, data: any): LabelTemplate {
     id,
     labelName:    data.labelName   ?? data.name ?? '',
     fields:       data.fields      ?? [],
-    paperSize:    data.paperSize   ?? 'Brother-QL800',
+    paperSize:    data.paperSize   ?? '29mmx90mm',
     width:        data.width       ?? 0,
     height:       data.height      ?? 0,
     copies:       data.copies      ?? 1,

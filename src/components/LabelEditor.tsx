@@ -60,7 +60,7 @@ interface LabelEditorProps {
 
 const LabelEditor: React.FC<LabelEditorProps> = ({ template, onClose, onSave }) => {
   const [labelName, setLabelName] = useState('');
-  const [paperSize, setPaperSize] = useState<'Brother-QL800' | 'Dymo-TwinTurbo' | '29mmx90mm' | 'Godex-200i' | 'DK1201' | 'DK221' | 'Custom'>('Brother-QL800');
+  const [paperSize, setPaperSize] = useState<'Brother-QL800' | 'Dymo-TwinTurbo' | '29mmx90mm' | 'Godex-200i' | 'DK1201' | 'DK221' | 'Custom'>('29mmx90mm');
   const [copies, setCopies] = useState(1);
   const [fields, setFields] = useState<LabelField[]>([]);
   const [selectedField, setSelectedField] = useState<LabelField | null>(null);
@@ -146,7 +146,7 @@ const LabelEditor: React.FC<LabelEditorProps> = ({ template, onClose, onSave }) 
     } else {
       // Initialize with defaults
       setLabelName('');
-      setPaperSize('Brother-QL800');
+      setPaperSize('29mmx90mm');
       setCopies(1);
       setFields([]);
       setCanvasRotation(0);
