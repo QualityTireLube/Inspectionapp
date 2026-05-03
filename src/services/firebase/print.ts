@@ -1,14 +1,19 @@
 /**
- * Print service — calls the QL_Test Cloud Function for label/sticker printing.
- * Replaces the legacy printApi.ts / local print server approach.
+ * Print service — optional calls to the Quality Express Cloud Function print API.
  *
- * Cloud Function endpoint:
- *   POST https://us-central1-qualityexpress-c19f2.cloudfunctions.net/printApi/api/print/jobs
- *   Headers: X-API-Key: ql-print-2024
+ * By default this app does NOT call `qualityexpress-c19f2` (no traffic / Firestore reads
+ * from an idle or abandoned deploy). To re-enable printing from this app, set at build time:
+ *
+ *   VITE_QUALITYEXPRESS_PRINT_API_URL=https://us-central1-qualityexpress-c19f2.cloudfunctions.net/printApi
+ *   VITE_QUALITYEXPRESS_PRINT_API_KEY=...   (optional; defaults to shop key if URL is set)
  */
 
-const PRINT_CF_BASE = 'https://us-central1-qualityexpress-c19f2.cloudfunctions.net/printApi';
-const PRINT_API_KEY = 'ql-print-2024';
+const PRINT_CF_BASE = String(import.meta.env.VITE_QUALITYEXPRESS_PRINT_API_URL || '').replace(/\/+$/, '');
+const PRINT_API_KEY = String(import.meta.env.VITE_QUALITYEXPRESS_PRINT_API_KEY || 'ql-print-2024');
+
+function qualityExpressPrintConfigured(): boolean {
+  return PRINT_CF_BASE.length > 0;
+}
 
 export interface PrintJobRequest {
   templateName: string;
@@ -44,16 +49,21 @@ export interface PrintClient {
   lastSeen?: string;
 }
 
-const headers = {
-  'Content-Type': 'application/json',
-  'X-API-Key': PRINT_API_KEY,
-};
+function buildHeaders(): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    'X-API-Key': PRINT_API_KEY,
+  };
+}
 
 async function cfFetch(path: string, method = 'GET', body?: any) {
+  if (!qualityExpressPrintConfigured()) {
+    throw new Error('Quality Express print API disabled (VITE_QUALITYEXPRESS_PRINT_API_URL not set).');
+  }
   const res = await fetch(`${PRINT_CF_BASE}${path}`, {
     method,
     mode: 'cors',
-    headers,
+    headers: buildHeaders(),
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {
@@ -113,5 +123,6 @@ export async function getPrintQueue(): Promise<any[]> {
 }
 
 export async function cancelPrintJob(jobId: string): Promise<void> {
+  if (!qualityExpressPrintConfigured()) return;
   await cfFetch(`/api/print/jobs/${jobId}/cancel`, 'POST');
 }
